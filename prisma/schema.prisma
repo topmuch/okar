@@ -1,0 +1,439 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  name          String?
+  phone         String?
+  password      String?
+  role          String        @default("driver")
+  garageId      String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  blogPosts     BlogPost[]
+  dailyReports  DailyReport[]
+  assignedLeads Lead[]        @relation("AssignedLeads")
+  loginLogs     LoginLog[]
+  observations  Observation[]
+  sessions      Session[]
+  garage        Garage?       @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  vehicles      Vehicle[]     @relation("VehicleOwner")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  userAgent    String?
+  ipAddress    String?
+  lastActivity DateTime @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoginLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  email         String
+  success       Boolean  @default(false)
+  failureReason String?
+  ipAddress     String?
+  userAgent     String?
+  country       String?
+  city          String?
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
+}
+
+model Garage {
+  id                    String              @id @default(cuid())
+  name                  String
+  slug                  String              @unique
+  email                 String?
+  phone                 String?
+  address               String?
+  logo                  String?
+  isCertified           Boolean             @default(false)
+  businessLicense       String?
+  subscriptionPlan      String?             @default("basic")
+  subscriptionExpiresAt DateTime?
+  active                Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+  invoices              Invoice[]
+  maintenanceRecords    MaintenanceRecord[] @relation("GarageRecords")
+  assignedLots          QRCodeLot[]
+  qrCodes               QRCodeStock[]
+  users                 User[]
+  vehicles              Vehicle[]
+}
+
+model QRCodeLot {
+  id           String        @id @default(cuid())
+  prefix       String
+  count        Int
+  status       String        @default("CREATED")      // CREATED, ASSIGNED, EXHAUSTED, EXPIRED
+  assignedToId String?
+  assignedAt   DateTime?
+  createdBy    String?
+  createdAt    DateTime      @default(now())
+  expiresAt    DateTime?
+  notes        String?
+  assignedTo   Garage?       @relation(fields: [assignedToId], references: [id])
+  vehicles     Vehicle[]
+  qrCodes      QRCodeStock[]
+}
+
+// Stock individuel de QR Codes - Sécurité et traçabilité
+model QRCodeStock {
+  id                String    @id @default(cuid())
+  codeUnique        String    @unique                    // Code QR unique (UUID sécurisé)
+  shortCode         String    @unique                    // Code court pour URL (8-10 chars)
+  lotId             String
+  status            String    @default("STOCK")          // STOCK, ASSIGNED, ACTIVE, REVOKED
+  assignedGarageId  String?
+  linkedVehicleId   String?   @unique
+  activationDate    DateTime?
+  revokedAt         DateTime?
+  revokedBy         String?
+  revokeReason      String?
+  replacementForId  String?   @unique                    // Si ce QR remplace un QR révoqué
+  printedAt         DateTime?
+  printedBy         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  lot               QRCodeLot    @relation(fields: [lotId], references: [id])
+  assignedGarage    Garage?      @relation(fields: [assignedGarageId], references: [id])
+  linkedVehicle     Vehicle?     @relation("VehicleQRCode", fields: [linkedVehicleId], references: [id])
+  replacementFor    QRCodeStock? @relation("QRReplacement", fields: [replacementForId], references: [id])
+  replacedBy        QRCodeStock? @relation("QRReplacement")
+  
+  @@index([codeUnique])
+  @@index([shortCode])
+  @@index([status])
+  @@index([lotId])
+  @@index([assignedGarageId])
+}
+
+model Vehicle {
+  id                 String              @id @default(cuid())
+  reference          String              @unique
+  type               String              @default("voyageur")
+  vin                String?             @unique
+  make               String?
+  model              String?
+  year               Int?
+  color              String?
+  mileage            Int?                @default(0)
+  engineType         String?             @default("essence")
+  licensePlate       String?
+  vehicleType        String?             @default("voiture")
+  ownerId            String?
+  ownerName          String?
+  ownerFirstName     String?
+  ownerLastName      String?
+  ownerPhone         String?
+  lotId              String?
+  qrStatus           String              @default("INACTIVE")
+  garageId           String?
+  status             String              @default("pending_activation")
+  lastScanDate       DateTime?
+  lastLocation       String?
+  declaredLostAt     DateTime?
+  foundAt            DateTime?
+  activatedAt        DateTime?
+  createdAt          DateTime            @default(now())
+  expiresAt          DateTime?
+  updatedAt          DateTime            @updatedAt
+  maintenanceRecords MaintenanceRecord[]
+  ownershipHistory   OwnershipHistory[]
+  garage             Garage?             @relation(fields: [garageId], references: [id])
+  lot                QRCodeLot?          @relation(fields: [lotId], references: [id])
+  owner              User?               @relation("VehicleOwner", fields: [ownerId], references: [id])
+  qrCode             QRCodeStock?        @relation("VehicleQRCode")
+  
+  @@index([reference])
+  @@index([licensePlate])
+  @@index([ownerId])
+  @@index([garageId])
+}
+
+model MaintenanceRecord {
+  id                String    @id @default(cuid())
+  vehicleId         String
+  garageId          String?
+  mechanicName      String?
+  category          String
+  description       String?
+  mileage           Int?
+  partsList         String?
+  partsCost         Float?    @default(0)
+  laborCost         Float?    @default(0)
+  totalCost         Float?    @default(0)
+  invoicePhoto      String?
+  invoiceNumber     String?
+  mechanicSignature String?
+  ownerValidation   String?   @default("PENDING")
+  validationDate    DateTime?
+  rejectionReason   String?
+  status            String    @default("DRAFT")
+  interventionDate  DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  garage            Garage?   @relation("GarageRecords", fields: [garageId], references: [id])
+  vehicle           Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+model OwnershipHistory {
+  id                String   @id @default(cuid())
+  vehicleId         String
+  previousOwnerId   String?
+  previousOwnerName String?
+  newOwnerId        String?
+  newOwnerName      String?
+  newOwnerPhone     String?
+  transferType      String   @default("sale")
+  transferDate      DateTime @default(now())
+  transferPrice     Float?
+  documentUrl       String?
+  createdAt         DateTime @default(now())
+  vehicle           Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Page {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  type      String
+  content   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String
+  category    String   @default("general")
+  enabled     Boolean  @default(false)
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Message {
+  id                String   @id @default(cuid())
+  type              String
+  status            String   @default("non_lu")
+  senderName        String?
+  senderEmail       String?
+  senderPhone       String?
+  garageId          String?
+  recipientGarageId String?
+  subject           String?
+  content           String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  userId    String?
+  garageId  String?
+  vehicleId String?
+  message   String
+  data      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailSettings {
+  id             String    @id @default(cuid())
+  provider       String    @default("console")
+  fromEmail      String    @default("noreply@autopass.sn")
+  fromName       String    @default("AutoPass")
+  smtpHost       String?
+  smtpPort       Int?
+  smtpUser       String?
+  smtpPassword   String?
+  smtpEncryption String    @default("tls")
+  isActive       Boolean   @default(true)
+  lastTestAt     DateTime?
+  lastTestStatus String?
+  lastTestError  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model EmailLog {
+  id        String    @id @default(cuid())
+  to        String
+  subject   String
+  type      String
+  status    String    @default("pending")
+  error     String?
+  userId    String?
+  garageId  String?
+  data      String?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model EmailToken {
+  id        String    @id @default(cuid())
+  email     String
+  token     String    @unique
+  type      String
+  code      String?
+  expiresAt DateTime
+  used      Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  number        String    @unique
+  garageId      String
+  amount        Float
+  currency      String    @default("XOF")
+  status        String    @default("pending")
+  description   String?
+  items         String
+  dueDate       DateTime?
+  paidAt        DateTime?
+  paymentMethod String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  garage        Garage    @relation(fields: [garageId], references: [id])
+}
+
+model Lead {
+  id           String        @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  company      String?
+  status       String        @default("new")
+  source       String?
+  notes        String?
+  garageId     String?
+  assignedToId String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  assignedTo   User?         @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  observations Observation[]
+}
+
+model Observation {
+  id        String   @id @default(cuid())
+  leadId    String
+  type      String
+  content   String
+  date      DateTime @default(now())
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model DailyReport {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @default(now())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model Advertisement {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  imageUrl      String
+  linkUrl       String?
+  linkTarget    String         @default("_blank")
+  position      String         @default("footer")
+  targetScope   String         @default("all")
+  garageId      String?
+  startDate     DateTime
+  endDate       DateTime?
+  status        String         @default("draft")
+  priority      Int            @default(0)
+  impressions   Int            @default(0)
+  clicks        Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  adImpressions AdImpression[]
+}
+
+model AdImpression {
+  id              String        @id @default(cuid())
+  advertisementId String
+  userId          String?
+  garageId        String?
+  userRole        String?
+  action          String
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime      @default(now())
+  advertisement   Advertisement @relation(fields: [advertisementId], references: [id], onDelete: Cascade)
+}
+
+model BlogPost {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  content     String
+  excerpt     String?
+  coverImage  String?
+  category    String     @default("actualites")
+  status      String     @default("draft")
+  publishedAt DateTime?
+  authorId    String?
+  views       Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  author      User?      @relation(fields: [authorId], references: [id])
+  blogViews   BlogView[]
+}
+
+model BlogView {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String?
+  garageId  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
