@@ -23,13 +23,14 @@ import {
 // Types
 interface DashboardStats {
   totalQR: number;
-  qrActivatedHajj: number;
-  qrActivatedVoyageur: number;
-  totalPelerins: number;
-  totalVoyageurs: number;
+  qrActivatedVehicles: number;
+  qrPendingActivation: number;
+  totalDrivers: number;
+  totalVehicles: number;
   expiringSoon: number;
   pendingOrders: number;
   totalAgencies: number;
+  totalGarages: number;
 }
 
 interface RecentActivity {
@@ -286,13 +287,14 @@ export default function DashboardPage() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [stats, setStats] = useState<DashboardStats>({
     totalQR: 0,
-    qrActivatedHajj: 0,
-    qrActivatedVoyageur: 0,
-    totalPelerins: 0,
-    totalVoyageurs: 0,
+    qrActivatedVehicles: 0,
+    qrPendingActivation: 0,
+    totalDrivers: 0,
+    totalVehicles: 0,
     expiringSoon: 0,
     pendingOrders: 0,
     totalAgencies: 0,
+    totalGarages: 0,
   });
   const [dailyActivations, setDailyActivations] = useState<DailyActivation[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -354,43 +356,43 @@ export default function DashboardPage() {
   const kpiCards = [
     { 
       title: 'Total QR Codes', 
-      value: stats.totalQR, 
-      subtitle: `${stats.qrActivatedHajj} Hajj actifs`,
+      value: stats.totalQR || 0, 
+      subtitle: `${stats.qrActivatedVehicles || 0} véhicules actifs`,
       icon: <QrCode className="w-6 h-6 text-white" />,
       colorVariant: 'green' as const
     },
     { 
-      title: 'QR Voyageurs', 
-      value: stats.qrActivatedVoyageur, 
-      subtitle: 'Codes activés',
+      title: 'Véhicules', 
+      value: stats.totalVehicles || 0, 
+      subtitle: 'Enregistrés',
       icon: <Package className="w-6 h-6 text-white" />,
       colorVariant: 'blue' as const
     },
     { 
-      title: 'Utilisateurs', 
-      value: stats.totalPelerins + stats.totalVoyageurs, 
-      subtitle: `${stats.totalPelerins} Hajj + ${stats.totalVoyageurs} Voyageurs`,
+      title: 'Conducteurs', 
+      value: stats.totalDrivers || 0, 
+      subtitle: 'Utilisateurs inscrits',
       icon: <Users className="w-6 h-6 text-white" />,
       colorVariant: 'purple' as const
     },
     { 
       title: 'Commandes', 
-      value: stats.pendingOrders, 
+      value: stats.pendingOrders || 0, 
       subtitle: 'En attente',
       icon: <ShoppingCart className="w-6 h-6 text-white" />,
       colorVariant: 'orange' as const
     },
     { 
-      title: 'Agences', 
-      value: stats.totalAgencies, 
-      subtitle: 'Partenaires',
+      title: 'Garages', 
+      value: stats.totalGarages || 0, 
+      subtitle: 'Partenaires certifiés',
       icon: <Building className="w-6 h-6 text-white" />,
       colorVariant: 'cyan' as const
     },
     { 
-      title: 'Expiration', 
-      value: stats.expiringSoon, 
-      subtitle: 'À renouveler',
+      title: 'En attente', 
+      value: stats.qrPendingActivation || 0, 
+      subtitle: 'QR à activer',
       icon: <Clock className="w-6 h-6 text-white" />,
       colorVariant: 'red' as const
     },
