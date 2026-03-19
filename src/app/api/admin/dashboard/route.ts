@@ -144,11 +144,19 @@ export async function GET() {
     recentActivities.sort(() => Math.random() - 0.5);
 
     const stats = {
+      totalQR: totalVehicles,
+      qrActivatedVehicles: activeVehicles,
+      qrPendingActivation: inactiveVehicles,
+      totalDrivers: 0, // TODO: Add driver count
       totalVehicles,
+      expiringSoon: 0, // TODO: Add expiring vehicles count
+      pendingOrders: pendingValidations,
+      totalAgencies: 0, // Not used for OKAR
+      totalGarages,
+      // Extended stats
       activeVehicles,
       inactiveVehicles,
       blockedVehicles,
-      totalGarages,
       certifiedGarages,
       activeGarages,
       totalInterventions,

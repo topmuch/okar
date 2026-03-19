@@ -147,12 +147,20 @@ export default function VehicleScanPage() {
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mb-2">QR Code non activé</h1>
           <p className="text-slate-500 mb-6">Ce passeport véhicule n'a pas encore été activé par un garage partenaire.</p>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-3 bg-orange-500 text-white rounded-xl font-medium"
-          >
-            Retour à l'accueil
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push('/')}
+              className="w-full px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+            >
+              Retour à l'accueil
+            </button>
+            <button
+              onClick={() => router.push(`/garage/activate?code=${reference}`)}
+              className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+            >
+              Activer ce QR Code (Garage)
+            </button>
+          </div>
         </div>
       </main>
     );

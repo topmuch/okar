@@ -1,25 +1,47 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   QrCode,
-  Plus,
-  Search,
   Package,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   Building2,
-  Calendar,
-  ChevronRight,
-  Loader2,
+  Search,
+  Eye,
   Download,
-  Trash2,
-  Send,
-  Eye
+  CheckCircle,
+  Clock,
+  XCircle,
+  RefreshCw,
+  User,
+  ShoppingCart
 } from 'lucide-react';
-import { printQRCodes } from '@/lib/qr-pdf';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
+// Types
+interface Garage {
+  id: string;
+  name: string;
+  slug: string;
+  isCertified: boolean;
+  active: boolean;
+}
+
+interface QRCodeStats {
+  total: number;
+  stock: number;
+  assigned: number;
+  active: number;
+  revoked: number;
+  garageTotal: number;
+  garageActive: number;
+  individualTotal: number;
+  individualActive: number;
+}
 
 interface QRLot {
   id: string;
@@ -27,65 +49,62 @@ interface QRLot {
   count: number;
   status: string;
   createdAt: string;
-  assignedAt: string | null;
-  notes: string | null;
-  garage: {
-    id: string;
-    name: string;
-    isCertified: boolean;
-  } | null;
-  stats: {
-    total: number;
-    activated: number;
-    available: number;
-  };
+  garageId: string | null;
+  garageName: string | null;
+  generatedCount: number;
+  activatedCount: number;
+  stockCount: number;
+  utilizationRate: number;
 }
 
-interface Garage {
-  id: string;
-  name: string;
-  isCertified: boolean;
-}
-
-const statusConfig: Record<string, { label: string; className: string; icon: typeof Clock }> = {
-  CREATED: { label: 'Créé', className: 'bg-blue-100 text-blue-700', icon: Clock },
-  ASSIGNED: { label: 'Assigné', className: 'bg-purple-100 text-purple-700', icon: Send },
-  PARTIALLY_USED: { label: 'Partiellement utilisé', className: 'bg-yellow-100 text-yellow-700', icon: Clock },
-  FULLY_USED: { label: 'Épuisé', className: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
-};
-
-export default function AdminQRLotsPage() {
-  const [lots, setLots] = useState<QRLot[]>([]);
-  const [garages, setGarages] = useState<Garage[]>([]);
+export default function QRCodesManagementPage() {
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [garages, setGarages] = useState<Garage[]>([]);
+  const [lots, setLots] = useState<QRLot[]>([]);
+  const [stats, setStats] = useState<QRCodeStats>({
+    total: 0,
+    stock: 0,
+    assigned: 0,
+    active: 0,
+    revoked: 0,
+    garageTotal: 0,
+    garageActive: 0,
+    individualTotal: 0,
+    individualActive: 0,
+  });
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedLot, setSelectedLot] = useState<QRLot | null>(null);
-  
-  // Form state
-  const [newLotCount, setNewLotCount] = useState(50);
-  const [newLotNotes, setNewLotNotes] = useState('');
-  const [newLotGarage, setNewLotGarage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'garage' | 'individual'>('garage');
 
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      // Fetch lots
-      const lotsRes = await fetch('/api/qr-lots');
-      const lotsData = await lotsRes.json();
-      setLots(lotsData.lots || []);
-
       // Fetch garages
-      const garagesRes = await fetch('/api/admin/garages?certified=true');
+      const garagesRes = await fetch('/api/admin/garages');
       const garagesData = await garagesRes.json();
       setGarages(garagesData.garages || []);
 
+      // Fetch QR lots
+      const lotsRes = await fetch('/api/admin/qr-lots/generate');
+      const lotsData = await lotsRes.json();
+      setLots(lotsData.lots || []);
+
+      // Fetch stats
+      const statsRes = await fetch('/api/admin/qrcodes/stats');
+      const statsData = await statsRes.json();
+      if (statsData.stats) {
+        setStats({
+          ...statsData.stats,
+          garageTotal: statsData.garageTotal || 0,
+          garageActive: statsData.garageActive || 0,
+          individualTotal: statsData.individualTotal || 0,
+          individualActive: statsData.individualActive || 0,
+        });
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -93,503 +112,463 @@ export default function AdminQRLotsPage() {
     }
   };
 
-  const handleCreateLot = async () => {
-    if (newLotCount < 1 || newLotCount > 1000) {
-      alert('Le nombre de QR doit être entre 1 et 1000');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const response = await fetch('/api/qr-lots', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          count: newLotCount,
-          notes: newLotNotes,
-          assignToGarageId: newLotGarage || null,
-          createdBy: 'admin' // In production, get from auth
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setShowCreateModal(false);
-        setNewLotCount(50);
-        setNewLotNotes('');
-        setNewLotGarage('');
-        fetchData();
-      } else {
-        alert(data.error || 'Erreur lors de la création');
-      }
-
-    } catch (error) {
-      console.error('Error creating lot:', error);
-      alert('Erreur lors de la création du lot');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleAssignLot = async () => {
-    if (!selectedLot || !newLotGarage) {
-      alert('Veuillez sélectionner un garage');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const response = await fetch('/api/qr-lots', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lotId: selectedLot.id,
-          garageId: newLotGarage,
-          action: 'assign'
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setShowAssignModal(false);
-        setSelectedLot(null);
-        setNewLotGarage('');
-        fetchData();
-      } else {
-        alert(data.error || 'Erreur lors de l\'assignation');
-      }
-
-    } catch (error) {
-      console.error('Error assigning lot:', error);
-      alert('Erreur lors de l\'assignation');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePrintLot = async (lot: QRLot) => {
-    // Fetch QR codes for this lot
-    try {
-      const response = await fetch(`/api/qr-lots/${lot.id}/codes`);
-      const data = await response.json();
-
-      if (data.codes) {
-        printQRCodes(
-          data.codes.map((code: any) => ({
-            reference: code.reference,
-            securityHash: code.securityHash,
-            lotPrefix: lot.prefix
-          })),
-          {
-            title: 'Lot de QR Codes AutoPass',
-            lotPrefix: lot.prefix,
-            count: lot.count,
-            generatedBy: 'SuperAdmin',
-            generatedAt: new Date(),
-            notes: lot.notes || undefined
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Error printing lot:', error);
-      alert('Erreur lors de l\'impression');
-    }
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
+  // Filter lots based on active tab
   const filteredLots = lots.filter(lot => {
+    // Tab filter
+    if (activeTab === 'garage' && !lot.garageId) return false;
+    if (activeTab === 'individual' && lot.garageId) return false;
+
+    // Status filter
     if (statusFilter !== 'all' && lot.status !== statusFilter) return false;
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
-      return (
-        lot.prefix.toLowerCase().includes(searchLower) ||
-        lot.garage?.name.toLowerCase().includes(searchLower)
-      );
-    }
+
     return true;
   });
 
+  // Group lots by garage (for garage tab)
+  const lotsByGarage = filteredLots.reduce((acc, lot) => {
+    const key = lot.garageId || 'unassigned';
+    if (!acc[key]) {
+      acc[key] = {
+        garageName: lot.garageName || 'Non assigné',
+        garageId: lot.garageId,
+        lots: [],
+        totalQR: 0,
+        totalActivated: 0,
+      };
+    }
+    acc[key].lots.push(lot);
+    acc[key].totalQR += lot.count;
+    acc[key].totalActivated += lot.activatedCount;
+    return acc;
+  }, {} as Record<string, { garageName: string; garageId: string | null; lots: QRLot[]; totalQR: number; totalActivated: number }>);
+
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { className: string; label: string }> = {
+      CREATED: { className: 'bg-slate-500', label: 'Créé' },
+      ASSIGNED: { className: 'bg-blue-500', label: 'Assigné' },
+      ACTIVE: { className: 'bg-emerald-500', label: 'Actif' },
+    };
+    const cfg = config[status] || { className: 'bg-slate-500', label: status };
+    return (
+      <Badge className={cfg.className}>
+        {cfg.label}
+      </Badge>
+    );
+  };
+
+  const exportToCSV = () => {
+    const csvContent = [
+      'Lot ID,Préfixe,Nombre,Garage,Statut,Activés,En stock,Taux,Date',
+      ...filteredLots.map(lot =>
+        `${lot.id},${lot.prefix},${lot.count},"${lot.garageName || 'Particulier'}",${lot.status},${lot.activatedCount},${lot.stockCount},${lot.utilizationRate}%,${new Date(lot.createdAt).toLocaleDateString('fr-FR')}`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `qr-codes-${activeTab}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Calculate tab stats
+  const garageStats = {
+    total: lots.filter(l => l.garageId).reduce((sum, l) => sum + l.count, 0),
+    activated: lots.filter(l => l.garageId).reduce((sum, l) => sum + l.activatedCount, 0),
+    lots: lots.filter(l => l.garageId).length,
+  };
+
+  const individualStats = {
+    total: lots.filter(l => !l.garageId).reduce((sum, l) => sum + l.count, 0),
+    activated: lots.filter(l => !l.garageId).reduce((sum, l) => sum + l.activatedCount, 0),
+    lots: lots.filter(l => !l.garageId).length,
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-            <QrCode className="w-8 h-8 text-orange-500" />
-            Gestion des Lots QR
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
+            Gestion des QR Codes
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Créez et assignez des lots de QR codes aux garages certifiés
+            {stats.total} QR codes • {stats.active} activés
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-orange-500/20"
-        >
-          <Plus className="w-5 h-5" />
-          Nouveau Lot
-        </button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchData} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Actualiser
+          </Button>
+          <Link href="/admin/generer">
+            <Button className="gap-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600">
+              <QrCode className="w-4 h-4" />
+              Générer QR
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/10 rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 text-blue-500" />
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <Card className="bg-slate-900 text-white">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-slate-400" />
+              <div>
+                <p className="text-xl font-bold">{stats.total}</p>
+                <p className="text-xs text-slate-400">Total</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-white">{lots.length}</p>
-              <p className="text-sm text-slate-500">Lots créés</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-500 text-white">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-white/70" />
+              <div>
+                <p className="text-xl font-bold">{stats.stock}</p>
+                <p className="text-xs text-white/80">En stock</p>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-500 text-white">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-white/70" />
+              <div>
+                <p className="text-xl font-bold">{stats.assigned}</p>
+                <p className="text-xs text-white/80">Assignés</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-emerald-500 text-white">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-white/70" />
+              <div>
+                <p className="text-xl font-bold">{stats.active}</p>
+                <p className="text-xs text-white/80">Activés</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-500 text-white">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-white/70" />
+              <div>
+                <p className="text-xl font-bold">{stats.revoked}</p>
+                <p className="text-xs text-white/80">Révoqués</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab('garage')}
+          className={cn(
+            "flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all",
+            activeTab === 'garage'
+              ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg"
+              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+          )}
+        >
+          <Building2 className="w-5 h-5" />
+          <div className="text-left">
+            <p className="font-semibold">QR Codes Garages</p>
+            <p className="text-xs opacity-80">{garageStats.lots} lots • {garageStats.total} QR</p>
           </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-500/10 rounded-lg flex items-center justify-center">
-              <Send className="w-5 h-5 text-purple-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                {lots.filter(l => l.status === 'ASSIGNED' || l.status === 'PARTIALLY_USED').length}
-              </p>
-              <p className="text-sm text-slate-500">Assignés</p>
-            </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('individual')}
+          className={cn(
+            "flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all",
+            activeTab === 'individual'
+              ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+          )}
+        >
+          <ShoppingCart className="w-5 h-5" />
+          <div className="text-left">
+            <p className="font-semibold">QR Codes Particuliers</p>
+            <p className="text-xs opacity-80">{individualStats.lots} lots • {individualStats.total} QR</p>
           </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-500/10 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                {lots.reduce((sum, l) => sum + l.stats.activated, 0)}
-              </p>
-              <p className="text-sm text-slate-500">QR Activés</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-500/10 rounded-lg flex items-center justify-center">
-              <QrCode className="w-5 h-5 text-orange-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                {lots.reduce((sum, l) => sum + l.stats.available, 0)}
-              </p>
-              <p className="text-sm text-slate-500">QR Disponibles</p>
-            </div>
-          </div>
-        </div>
+        </button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Rechercher par préfixe, garage..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-12 pr-4 text-slate-700 dark:text-slate-200 placeholder-slate-400"
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Rechercher par lot ID ou garage..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-200"
-        >
-          <option value="all">Tous les statuts</option>
-          <option value="CREATED">Créés</option>
-          <option value="ASSIGNED">Assignés</option>
-          <option value="PARTIALLY_USED">Partiellement utilisés</option>
-          <option value="FULLY_USED">Épuisés</option>
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="CREATED">Créé</option>
+            <option value="ASSIGNED">Assigné</option>
+            <option value="ACTIVE">Actif</option>
+          </select>
+          <Button variant="outline" onClick={exportToCSV} className="gap-2">
+            <Download className="w-4 h-4" />
+            Exporter
+          </Button>
+        </div>
       </div>
 
-      {/* Lots Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto" />
-            <p className="text-slate-500 mt-4">Chargement des lots...</p>
-          </div>
-        ) : filteredLots.length === 0 ? (
-          <div className="p-12 text-center">
-            <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500">Aucun lot trouvé</p>
-          </div>
+      {/* Content based on tab */}
+      {loading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : activeTab === 'garage' ? (
+        // GARAGE TAB
+        Object.keys(lotsByGarage).length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
+                Aucun QR Code garage
+              </h3>
+              <p className="text-slate-500 mb-4">
+                Générez des QR codes pour vos garages partenaires.
+              </p>
+              <Link href="/admin/generer">
+                <Button className="gap-2 bg-gradient-to-r from-orange-500 to-pink-500">
+                  <QrCode className="w-4 h-4" />
+                  Générer des QR Codes
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-left px-6 py-4 text-slate-500 font-medium text-sm">Lot</th>
-                  <th className="text-left px-6 py-4 text-slate-500 font-medium text-sm">QR Codes</th>
-                  <th className="text-left px-6 py-4 text-slate-500 font-medium text-sm">Garage</th>
-                  <th className="text-left px-6 py-4 text-slate-500 font-medium text-sm">Statut</th>
-                  <th className="text-left px-6 py-4 text-slate-500 font-medium text-sm">Date</th>
-                  <th className="text-left px-6 py-4 text-slate-500 font-medium text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLots.map((lot) => {
-                  const status = statusConfig[lot.status] || statusConfig.CREATED;
-                  const StatusIcon = status.icon;
-                  
-                  return (
-                    <tr key={lot.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-orange-100 dark:bg-orange-500/10 rounded-lg flex items-center justify-center">
-                            <QrCode className="w-5 h-5 text-orange-500" />
-                          </div>
-                          <div>
-                            <p className="font-mono font-bold text-slate-800 dark:text-white">{lot.prefix}</p>
-                            {lot.notes && (
-                              <p className="text-xs text-slate-400 truncate max-w-[200px]">{lot.notes}</p>
-                            )}
-                          </div>
-                        </div>
+          <div className="space-y-4">
+            {Object.entries(lotsByGarage).map(([key, group]) => (
+              <Card key={key} className="overflow-hidden">
+                {/* Garage Header */}
+                <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                        {group.garageName?.charAt(0) || 'G'}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-lg">{group.garageName}</h3>
+                        <p className="text-white/70 text-sm">
+                          {group.lots.length} lot(s) • {group.totalQR} QR codes • {group.totalActivated} activés
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-white">
+                        {group.totalQR > 0 ? Math.round((group.totalActivated / group.totalQR) * 100) : 0}%
+                      </p>
+                      <p className="text-white/70 text-xs">Activation</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lots Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 dark:bg-slate-800">
+                      <tr>
+                        <th className="text-left p-3 text-sm font-medium text-slate-500">Lot ID</th>
+                        <th className="text-left p-3 text-sm font-medium text-slate-500">Préfixe</th>
+                        <th className="text-center p-3 text-sm font-medium text-slate-500">QR</th>
+                        <th className="text-center p-3 text-sm font-medium text-slate-500">Activés</th>
+                        <th className="text-center p-3 text-sm font-medium text-slate-500">Stock</th>
+                        <th className="text-center p-3 text-sm font-medium text-slate-500">Taux</th>
+                        <th className="text-center p-3 text-sm font-medium text-slate-500">Statut</th>
+                        <th className="text-center p-3 text-sm font-medium text-slate-500">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {group.lots.map((lot) => (
+                        <tr key={lot.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td className="p-3">
+                            <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                              {lot.id}
+                            </code>
+                          </td>
+                          <td className="p-3 font-medium">{lot.prefix}</td>
+                          <td className="p-3 text-center font-semibold">{lot.count}</td>
+                          <td className="p-3 text-center text-emerald-600 font-medium">{lot.activatedCount}</td>
+                          <td className="p-3 text-center text-amber-600 font-medium">{lot.stockCount}</td>
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-16 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-emerald-500 to-green-500"
+                                  style={{ width: `${lot.utilizationRate}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-slate-500">{lot.utilizationRate}%</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">{getStatusBadge(lot.status)}</td>
+                          <td className="p-3 text-center text-sm text-slate-500">
+                            {new Date(lot.createdAt).toLocaleDateString('fr-FR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
+      ) : (
+        // INDIVIDUAL TAB
+        filteredLots.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
+                Aucun QR Code particulier
+              </h3>
+              <p className="text-slate-500 mb-4">
+                Générez des QR codes pour la vente aux particuliers.
+              </p>
+              <Link href="/admin/generer">
+                <Button className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500">
+                  <QrCode className="w-4 h-4" />
+                  Générer des QR Codes
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-lg">QR Codes Particuliers</h3>
+                    <p className="text-white/80 text-sm">
+                      {filteredLots.length} lot(s) • {filteredLots.reduce((s, l) => s + l.count, 0)} QR • Vente directe
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-white">
+                    {filteredLots.reduce((s, l) => s + l.activatedCount, 0)}
+                  </p>
+                  <p className="text-white/80 text-xs">Activés</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 dark:bg-slate-800">
+                  <tr>
+                    <th className="text-left p-3 text-sm font-medium text-slate-500">Lot ID</th>
+                    <th className="text-left p-3 text-sm font-medium text-slate-500">Préfixe</th>
+                    <th className="text-center p-3 text-sm font-medium text-slate-500">QR</th>
+                    <th className="text-center p-3 text-sm font-medium text-slate-500">Activés</th>
+                    <th className="text-center p-3 text-sm font-medium text-slate-500">Disponibles</th>
+                    <th className="text-center p-3 text-sm font-medium text-slate-500">Taux</th>
+                    <th className="text-center p-3 text-sm font-medium text-slate-500">Statut</th>
+                    <th className="text-center p-3 text-sm font-medium text-slate-500">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredLots.map((lot) => (
+                    <tr key={lot.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td className="p-3">
+                        <code className="text-xs bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">
+                          {lot.id}
+                        </code>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-slate-800 dark:text-white">{lot.stats.total}</span>
-                            <span className="text-slate-400">total</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs">
-                            <span className="text-emerald-600">{lot.stats.activated} activés</span>
-                            <span className="text-orange-600">{lot.stats.available} dispo</span>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="mt-2 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden w-24">
-                            <div 
-                              className="h-full bg-emerald-500 rounded-full transition-all"
-                              style={{ width: `${(lot.stats.activated / lot.stats.total) * 100}%` }}
+                      <td className="p-3 font-medium">{lot.prefix}</td>
+                      <td className="p-3 text-center font-semibold">{lot.count}</td>
+                      <td className="p-3 text-center text-emerald-600 font-medium">{lot.activatedCount}</td>
+                      <td className="p-3 text-center">
+                        <span className="text-purple-600 font-medium">{lot.stockCount}</span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-16 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                              style={{ width: `${lot.utilizationRate}%` }}
                             />
                           </div>
+                          <span className="text-xs text-slate-500">{lot.utilizationRate}%</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        {lot.garage ? (
-                          <div className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-slate-400" />
-                            <div>
-                              <p className="text-slate-800 dark:text-white font-medium">{lot.garage.name}</p>
-                              {lot.garage.isCertified && (
-                                <span className="text-xs text-emerald-600">Certifié</span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">Non assigné</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${status.className}`}>
-                          <StatusIcon className="w-3.5 h-3.5" />
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm">
-                          <p className="text-slate-800 dark:text-white">{formatDate(lot.createdAt)}</p>
-                          {lot.assignedAt && (
-                            <p className="text-xs text-slate-400">Assigné: {formatDate(lot.assignedAt)}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {!lot.garage && (
-                            <button
-                              onClick={() => {
-                                setSelectedLot(lot);
-                                setNewLotGarage('');
-                                setShowAssignModal(true);
-                              }}
-                              className="p-2 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-500/10 text-purple-500 transition-colors"
-                              title="Assigner à un garage"
-                            >
-                              <Send className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handlePrintLot(lot)}
-                            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-                            title="Imprimer les QR codes"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <Link
-                            href={`/admin/qrcodes/${lot.id}`}
-                            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-                            title="Voir détails"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                        </div>
+                      <td className="p-3 text-center">{getStatusBadge(lot.status)}</td>
+                      <td className="p-3 text-center text-sm text-slate-500">
+                        {new Date(lot.createdAt).toLocaleDateString('fr-FR')}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Create Lot Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full shadow-2xl">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Plus className="w-5 h-5 text-orange-500" />
-                Créer un nouveau lot
-              </h3>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Nombre de QR codes *
-                </label>
-                <input
-                  type="number"
-                  value={newLotCount}
-                  onChange={(e) => setNewLotCount(parseInt(e.target.value) || 0)}
-                  min={1}
-                  max={1000}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200"
-                />
-                <p className="text-xs text-slate-400 mt-1">Entre 1 et 1000 QR codes par lot</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Assigner à un garage (optionnel)
-                </label>
-                <select
-                  value={newLotGarage}
-                  onChange={(e) => setNewLotGarage(e.target.value)}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200"
-                >
-                  <option value="">-- Non assigné --</option>
-                  {garages.filter(g => g.isCertified).map(garage => (
-                    <option key={garage.id} value={garage.id}>{garage.name}</option>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  value={newLotNotes}
-                  onChange={(e) => setNewLotNotes(e.target.value)}
-                  rows={3}
-                  placeholder="Notes internes..."
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 resize-none"
-                />
-              </div>
+                </tbody>
+              </table>
             </div>
-
-            <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex gap-3">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 py-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleCreateLot}
-                disabled={submitting}
-                className="flex-1 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Création...
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="w-5 h-5" />
-                    Créer le lot
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+          </Card>
+        )
       )}
 
-      {/* Assign Modal */}
-      {showAssignModal && selectedLot && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full shadow-2xl">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">
-                Assigner le lot {selectedLot.prefix}
-              </h3>
-              <p className="text-sm text-slate-500 mt-1">
-                {selectedLot.count} QR codes disponibles
-              </p>
-            </div>
-            
-            <div className="p-6">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Sélectionner un garage certifié *
-              </label>
-              <select
-                value={newLotGarage}
-                onChange={(e) => setNewLotGarage(e.target.value)}
-                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200"
-              >
-                <option value="">-- Choisir un garage --</option>
-                {garages.filter(g => g.isCertified).map(garage => (
-                  <option key={garage.id} value={garage.id}>{garage.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAssignModal(false);
-                  setSelectedLot(null);
-                }}
-                className="flex-1 py-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAssignLot}
-                disabled={submitting || !newLotGarage}
-                className="flex-1 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50"
-              >
-                {submitting ? 'Assignation...' : 'Assigner'}
-              </button>
-            </div>
+      {/* Info Banner */}
+      <Card className="mt-6 bg-slate-900 text-white">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            {activeTab === 'garage' ? (
+              <>
+                <Building2 className="w-5 h-5 text-orange-400 mt-0.5" />
+                <div>
+                  <p className="font-medium">QR Codes Garages</p>
+                  <p className="text-sm text-slate-400">
+                    Ces QR codes sont assignés à un garage partenaire spécifique. Seul ce garage peut les activer pour ses clients.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-5 h-5 text-purple-400 mt-0.5" />
+                <div>
+                  <p className="font-medium">QR Codes Particuliers</p>
+                  <p className="text-sm text-slate-400">
+                    Ces QR codes ne sont pas assignés. Ils peuvent être vendus directement aux particuliers et activés par n'importe quel garage certifié.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

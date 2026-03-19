@@ -8,23 +8,35 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
-  name          String?
-  phone         String?
-  password      String?
-  role          String        @default("driver")
-  garageId      String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  blogPosts     BlogPost[]
-  dailyReports  DailyReport[]
-  assignedLeads Lead[]        @relation("AssignedLeads")
-  loginLogs     LoginLog[]
-  observations  Observation[]
-  sessions      Session[]
-  garage        Garage?       @relation(fields: [garageId], references: [id], onDelete: Cascade)
-  vehicles      Vehicle[]     @relation("VehicleOwner")
+  id               String             @id @default(cuid())
+  email            String             @unique
+  name             String?
+  phone            String?
+  password         String?
+  role             String             @default("driver")
+  garageId         String?
+  emailVerified    Boolean            @default(false)
+  phoneVerified    Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  blogPosts        BlogPost[]
+  dailyReports     DailyReport[]
+  fleetAccounts    FleetAccount[]
+  fleetMemberships FleetMember[]
+  assignedLeads    Lead[]             @relation("AssignedLeads")
+  loginLogs        LoginLog[]
+  observations     Observation[]
+  reminderLogs     ReminderLog[]
+  sessions         Session[]
+  transactions     Transaction[]
+  garage           Garage?            @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  notifications    UserNotification[]
+  ownedVehicles    Vehicle[]          @relation("VehicleProprietor")
+  vehicles         Vehicle[]          @relation("VehicleOwner")
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
 }
 
 model Session {
@@ -65,20 +77,28 @@ model Garage {
   subscriptionPlan      String?             @default("basic")
   subscriptionExpiresAt DateTime?
   active                Boolean             @default(true)
+  whatsappNumber        String?
+  whatsappVerified      Boolean             @default(false)
   createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  profile               GarageProfile?
   invoices              Invoice[]
   maintenanceRecords    MaintenanceRecord[] @relation("GarageRecords")
   assignedLots          QRCodeLot[]
   qrCodes               QRCodeStock[]
+  transactions          Transaction[]
   users                 User[]
   vehicles              Vehicle[]
+
+  @@index([slug])
+  @@index([isCertified])
 }
 
 model QRCodeLot {
   id           String        @id @default(cuid())
   prefix       String
   count        Int
-  status       String        @default("CREATED")      // CREATED, ASSIGNED, EXHAUSTED, EXPIRED
+  status       String        @default("CREATED")
   assignedToId String?
   assignedAt   DateTime?
   createdBy    String?
@@ -86,109 +106,167 @@ model QRCodeLot {
   expiresAt    DateTime?
   notes        String?
   assignedTo   Garage?       @relation(fields: [assignedToId], references: [id])
-  vehicles     Vehicle[]
   qrCodes      QRCodeStock[]
+  vehicles     Vehicle[]
+
+  @@index([status])
 }
 
-// Stock individuel de QR Codes - Sécurité et traçabilité
 model QRCodeStock {
-  id                String    @id @default(cuid())
-  codeUnique        String    @unique                    // Code QR unique (UUID sécurisé)
-  shortCode         String    @unique                    // Code court pour URL (8-10 chars)
-  lotId             String
-  status            String    @default("STOCK")          // STOCK, ASSIGNED, ACTIVE, REVOKED
-  assignedGarageId  String?
-  linkedVehicleId   String?   @unique
-  activationDate    DateTime?
-  revokedAt         DateTime?
-  revokedBy         String?
-  revokeReason      String?
-  replacementForId  String?   @unique                    // Si ce QR remplace un QR révoqué
-  printedAt         DateTime?
-  printedBy         String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  lot               QRCodeLot    @relation(fields: [lotId], references: [id])
-  assignedGarage    Garage?      @relation(fields: [assignedGarageId], references: [id])
-  linkedVehicle     Vehicle?     @relation("VehicleQRCode", fields: [linkedVehicleId], references: [id])
-  replacementFor    QRCodeStock? @relation("QRReplacement", fields: [replacementForId], references: [id])
-  replacedBy        QRCodeStock? @relation("QRReplacement")
-  
+  id               String       @id @default(cuid())
+  codeUnique       String       @unique
+  shortCode        String       @unique
+  lotId            String
+  status           String       @default("STOCK")
+  assignedGarageId String?
+  linkedVehicleId  String?      @unique
+  activationDate   DateTime?
+  revokedAt        DateTime?
+  revokedBy        String?
+  revokeReason     String?
+  replacementForId String?      @unique
+  printedAt        DateTime?
+  printedBy        String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  replacementFor   QRCodeStock? @relation("QRReplacement", fields: [replacementForId], references: [id])
+  replacedBy       QRCodeStock? @relation("QRReplacement")
+  linkedVehicle    Vehicle?     @relation("VehicleQRCode", fields: [linkedVehicleId], references: [id])
+  assignedGarage   Garage?      @relation(fields: [assignedGarageId], references: [id])
+  lot              QRCodeLot    @relation(fields: [lotId], references: [id])
+
   @@index([codeUnique])
   @@index([shortCode])
   @@index([status])
-  @@index([lotId])
-  @@index([assignedGarageId])
 }
 
 model Vehicle {
-  id                 String              @id @default(cuid())
-  reference          String              @unique
-  type               String              @default("voyageur")
-  vin                String?             @unique
-  make               String?
-  model              String?
-  year               Int?
-  color              String?
-  mileage            Int?                @default(0)
-  engineType         String?             @default("essence")
-  licensePlate       String?
-  vehicleType        String?             @default("voiture")
-  ownerId            String?
-  ownerName          String?
-  ownerFirstName     String?
-  ownerLastName      String?
-  ownerPhone         String?
-  lotId              String?
-  qrStatus           String              @default("INACTIVE")
-  garageId           String?
-  status             String              @default("pending_activation")
-  lastScanDate       DateTime?
-  lastLocation       String?
-  declaredLostAt     DateTime?
-  foundAt            DateTime?
-  activatedAt        DateTime?
-  createdAt          DateTime            @default(now())
-  expiresAt          DateTime?
-  updatedAt          DateTime            @updatedAt
-  maintenanceRecords MaintenanceRecord[]
-  ownershipHistory   OwnershipHistory[]
-  garage             Garage?             @relation(fields: [garageId], references: [id])
-  lot                QRCodeLot?          @relation(fields: [lotId], references: [id])
-  owner              User?               @relation("VehicleOwner", fields: [ownerId], references: [id])
-  qrCode             QRCodeStock?        @relation("VehicleQRCode")
-  
+  id                     String              @id @default(cuid())
+  reference              String              @unique
+  type                   String              @default("voiture")
+  vin                    String?             @unique
+  make                   String?
+  model                  String?
+  year                   Int?
+  color                  String?
+  licensePlate           String?
+  engineType             String?             @default("essence")
+  engineCapacity         String?
+  fuelType               String?
+  currentMileage         Int                 @default(0)
+  mileageUpdatedAt       DateTime?
+  mainPhoto              String?
+  vtStartDate            DateTime?
+  vtEndDate              DateTime?
+  vtCenter               String?
+  vtDocumentUrl          String?
+  insuranceStartDate     DateTime?
+  insuranceEndDate       DateTime?
+  insuranceCompany       String?
+  insurancePolicyNum     String?
+  insuranceDocumentUrl   String?
+  nextMaintenanceDueKm   Int?
+  nextMaintenanceDueDate DateTime?
+  nextMaintenanceType    String?
+  lastMaintenanceKm      Int?
+  lastMaintenanceDate    DateTime?
+  lastMaintenanceType    String?
+  ownerId                String?
+  proprietorId           String?
+  ownerName              String?
+  ownerFirstName         String?
+  ownerLastName          String?
+  ownerPhone             String?
+  ownerEmail             String?
+  garageId               String?
+  lotId                  String?
+  qrStatus               String              @default("INACTIVE")
+  status                 String              @default("pending_activation")
+  lastScanDate           DateTime?
+  lastLocation           String?
+  declaredLostAt         DateTime?
+  foundAt                DateTime?
+  activatedAt            DateTime?
+  createdAt              DateTime            @default(now())
+  expiresAt              DateTime?
+  updatedAt              DateTime            @updatedAt
+  fleetVehicles          FleetVehicle[]
+  leadRequests           LeadRequest[]
+  maintenanceRecords     MaintenanceRecord[]
+  ownershipHistory       OwnershipHistory[]
+  pdfReports             PdfReport[]
+  qrCode                 QRCodeStock?        @relation("VehicleQRCode")
+  reminderLogs           ReminderLog[]
+  notifications          UserNotification[]
+  proprietor             User?               @relation("VehicleProprietor", fields: [proprietorId], references: [id])
+  owner                  User?               @relation("VehicleOwner", fields: [ownerId], references: [id])
+  lot                    QRCodeLot?          @relation(fields: [lotId], references: [id])
+  garage                 Garage?             @relation(fields: [garageId], references: [id])
+  photos                 VehiclePhoto[]
+  sale                   VehicleSale?
+
   @@index([reference])
   @@index([licensePlate])
   @@index([ownerId])
+  @@index([proprietorId])
   @@index([garageId])
+  @@index([vtEndDate])
+  @@index([insuranceEndDate])
+}
+
+model VehiclePhoto {
+  id         String   @id @default(cuid())
+  vehicleId  String
+  url        String
+  caption    String?
+  isMain     Boolean  @default(false)
+  uploadedBy String?
+  uploadedAt DateTime @default(now())
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
 }
 
 model MaintenanceRecord {
-  id                String    @id @default(cuid())
+  id                String              @id @default(cuid())
   vehicleId         String
   garageId          String?
   mechanicName      String?
+  mechanicSignature String?
+  mechanicPhone     String?
   category          String
+  subCategory       String?
   description       String?
   mileage           Int?
   partsList         String?
-  partsCost         Float?    @default(0)
-  laborCost         Float?    @default(0)
-  totalCost         Float?    @default(0)
+  partsCost         Float?              @default(0)
+  laborCost         Float?              @default(0)
+  totalCost         Float?              @default(0)
   invoicePhoto      String?
   invoiceNumber     String?
-  mechanicSignature String?
-  ownerValidation   String?   @default("PENDING")
+  workPhotos        String?
+  status            String              @default("PENDING")
+  ownerValidation   String              @default("PENDING")
+  isLocked          Boolean             @default(false)
+  serverCreatedAt   DateTime            @default(now())
+  serverValidatedAt DateTime?
+  correctionOfId    String?
+  correctionReason  String?
+  interventionDate  DateTime            @default(now())
   validationDate    DateTime?
   rejectionReason   String?
-  status            String    @default("DRAFT")
-  interventionDate  DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  garage            Garage?   @relation("GarageRecords", fields: [garageId], references: [id])
-  vehicle           Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  correctionOf      MaintenanceRecord?  @relation("RecordCorrection", fields: [correctionOfId], references: [id])
+  correctedBy       MaintenanceRecord[] @relation("RecordCorrection")
+  vehicle           Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  garage            Garage?             @relation("GarageRecords", fields: [garageId], references: [id])
+
+  @@index([vehicleId])
+  @@index([garageId])
+  @@index([status])
+  @@index([interventionDate])
+  @@index([isLocked])
 }
 
 model OwnershipHistory {
@@ -205,6 +283,49 @@ model OwnershipHistory {
   documentUrl       String?
   createdAt         DateTime @default(now())
   vehicle           Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+}
+
+model ReminderLog {
+  id              String    @id @default(cuid())
+  vehicleId       String
+  type            String
+  channel         String
+  recipient       String
+  message         String
+  status          String    @default("PENDING")
+  errorDetails    String?
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+  webhookResponse String?
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+  vehicle         Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@index([type])
+  @@index([status])
+  @@index([sentAt])
+}
+
+model UserNotification {
+  id        String    @id @default(cuid())
+  userId    String?
+  vehicleId String?
+  type      String
+  title     String
+  message   String
+  data      String?
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  vehicle   Vehicle?  @relation(fields: [vehicleId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
 }
 
 model Setting {
@@ -276,8 +397,8 @@ model Notification {
 model EmailSettings {
   id             String    @id @default(cuid())
   provider       String    @default("console")
-  fromEmail      String    @default("noreply@autopass.sn")
-  fromName       String    @default("AutoPass")
+  fromEmail      String    @default("noreply@okar.sn")
+  fromName       String    @default("OKAR")
   smtpHost       String?
   smtpPort       Int?
   smtpUser       String?
@@ -359,8 +480,8 @@ model Observation {
   date      DateTime @default(now())
   userId    String
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model DailyReport {
@@ -436,4 +557,305 @@ model BlogView {
   userAgent String?
   createdAt DateTime @default(now())
   post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id              String     @id @default(cuid())
+  userId          String?
+  garageId        String?
+  amount          Float
+  currency        String     @default("XOF")
+  provider        String
+  providerRef     String?
+  type            String
+  status          String     @default("PENDING")
+  metadata        String?
+  payerPhone      String?
+  payerName       String?
+  webhookReceived Boolean    @default(false)
+  webhookData     String?
+  promoCodeId     String?
+  promoDiscount   Float?     @default(0)
+  initiatedAt     DateTime   @default(now())
+  completedAt     DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  pdfReport       PdfReport?
+  garage          Garage?    @relation(fields: [garageId], references: [id])
+  user            User?      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([garageId])
+  @@index([type])
+  @@index([status])
+  @@index([provider])
+  @@index([providerRef])
+}
+
+model GarageProfile {
+  id                    String    @id @default(cuid())
+  garageId              String    @unique
+  subscriptionTier      String    @default("FREE")
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  subscriptionAutoRenew Boolean   @default(false)
+  profileViews          Int       @default(0)
+  qrScans               Int       @default(0)
+  contactClicks         Int       @default(0)
+  statsViews            String?
+  promoCredits          Int       @default(0)
+  promoCreditsUsed      Int       @default(0)
+  badgeVerified         Boolean   @default(false)
+  badgeRecommended      Boolean   @default(false)
+  badgeTopRated         Boolean   @default(false)
+  promoActive           Boolean   @default(false)
+  promoMessage          String?
+  promoEndDate          DateTime?
+  appointmentEnabled    Boolean   @default(false)
+  appointmentPhone      String?
+  appointmentWhatsapp   String?
+  specialties           String?
+  workingHours          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  garage                Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionTier])
+  @@index([subscriptionEndDate])
+}
+
+model VehicleSale {
+  id                 String    @id @default(cuid())
+  vehicleId          String    @unique
+  isForSale          Boolean   @default(false)
+  salePrice          Float?
+  saleCurrency       String    @default("XOF")
+  saleDescription    String?
+  contactPhone       String?
+  contactWhatsapp    String?
+  isBoosted          Boolean   @default(false)
+  boostStartDate     DateTime?
+  boostEndDate       DateTime?
+  boostType          String?
+  verificationStatus String    @default("NONE")
+  verificationDate   DateTime?
+  verificationReport String?
+  verifiedBy         String?
+  viewCount          Int       @default(0)
+  contactCount       Int       @default(0)
+  whatsappShares     Int       @default(0)
+  adContextTags      String?
+  publishedAt        DateTime?
+  soldAt             DateTime?
+  archivedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  vehicle            Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([isForSale])
+  @@index([isBoosted])
+  @@index([verificationStatus])
+}
+
+model LeadRequest {
+  id                String    @id @default(cuid())
+  vehicleId         String
+  userId            String?
+  type              String
+  status            String    @default("NEW")
+  partnerId         String?
+  partnerName       String?
+  partnerCommission Float?
+  vehicleMake       String?
+  vehicleModel      String?
+  vehicleYear       Int?
+  vehiclePlate      String?
+  ownerPhone        String?
+  ownerEmail        String?
+  ownerName         String?
+  location          String?
+  sentToPartnerAt   DateTime?
+  partnerResponseAt DateTime?
+  conversionDate    DateTime?
+  conversionValue   Float?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  vehicle           Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@index([type])
+  @@index([status])
+  @@index([partnerId])
+}
+
+model FleetAccount {
+  id                    String         @id @default(cuid())
+  companyName           String
+  companyEmail          String?
+  companyPhone          String?
+  companyAddress        String?
+  businessType          String?
+  adminUserId           String
+  subscriptionTier      String         @default("BASIC")
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  vehiclesIncluded      Int            @default(1)
+  vehiclesUsed          Int            @default(0)
+  pricePerVehicle       Float          @default(1000)
+  totalVehicles         Int            @default(0)
+  activeVehicles        Int            @default(0)
+  totalMileage          Int            @default(0)
+  pendingAlerts         Int            @default(0)
+  lastAlertDate         DateTime?
+  lastExportDate        DateTime?
+  exportFormat          String         @default("CSV")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  adminUser             User           @relation(fields: [adminUserId], references: [id])
+  members               FleetMember[]
+  vehicles              FleetVehicle[]
+
+  @@index([adminUserId])
+  @@index([subscriptionEndDate])
+}
+
+model FleetVehicle {
+  id                 String       @id @default(cuid())
+  fleetAccountId     String
+  vehicleId          String
+  assignedDriverId   String?
+  assignedDriverName String?
+  internalId         String?
+  notes              String?
+  monthlyMileage     Int          @default(0)
+  maintenanceCount   Int          @default(0)
+  active             Boolean      @default(true)
+  addedAt            DateTime     @default(now())
+  removedAt          DateTime?
+  vehicle            Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  fleetAccount       FleetAccount @relation(fields: [fleetAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([fleetAccountId, vehicleId])
+  @@index([fleetAccountId])
+  @@index([vehicleId])
+}
+
+model FleetMember {
+  id               String       @id @default(cuid())
+  fleetAccountId   String
+  userId           String
+  role             String       @default("VIEWER")
+  canExport        Boolean      @default(false)
+  canManageDrivers Boolean      @default(false)
+  invitedBy        String?
+  invitedAt        DateTime     @default(now())
+  acceptedAt       DateTime?
+  active           Boolean      @default(true)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fleetAccount     FleetAccount @relation(fields: [fleetAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([fleetAccountId, userId])
+  @@index([fleetAccountId])
+  @@index([userId])
+}
+
+model AdCampaign {
+  id                String                 @id @default(cuid())
+  name              String
+  advertiserName    String
+  advertiserEmail   String?
+  advertiserPhone   String?
+  targetCategory    String?
+  targetLocation    String?
+  targetVehicleType String?
+  creativeType      String                 @default("IMAGE")
+  creativeUrl       String?
+  creativeAlt       String?
+  headline          String?
+  description       String?
+  ctaText           String?
+  ctaUrl            String?
+  pricingModel      String                 @default("CPM")
+  budgetTotal       Float
+  budgetSpent       Float                  @default(0)
+  costPerUnit       Float                  @default(0)
+  impressions       Int                    @default(0)
+  clicks            Int                    @default(0)
+  conversions       Int                    @default(0)
+  ctr               Float                  @default(0)
+  startDate         DateTime
+  endDate           DateTime?
+  status            String                 @default("DRAFT")
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  adImpressions     AdCampaignImpression[]
+
+  @@index([targetCategory])
+  @@index([targetLocation])
+  @@index([status])
+}
+
+model AdCampaignImpression {
+  id         String     @id @default(cuid())
+  campaignId String
+  vehicleId  String?
+  userId     String?
+  action     String
+  ipAddress  String?
+  userAgent  String?
+  referrer   String?
+  createdAt  DateTime   @default(now())
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([vehicleId])
+  @@index([action])
+}
+
+model PromoCode {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  description   String?
+  discountType  String
+  discountValue Float
+  maxUses       Int?
+  usesCount     Int      @default(0)
+  applicableTo  String
+  validFrom     DateTime
+  validUntil    DateTime
+  isActive      Boolean  @default(true)
+  minAmount     Float?
+  maxDiscount   Float?
+  firstTimeOnly Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model PdfReport {
+  id               String       @id @default(cuid())
+  vehicleId        String
+  transactionId    String?      @unique
+  reportType       String
+  includePhotos    Boolean      @default(true)
+  includeCharts    Boolean      @default(true)
+  fileName         String
+  fileUrl          String
+  fileSize         Int?
+  certifiedAt      DateTime?
+  certifiedBy      String?
+  verificationCode String?      @unique
+  accessCount      Int          @default(0)
+  lastAccessedAt   DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime     @default(now())
+  transaction      Transaction? @relation(fields: [transactionId], references: [id])
+  vehicle          Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@index([verificationCode])
 }

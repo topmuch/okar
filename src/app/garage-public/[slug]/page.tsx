@@ -21,7 +21,6 @@ interface VehicleRow {
   ownerFirstName: string | null;
   ownerLastName: string | null;
   ownerPhone: string | null;
-  vehicleType: string;
   status: string;
   createdAt: string;
 }
@@ -89,7 +88,7 @@ export default async function PublicGaragePage({ params }: PageProps) {
           SELECT
             id, reference, type, lotId, garageId,
             ownerFirstName, ownerLastName, ownerPhone,
-            vehicleType, status, createdAt
+            status, createdAt
           FROM Vehicle
           WHERE garageId = ${garage.id}
             AND status IN ('active', 'scanned', 'found')
@@ -282,7 +281,7 @@ export default async function PublicGaragePage({ params }: PageProps) {
                         {vehicle.status === 'active' ? 'Actif' : vehicle.status === 'found' ? 'Retrouvé' : 'Scanné'}
                       </span>
                       <span className="text-sm text-slate-400 dark:text-slate-500 hidden sm:block">
-                        {vehicle.vehicleType === 'moto' ? 'Moto' : 'Voiture'}
+                        {vehicle.type === 'moto' ? 'Moto' : vehicle.type === 'baggage' ? 'Baggage' : 'Voiture'}
                       </span>
                     </div>
                   </div>

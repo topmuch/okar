@@ -1,396 +1,474 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Button } from "@/components/ui/button";
-import {
-  QrCode,
-  Shield,
-  CheckCircle,
-  Smartphone,
-  Car,
-  Wrench,
-  ArrowRight,
-  Menu,
-  X,
-  Star,
-  Sparkles,
-  ChevronRight,
+import { Button } from '@/components/ui/button';
+import { 
+  Shield, 
+  Car, 
+  Wrench, 
+  Handshake, 
+  QrCode, 
+  ChevronRight, 
   Play,
-  Zap,
-  Award,
+  Smartphone,
+  CheckCircle2,
+  Star,
   Users,
-  Clock,
-  MessageCircle
-} from "lucide-react";
+  Building2,
+  Sparkles,
+  Menu,
+  X
+} from 'lucide-react';
 
-// ========================================
-// PREMIUM ANIMATED BACKGROUND COMPONENT
-// ========================================
-function AnimatedBackground() {
-  return (
-    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-      {/* Gradient Orbs */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-br from-orange-200/40 via-pink-200/30 to-transparent rounded-full blur-3xl animate-blob" />
-      <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-pink-200/40 via-orange-100/30 to-transparent rounded-full blur-3xl animate-blob animation-delay-2000" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-yellow-100/40 via-orange-100/30 to-transparent rounded-full blur-3xl animate-blob animation-delay-4000" />
-      
-      {/* Floating Particles */}
-      <div className="absolute inset-0">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 bg-gradient-to-r from-orange-400 to-pink-400 rounded-full opacity-20 animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`
-            }}
-          />
-        ))}
-      </div>
-      
-      {/* Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-50" />
-    </div>
-  );
-}
-
-// ========================================
-// PREMIUM NAVIGATION
-// ========================================
+// ============================================
+// NAVIGATION - Fixed Header
+// ============================================
 function Navigation() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const navLinks = [
+    { href: '#confiance', label: 'Pourquoi OKAR' },
+    { href: '#demo', label: 'Comment ça marche' },
+    { href: '#qui', label: 'Pour qui' },
+    { href: '/devenir-partenaire', label: 'Devenir Partenaire' },
+  ];
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-      scrolled 
-        ? 'bg-white/80 backdrop-blur-xl shadow-lg shadow-gray-200/50 border-b border-gray-100' 
-        : 'bg-transparent'
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-12 h-12">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-pink-500 to-orange-400 rounded-xl rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-80" />
-              <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <QrCode className="w-7 h-7 text-transparent bg-gradient-to-br from-orange-500 to-pink-500 bg-clip-text" style={{stroke: 'url(#gradient)'}} />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f97316" />
-                      <stop offset="100%" stopColor="#ec4899" />
-                    </linearGradient>
-                  </defs>
-                </svg>
+    <>
+      <motion.nav
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-black/80 backdrop-blur-xl border-b border-white/10' 
+            : 'bg-transparent'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-fuchsia-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <QrCode className="w-6 h-6 text-white" />
               </div>
+              <span className="text-2xl font-black text-white">OKAR</span>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-8">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-white/70 hover:text-white transition-colors font-medium"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
-            <span className="text-2xl font-black bg-gradient-to-r from-orange-500 via-pink-500 to-orange-400 bg-clip-text text-transparent">
-              OKAR
-            </span>
-          </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-8">
-            <a href="#solutions" className="text-gray-600 hover:text-orange-500 transition-colors font-medium">Solutions</a>
-            <a href="#comment" className="text-gray-600 hover:text-orange-500 transition-colors font-medium">Comment ça marche</a>
-            <a href="#tarifs" className="text-gray-600 hover:text-orange-500 transition-colors font-medium">Tarifs</a>
-            <Link href="/contact" className="text-gray-600 hover:text-orange-500 transition-colors font-medium">Contact</Link>
+            {/* CTA Buttons */}
+            <div className="hidden md:flex items-center gap-4">
+              <Link href="/login">
+                <button className="px-4 py-2 text-white/80 hover:text-white transition-colors font-medium">
+                  Connexion
+                </button>
+              </Link>
+              <Link href="/inscrire">
+                <button className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-fuchsia-500 rounded-full text-white font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition-all">
+                  S&apos;inscrire
+                </button>
+              </Link>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden text-white p-2"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
-
-          {/* CTA Buttons */}
-          <div className="hidden lg:flex items-center gap-4">
-            <Link href="/garage/connexion">
-              <Button variant="ghost" className="text-gray-600 hover:text-orange-500 hover:bg-orange-50 font-medium">
-                <Wrench className="w-4 h-4 mr-2" />
-                Espace Garage
-              </Button>
-            </Link>
-            <Link href="/devenir-partenaire">
-              <Button className="bg-gradient-to-r from-orange-500 via-pink-500 to-orange-400 hover:from-orange-600 hover:via-pink-600 hover:to-orange-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/30 transition-all hover:-translate-y-0.5">
-                Devenir Partenaire
-                <Sparkles className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X className="w-6 h-6 text-gray-700" /> : <Menu className="w-6 h-6 text-gray-700" />}
-          </button>
         </div>
+      </motion.nav>
 
-        {/* Mobile Menu */}
-        {isOpen && (
-          <div className="lg:hidden py-6 border-t border-gray-100 bg-white/95 backdrop-blur-xl rounded-b-3xl">
-            <div className="flex flex-col gap-4">
-              <a href="#solutions" className="text-gray-700 hover:text-orange-500 font-medium py-2" onClick={() => setIsOpen(false)}>Solutions</a>
-              <a href="#comment" className="text-gray-700 hover:text-orange-500 font-medium py-2" onClick={() => setIsOpen(false)}>Comment ça marche</a>
-              <a href="#tarifs" className="text-gray-700 hover:text-orange-500 font-medium py-2" onClick={() => setIsOpen(false)}>Tarifs</a>
-              <Link href="/contact" className="text-gray-700 hover:text-orange-500 font-medium py-2" onClick={() => setIsOpen(false)}>Contact</Link>
-              <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
-                <Link href="/garage/connexion" onClick={() => setIsOpen(false)}>
-                  <Button variant="outline" className="w-full font-medium">Espace Garage</Button>
-                </Link>
-                <Link href="/devenir-partenaire" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold">Devenir Partenaire</Button>
-                </Link>
-              </div>
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed inset-0 z-40 bg-black/95 backdrop-blur-xl md:hidden pt-24"
+        >
+          <div className="flex flex-col items-center gap-6 p-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-xl text-white/80 hover:text-white transition-colors font-medium"
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="flex flex-col gap-4 mt-8 w-full max-w-xs">
+              <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                <button className="w-full px-6 py-3 border border-white/30 rounded-full text-white font-semibold">
+                  Connexion
+                </button>
+              </Link>
+              <Link href="/inscrire" onClick={() => setIsMobileMenuOpen(false)}>
+                <button className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-fuchsia-500 rounded-full text-white font-semibold">
+                  S&apos;inscrire
+                </button>
+              </Link>
             </div>
           </div>
-        )}
-      </div>
-    </nav>
+        </motion.div>
+      )}
+    </>
   );
 }
 
-// ========================================
-// HERO SECTION - THE WOW EFFECT
-// ========================================
+// ============================================
+// HERO SECTION - Cinematic Experience
+// ============================================
 function HeroSection() {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const heroRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (heroRef.current) {
-        const rect = heroRef.current.getBoundingClientRect();
-        setMousePosition({
-          x: (e.clientX - rect.left) / rect.width,
-          y: (e.clientY - rect.top) / rect.height
-        });
-      }
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"]
+  });
+  
+  const y = useTransform(scrollYProgress, [0, 1], [0, 300]);
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
-    <section ref={heroRef} className="min-h-screen flex items-center pt-20 pb-10 px-4 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full relative z-10">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          {/* Left Content */}
-          <div className="text-center lg:text-left order-2 lg:order-1">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 mb-6 animate-fade-in-up">
-              <span className="px-4 py-2 bg-gradient-to-r from-orange-100 to-pink-100 border border-orange-200 text-orange-600 text-sm rounded-full font-semibold shadow-sm">
-                🚗 Le passeport numérique automobile du Sénégal
-              </span>
-            </div>
+    <section ref={ref} className="relative min-h-screen overflow-hidden bg-black">
+      {/* Video Background with Overlay */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/10 via-transparent to-fuchsia-600/10 z-10" />
+        {/* Video placeholder - replace with actual video */}
+        <div className="absolute inset-0 bg-[url('/hero-car.jpg')] bg-cover bg-center bg-no-repeat" />
+        {/* Animated particles */}
+        <div className="absolute inset-0 z-5">
+          {[...Array(30)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-orange-400/40 rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+              animate={{
+                y: [-20, 20],
+                opacity: [0.2, 0.8, 0.2],
+                scale: [1, 1.5, 1],
+              }}
+              transition={{
+                duration: 3 + Math.random() * 2,
+                repeat: Infinity,
+                delay: Math.random() * 2,
+              }}
+            />
+          ))}
+        </div>
+      </div>
 
-            {/* Title */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-gray-900 mb-6 leading-tight animate-fade-in-up animation-delay-100">
-              <span className="block">L&apos;Histoire Réelle</span>
-              <span className="block bg-gradient-to-r from-orange-500 via-pink-500 to-orange-400 bg-clip-text text-transparent">
-                de Votre Voiture.
-              </span>
-            </h1>
+      {/* Main Content - Split Layout */}
+      <div className="relative z-20 min-h-screen flex items-center pt-20">
+        <div className="max-w-7xl mx-auto px-6 w-full">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left Side - Text Content */}
+            <motion.div
+              style={{ opacity }}
+              className="text-center lg:text-left"
+            >
+              {/* Title */}
+              <motion.h1
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.3 }}
+                className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-white leading-tight tracking-tight"
+              >
+                <span className="bg-gradient-to-r from-orange-400 via-fuchsia-400 to-orange-400 bg-clip-text text-transparent">
+                  OKAR.
+                </span>
+                <br />
+                <span className="text-white/90">La Mémoire de</span>
+                <br />
+                <span className="text-white/90">Votre Automobile.</span>
+              </motion.h1>
 
-            {/* Subtitle */}
-            <p className="text-gray-600 text-lg sm:text-xl mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed animate-fade-in-up animation-delay-200">
-              Le premier passeport numérique certifié par les garages. 
-              <span className="font-semibold text-gray-800"> Transparence totale, valeur garantie.</span>
-            </p>
+              {/* Subtitle */}
+              <motion.p
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.5 }}
+                className="mt-6 text-lg md:text-xl text-white/70 max-w-xl mx-auto lg:mx-0 font-light"
+              >
+                Le premier carnet d&apos;entretien immuable, certifié par les garages 
+                et protégé par la blockchain de la confiance.
+              </motion.p>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up animation-delay-300">
-              <Link href="/scan/demo">
-                <Button className="group bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 hover:from-yellow-500 hover:via-yellow-400 hover:to-yellow-500 text-gray-900 px-8 py-7 rounded-2xl font-bold text-lg shadow-xl shadow-yellow-500/30 hover:shadow-2xl hover:shadow-yellow-500/40 transition-all hover:-translate-y-1">
-                  <QrCode className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-                  Scanner un Véhicule
-                </Button>
-              </Link>
-              <Link href="/devenir-partenaire">
-                <Button className="group bg-white hover:bg-gradient-to-r hover:from-orange-500 hover:to-pink-500 text-gray-700 hover:text-white px-8 py-7 rounded-2xl font-bold text-lg border-2 border-gray-200 hover:border-transparent shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
-                  Devenir Garage Partenaire
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
+              {/* CTAs */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.7 }}
+                className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+              >
+                {/* Primary CTA */}
+                <Link href="/scan">
+                  <button className="group relative px-8 py-4 rounded-full overflow-hidden w-full sm:w-auto">
+                    {/* Gradient background */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-fuchsia-500 to-orange-500 bg-[length:200%_100%] animate-gradient" />
+                    {/* Glow on hover */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-white/20" />
+                    {/* Button content */}
+                    <span className="relative flex items-center justify-center gap-2 text-white font-bold text-lg">
+                      <QrCode className="w-5 h-5" />
+                      Scanner un Véhicule
+                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </button>
+                </Link>
 
-            {/* Trust Pills */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-3 mt-8 animate-fade-in-up animation-delay-400">
-              <div className="flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-2.5 rounded-full shadow-sm border border-gray-100">
-                <Shield className="w-4 h-4 text-orange-500" />
-                <span className="text-gray-600 text-sm font-medium">Infalsifiable</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-2.5 rounded-full shadow-sm border border-gray-100">
-                <CheckCircle className="w-4 h-4 text-pink-500" />
-                <span className="text-gray-600 text-sm font-medium">Certifié</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-2.5 rounded-full shadow-sm border border-gray-100">
-                <Users className="w-4 h-4 text-orange-500" />
-                <span className="text-gray-600 text-sm font-medium">+200 Garages</span>
-              </div>
-            </div>
-          </div>
+                {/* Secondary CTA */}
+                <Link href="/devenir-partenaire">
+                  <button className="group px-8 py-4 rounded-full border-2 border-white/30 backdrop-blur-sm hover:border-white/60 transition-all duration-300 hover:bg-white/10 w-full sm:w-auto">
+                    <span className="flex items-center justify-center gap-2 text-white font-semibold">
+                      <Building2 className="w-5 h-5" />
+                      Devenir Partenaire
+                      <motion.span
+                        animate={{ x: [0, 5, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        →
+                      </motion.span>
+                    </span>
+                  </button>
+                </Link>
+              </motion.div>
 
-          {/* Right Content - 3D Hero Visual */}
-          <div className="relative order-1 lg:order-2 animate-fade-in-up">
-            {/* Main Container */}
-            <div className="relative h-[400px] sm:h-[500px] lg:h-[600px]">
-              {/* Floating Car */}
-              <div 
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-72 sm:w-80 lg:w-96 animate-float"
-                style={{
-                  transform: `translate(-50%, -50%) perspective(1000px) rotateY(${(mousePosition.x - 0.5) * 10}deg) rotateX(${(mousePosition.y - 0.5) * -5}deg)`
+              {/* Social Proof Bar */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 1 }}
+                className="mt-12 flex items-center justify-center lg:justify-start gap-6 md:gap-8 text-white/50 text-sm md:text-base"
+              >
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-orange-400" />
+                  <span><strong className="text-white">500+</strong> garages</span>
+                </div>
+                <div className="w-px h-4 bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <Car className="w-5 h-5 text-fuchsia-400" />
+                  <span><strong className="text-white">2000+</strong> véhicules</span>
+                </div>
+                <div className="w-px h-4 bg-white/20 hidden sm:block" />
+                <div className="hidden sm:flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-400" />
+                  <span><strong className="text-white">4.9/5</strong></span>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Right Side - Floating 3D QR Code */}
+            <motion.div 
+              className="hidden lg:flex justify-center items-center"
+              style={{ y }}
+            >
+              <motion.div
+                className="relative"
+                animate={{ 
+                  y: [0, -15, 0],
+                  rotateY: [0, 5, 0, -5, 0],
+                }}
+                transition={{ 
+                  duration: 6, 
+                  repeat: Infinity,
+                  ease: "easeInOut" 
                 }}
               >
-                <Image
-                  src="/hero-car.png"
-                  alt="OKAR - Vehicle Passport"
-                  fill
-                  className="object-contain drop-shadow-2xl"
-                  priority
-                />
-              </div>
-
-              {/* Floating QR Code */}
-              <div 
-                className="absolute right-0 sm:right-4 top-1/4 w-28 sm:w-36 animate-float animation-delay-2000"
-                style={{
-                  transform: `perspective(500px) rotateY(${(mousePosition.x - 0.5) * 15}deg)`
-                }}
-              >
-                <Image
-                  src="/hero-qr.png"
-                  alt="QR Code OKAR"
-                  fill
-                  className="object-contain drop-shadow-xl"
-                />
-              </div>
-
-              {/* Glowing Ring */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] lg:w-[500px] lg:h-[500px]">
-                <div className="absolute inset-0 rounded-full border-2 border-orange-200/50 animate-spin-slow" />
-                <div className="absolute inset-4 rounded-full border border-pink-200/40 animate-spin-slow animation-delay-1000" />
-                <div className="absolute inset-8 rounded-full border border-orange-100/30 animate-spin-slow animation-delay-2000" />
-              </div>
-
-              {/* Floating Stats Cards */}
-              <div className="absolute left-0 bottom-1/4 bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-xl border border-white/50 animate-float animation-delay-1000 hidden sm:block">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center">
-                    <Car className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">5K+</p>
-                    <p className="text-xs text-gray-500">Véhicules suivis</p>
+                {/* Glassmorphism QR Container */}
+                <div className="relative w-72 h-72 xl:w-80 xl:h-80 rounded-3xl overflow-hidden">
+                  {/* Glow effect */}
+                  <div className="absolute -inset-4 bg-gradient-to-r from-orange-500 via-fuchsia-500 to-orange-500 rounded-3xl blur-2xl opacity-50 animate-pulse" />
+                  
+                  {/* Glass card */}
+                  <div className="relative h-full backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 shadow-2xl">
+                    {/* QR Code Visual */}
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl" />
+                      <QrCode className="w-32 h-32 xl:w-40 xl:h-40 text-white/90" strokeWidth={1} />
+                      {/* Scanning line animation */}
+                      <motion.div
+                        className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-orange-500 to-transparent"
+                        animate={{ top: ["20%", "80%", "20%"] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      />
+                    </div>
+                    
+                    {/* OKAR Logo in QR */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                      <span className="text-2xl font-black bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">
+                        OKAR
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="absolute right-0 sm:right-8 bottom-1/3 bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-xl border border-white/50 animate-float animation-delay-3000 hidden sm:block">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-orange-500 rounded-xl flex items-center justify-center">
-                    <Wrench className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">200+</p>
-                    <p className="text-xs text-gray-500">Garages certifiés</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 rounded-full border-2 border-gray-300 flex justify-center pt-2">
-          <div className="w-1.5 h-3 bg-gradient-to-b from-orange-400 to-pink-400 rounded-full animate-scroll" />
+      {/* Scroll indicator */}
+      <motion.div
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
+        animate={{ y: [0, 10, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <div className="w-6 h-10 rounded-full border-2 border-white/30 flex items-start justify-center p-2">
+          <motion.div
+            className="w-1 h-2 bg-white/60 rounded-full"
+            animate={{ y: [0, 12, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }
 
-// ========================================
-// TRUST SECTION - GLASSMORPHISM CARDS
-// ========================================
+// ============================================
+// TRUST SECTION - Animated Cards
+// ============================================
 function TrustSection() {
-  const features = [
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const pathLength = useTransform(scrollYProgress, [0, 0.5], [0, 1]);
+
+  const cards = [
     {
       icon: Shield,
       title: "Historique Certifié",
-      description: "Chaque intervention est enregistrée, signée électroniquement et horodatée. Impossible à falsifier.",
-      gradient: "from-orange-500 to-pink-500",
-      image: "/icon-certified.png"
+      description: "Jamais modifiable. Jamais falsifiable.",
+      gradient: "from-amber-400 to-orange-500",
+      delay: 0
     },
     {
       icon: Wrench,
       title: "Garages Partenaires",
-      description: "Un réseau de garages certifiés et vérifiés à travers tout le Sénégal.",
-      gradient: "from-pink-500 to-orange-400",
-      image: "/icon-garage.png"
+      description: "Validé par les meilleurs mécaniciens du Sénégal.",
+      gradient: "from-fuchsia-400 to-purple-500",
+      delay: 0.2
     },
     {
-      icon: CheckCircle,
+      icon: Handshake,
       title: "Vente Sécurisée",
-      description: "Achetez en confiance avec un historique complet et vérifiable du véhicule.",
-      gradient: "from-orange-400 to-yellow-400",
-      image: "/icon-trust.png"
+      description: "Vendez plus cher, achetez en paix.",
+      gradient: "from-cyan-400 to-blue-500",
+      delay: 0.4
     }
   ];
 
   return (
-    <section id="solutions" className="py-24 px-4 relative">
-      <div className="max-w-6xl mx-auto">
-        {/* Title */}
-        <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1.5 bg-gradient-to-r from-orange-100 to-pink-100 text-orange-600 rounded-full text-sm font-semibold mb-4">
-            Pourquoi OKAR ?
-          </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            La confiance au cœur de chaque
-            <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent"> transaction</span>
+    <section id="confiance" ref={containerRef} className="relative py-32 bg-gradient-to-b from-black via-gray-950 to-black overflow-hidden">
+      {/* Animated Road Line */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <svg className="w-full h-full max-w-6xl" viewBox="0 0 1200 400">
+          <motion.path
+            d="M0,200 Q300,100 600,200 T1200,200"
+            fill="none"
+            stroke="url(#roadGradient)"
+            strokeWidth="2"
+            style={{ pathLength }}
+          />
+          <defs>
+            <linearGradient id="roadGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#FF6600" />
+              <stop offset="50%" stopColor="#FF007F" />
+              <stop offset="100%" stopColor="#7C3AED" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* Section Title */}
+      <div className="max-w-7xl mx-auto px-6 mb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center"
+        >
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4">
+            La Confiance en{' '}
+            <span className="bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Mouvement
+            </span>
           </h2>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Une technologie innovante pour une transparence totale dans l&apos;automobile
+          <p className="text-white/50 text-lg max-w-2xl mx-auto">
+            Une technologie qui protège votre investissement automobile
           </p>
-        </div>
+        </motion.div>
+      </div>
 
-        {/* Cards */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-          {features.map((feature, index) => (
-            <div
+      {/* Floating Cards */}
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+          {cards.map((card, index) => (
+            <motion.div
               key={index}
-              className="group relative bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
-              style={{ animationDelay: `${index * 100}ms` }}
+              initial={{ opacity: 0, y: 50, rotateX: -15 }}
+              whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: card.delay }}
+              whileHover={{ y: -10, rotateX: 5, rotateY: -5 }}
+              className="group perspective-1000"
             >
-              {/* Gradient Glow */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 rounded-3xl transition-opacity duration-500`} />
-              
-              {/* Icon */}
-              <div className="relative mb-6">
-                <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className="w-8 h-8 text-white" />
+              <div className="relative h-full p-8 rounded-3xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10">
+                {/* Glow effect */}
+                <div className={`absolute -inset-px rounded-3xl bg-gradient-to-r ${card.gradient} opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500`} />
+                
+                {/* Icon */}
+                <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-r ${card.gradient} p-4 mb-6`}>
+                  <card.icon className="w-full h-full text-white" />
                 </div>
-              </div>
 
-              {/* Content */}
-              <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-              <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                {/* Content */}
+                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-white/80 group-hover:bg-clip-text transition-all duration-300">
+                  {card.title}
+                </h3>
+                <p className="text-white/50 group-hover:text-white/70 transition-colors duration-300">
+                  {card.description}
+                </p>
 
-              {/* Decorative Element */}
-              <div className="absolute top-6 right-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                <div className={`w-20 h-20 bg-gradient-to-br ${feature.gradient} rounded-full blur-xl`} />
+                {/* Decorative corner */}
+                <div className={`absolute top-4 right-4 w-20 h-20 rounded-full bg-gradient-to-r ${card.gradient} opacity-10 blur-2xl group-hover:opacity-30 transition-opacity duration-500`} />
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -398,269 +476,358 @@ function TrustSection() {
   );
 }
 
-// ========================================
-// DEMO SECTION - INTERACTIVE SHOWCASE
-// ========================================
+// ============================================
+// DEMO SECTION - Interactive QR Scan
+// ============================================
 function DemoSection() {
+  const [isScanning, setIsScanning] = useState(false);
+  const [isScanned, setIsScanned] = useState(false);
+
+  const startDemo = () => {
+    setIsScanning(true);
+    setTimeout(() => {
+      setIsScanning(false);
+      setIsScanned(true);
+      setTimeout(() => setIsScanned(false), 3000);
+    }, 2000);
+  };
+
   return (
-    <section id="comment" className="py-24 px-4 relative overflow-hidden">
+    <section id="demo" className="relative py-32 bg-gradient-to-b from-black via-gray-950 to-black overflow-hidden">
       {/* Circuit Pattern Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white" />
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-      }} />
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 bg-[url('/circuit-pattern.svg')] bg-repeat" />
+      </div>
 
-      <div className="max-w-6xl mx-auto relative">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left - Phone Mockup */}
-          <div className="relative flex justify-center order-2 lg:order-1">
-            {/* Phone Container */}
-            <div className="relative w-64 sm:w-72 lg:w-80 animate-float">
-              {/* Phone Frame */}
-              <div className="relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
+      {/* Animated Grid */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,102,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,102,0,0.03)_1px,transparent_1px)] bg-[size:50px_50px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Phone Mockup */}
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="relative flex justify-center"
+          >
+            {/* Phone Frame */}
+            <motion.div
+              className="relative w-72 md:w-80"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              {/* Glow behind phone */}
+              <div className="absolute -inset-8 bg-gradient-to-r from-orange-500/20 via-fuchsia-500/20 to-orange-500/20 rounded-[60px] blur-3xl" />
+              
+              {/* Phone body */}
+              <div className="relative bg-gray-900 rounded-[40px] p-3 border border-gray-700 shadow-2xl">
+                {/* Notch */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-20" />
+                
                 {/* Screen */}
-                <div className="bg-white rounded-[2.25rem] overflow-hidden aspect-[9/19]">
-                  {/* Status Bar */}
-                  <div className="bg-gray-100 px-6 py-2 flex justify-between items-center text-xs text-gray-600">
-                    <span>9:41</span>
-                    <div className="flex gap-1">
-                      <div className="w-4 h-2 bg-gray-400 rounded-sm" />
-                      <div className="w-4 h-2 bg-gray-400 rounded-sm" />
-                      <div className="w-4 h-2 bg-green-500 rounded-sm" />
-                    </div>
-                  </div>
-                  
-                  {/* App Content */}
-                  <div className="p-4 bg-gradient-to-b from-white to-gray-50 h-full">
+                <div className="relative bg-gray-950 rounded-[32px] overflow-hidden aspect-[9/19]">
+                  {/* App Interface */}
+                  <div className="absolute inset-0 flex flex-col">
                     {/* Header */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center">
-                        <QrCode className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">OKAR</p>
-                        <p className="text-xs text-gray-500">Passeport Auto</p>
+                    <div className="p-4 pt-10 bg-gradient-to-r from-orange-500 to-fuchsia-500">
+                      <p className="text-white font-bold text-lg">OKAR Scanner</p>
+                      <p className="text-white/70 text-xs">Scannez le QR du véhicule</p>
+                    </div>
+
+                    {/* Scanner Area */}
+                    <div className="flex-1 relative flex items-center justify-center p-8">
+                      {/* QR Scanner Frame */}
+                      <div className="relative w-48 h-48">
+                        {/* Corner brackets */}
+                        {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos, i) => (
+                          <div
+                            key={pos}
+                            className={`absolute w-8 h-8 border-4 border-orange-500 ${
+                              pos.includes('top') ? 'top-0' : 'bottom-0'
+                            } ${pos.includes('left') ? 'left-0' : 'right-0'} ${
+                              pos.includes('left') ? 'border-r-0' : 'border-l-0'
+                            } ${pos.includes('top') ? 'border-b-0' : 'border-t-0'}`}
+                          />
+                        ))}
+
+                        {/* Scanning line */}
+                        {isScanning && (
+                          <motion.div
+                            className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-orange-500 to-transparent"
+                            animate={{ top: ["10%", "90%", "10%"] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        )}
+
+                        {/* QR Code placeholder */}
+                        <div className="absolute inset-4 flex items-center justify-center">
+                          <QrCode className="w-24 h-24 text-white/30" />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Scan Area */}
-                    <div className="relative bg-gray-100 rounded-2xl p-4 mb-4 border-2 border-dashed border-orange-300">
-                      <div className="flex justify-center mb-3">
-                        <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center shadow-inner">
-                          <QrCode className="w-12 h-12 text-orange-500 animate-pulse" />
-                        </div>
-                      </div>
-                      <p className="text-center text-sm text-gray-600">Scannez un QR Code</p>
-                    </div>
-
-                    {/* Vehicle Preview */}
-                    <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-pink-100 rounded-lg flex items-center justify-center">
-                          <Car className="w-6 h-6 text-orange-500" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900">Toyota Corolla</p>
-                          <p className="text-xs text-gray-500">AA-1234-BB</p>
-                        </div>
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      </div>
-                    </div>
-
-                    {/* Confetti Effect */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      {[...Array(8)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="absolute w-2 h-2 rounded-full animate-confetti"
-                          style={{
-                            backgroundColor: ['#f97316', '#ec4899', '#facc15', '#22c55e'][i % 4],
-                            left: `${20 + i * 10}%`,
-                            animationDelay: `${i * 0.1}s`
-                          }}
-                        />
-                      ))}
-                    </div>
+                    {/* Success State */}
+                    {isScanned && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="absolute inset-0 bg-gradient-to-b from-green-500/20 to-green-600/20 backdrop-blur-xl flex flex-col items-center justify-center p-8"
+                      >
+                        {/* Confetti */}
+                        {[...Array(20)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="absolute w-2 h-2 rounded-full"
+                            style={{
+                              backgroundColor: ['#FF6600', '#FF007F', '#FFD700', '#00FF88'][i % 4],
+                              left: `${Math.random() * 100}%`,
+                              top: `${Math.random() * 100}%`,
+                            }}
+                            initial={{ scale: 0, y: 0 }}
+                            animate={{ 
+                              scale: [0, 1, 0],
+                              y: [0, -100],
+                              x: [(Math.random() - 0.5) * 100],
+                            }}
+                            transition={{ duration: 1, delay: i * 0.02 }}
+                          />
+                        ))}
+                        
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", delay: 0.2 }}
+                          className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mb-4"
+                        >
+                          <CheckCircle2 className="w-12 h-12 text-white" />
+                        </motion.div>
+                        <p className="text-white font-bold text-xl text-center">VÉHICULE CERTIFIÉ</p>
+                        <p className="text-white/70 text-sm mt-2">Toyota Corolla 2019</p>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
               </div>
+            </motion.div>
 
-              {/* Floating Elements */}
-              <div className="absolute -right-4 top-1/4 bg-white rounded-xl p-3 shadow-xl animate-float animation-delay-1000">
-                <CheckCircle className="w-6 h-6 text-green-500" />
-              </div>
-              <div className="absolute -left-4 bottom-1/4 bg-white rounded-xl p-3 shadow-xl animate-float animation-delay-2000">
-                <Shield className="w-6 h-6 text-orange-500" />
-              </div>
-            </div>
-          </div>
+            {/* Demo Button */}
+            <button
+              onClick={startDemo}
+              disabled={isScanning || isScanned}
+              className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-gradient-to-r from-orange-500 to-fuchsia-500 rounded-full text-white font-semibold flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50"
+            >
+              <Play className="w-4 h-4" />
+              Voir la démo
+            </button>
+          </motion.div>
 
-          {/* Right - Content */}
-          <div className="order-1 lg:order-2">
-            <span className="inline-block px-4 py-1.5 bg-gradient-to-r from-orange-100 to-pink-100 text-orange-600 rounded-full text-sm font-semibold mb-4">
-              Technologie Simple
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-              Scannez. Vérifiez.
-              <span className="block bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">Roulez en confiance.</span>
+          {/* Text Content */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center lg:text-left"
+          >
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight">
+              Un simple scan.
+              <br />
+              <span className="bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">
+                Une vérité absolue.
+              </span>
             </h2>
-            <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-              Une technologie simple mais puissante. En un scan, accédez à l&apos;historique complet d&apos;un véhicule : entretiens, réparations, kilométrage certifié.
+            <p className="text-xl text-white/60 mb-8">
+              Accédez à tout l&apos;historique d&apos;entretien en moins de 3 secondes. 
+              Vérifiez l&apos;authenticité d&apos;un véhicule avant achat.
             </p>
 
-            {/* Steps */}
+            {/* Features list */}
             <div className="space-y-4">
               {[
-                { num: "01", title: "Scannez le QR", desc: "Flash le code OKAR sur le véhicule" },
-                { num: "02", title: "Consultez l'historique", desc: "Toutes les interventions certifiées" },
-                { num: "03", title: "Achetez en confiance", desc: "Transparence totale garantie" }
-              ].map((step, i) => (
-                <div key={i} className="flex items-center gap-4 group">
-                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform">
-                    {step.num}
+                "Historique complet des interventions",
+                "Certification garage vérifiable",
+                "Alertes expiration VT & Assurance",
+                "Transfert de propriété digitalisé"
+              ].map((feature, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex items-center gap-3"
+                >
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-orange-500 to-fuchsia-500 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 text-white" />
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{step.title}</p>
-                    <p className="text-sm text-gray-500">{step.desc}</p>
-                  </div>
-                </div>
+                  <span className="text-white/80">{feature}</span>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
   );
 }
 
-// ========================================
-// STATS SECTION
-// ========================================
-function StatsSection() {
-  const stats = [
-    { value: "5,000+", label: "Véhicules suivis", icon: Car, color: "from-orange-500 to-pink-500" },
-    { value: "200+", label: "Garages certifiés", icon: Wrench, color: "from-pink-500 to-orange-400" },
-    { value: "50,000+", label: "Interventions", icon: CheckCircle, color: "from-orange-400 to-yellow-400" },
-    { value: "24/7", label: "Disponible", icon: Clock, color: "from-yellow-400 to-orange-400" }
-  ];
+// ============================================
+// SEGMENTATION SECTION - Dynamic Tabs
+// ============================================
+function SegmentationSection() {
+  const [activeTab, setActiveTab] = useState<'acheteur' | 'proprietaire' | 'garagiste'>('acheteur');
 
-  return (
-    <section className="py-16 px-4 relative overflow-hidden">
-      {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-pink-500 to-orange-400" />
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,...')] opacity-10" />
-      
-      <div className="max-w-6xl mx-auto relative">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className="text-center p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300"
-            >
-              <div className={`w-12 h-12 mx-auto mb-4 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-white mb-1">{stat.value}</p>
-              <p className="text-white/80 text-sm">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ========================================
-// PRICING SECTION
-// ========================================
-function PricingSection() {
-  const plans = [
-    {
-      title: "Basique",
-      price: "25 000",
-      unit: "FCFA/mois",
-      features: ["50 QR codes/mois", "Rapports d'entretien", "Support email", "Dashboard garage"],
-      cta: "Commencer",
-      popular: false
+  const tabs = {
+    acheteur: {
+      icon: Car,
+      title: "Acheteur",
+      headline: "Évitez les arnaques. Voyez la vraie histoire.",
+      description: "Avant d'acheter un véhicule d'occasion, scannez son QR OKAR pour accéder à l'historique complet : entretiens, accidents, kilométrage vérifié. Prenez une décision éclairée.",
+      cta: "Vérifier un véhicule",
+      image: "/buyer-illustration.svg",
+      stats: [
+        { value: "85%", label: "des arnaques évitées" },
+        { value: "2 min", label: "pour vérifier" }
+      ]
     },
-    {
-      title: "Premium",
-      price: "75 000",
-      unit: "FCFA/mois",
-      features: ["200 QR codes/mois", "Signature numérique", "Support prioritaire", "Statistiques avancées", "Multi-utilisateurs"],
-      cta: "Choisir Premium",
-      popular: true
+    proprietaire: {
+      icon: Users,
+      title: "Propriétaire",
+      headline: "Boostez la valeur de revente de 20%.",
+      description: "Un véhicule avec un carnet OKAR certifié se vend plus cher et plus vite. Prouvez l'historique d'entretien à vos acheteurs potentiels et gagnez leur confiance instantanément.",
+      cta: "Créer mon carnet",
+      image: "/owner-illustration.svg",
+      stats: [
+        { value: "+20%", label: "valeur à la revente" },
+        { value: "3x", label: "plus rapide à vendre" }
+      ]
     },
-    {
-      title: "Entreprise",
-      price: "Sur devis",
-      unit: "",
-      features: ["QR codes illimités", "API dédiée", "Account manager", "Formation sur site"],
-      cta: "Nous contacter",
-      popular: false
+    garagiste: {
+      icon: Wrench,
+      title: "Garagiste",
+      headline: "Fidélisez vos clients et digitalisez votre atelier.",
+      description: "Rejoignez le réseau des garages certifiés OKAR. Offrez un service premium à vos clients, suivez les interventions numériquement et développez votre notoriété.",
+      cta: "Devenir partenaire",
+      image: "/mechanic-illustration.svg",
+      stats: [
+        { value: "500+", label: "garages partenaires" },
+        { value: "4.9/5", label: "note moyenne" }
+      ]
     }
-  ];
+  };
 
   return (
-    <section id="tarifs" className="py-24 px-4 relative">
-      <div className="max-w-5xl mx-auto">
-        {/* Title */}
-        <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1.5 bg-gradient-to-r from-orange-100 to-pink-100 text-orange-600 rounded-full text-sm font-semibold mb-4">
-            Tarifs
-          </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Choisissez votre
-            <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent"> formule</span>
+    <section id="qui" className="relative py-32 bg-gradient-to-b from-black via-gray-950 to-black overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Section Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+            OKAR pour{' '}
+            <span className="bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Qui ?
+            </span>
           </h2>
-          <p className="text-gray-600 text-lg">Des tarifs adaptés à tous les garages</p>
-        </div>
+          <p className="text-white/50 text-lg">Une solution adaptée à chaque profil</p>
+        </motion.div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {plans.map((plan, index) => (
-            <div
-              key={index}
-              className={`relative bg-white/80 backdrop-blur-xl rounded-3xl p-8 border transition-all duration-300 hover:-translate-y-2 ${
-                plan.popular 
-                  ? 'border-orange-200 shadow-xl shadow-orange-500/10' 
-                  : 'border-gray-100 shadow-lg hover:shadow-xl'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white text-sm font-bold rounded-full shadow-lg">
-                  ⭐ Populaire
-                </div>
-              )}
-
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.title}</h3>
-              
-              <div className="mb-6">
-                <span className="text-4xl font-black bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                  {plan.price}
+        {/* Tab Switcher */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="flex justify-center mb-16"
+        >
+          <div className="relative inline-flex p-1.5 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10">
+            {Object.entries(tabs).map(([key, tab]) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key as any)}
+                className={`relative px-6 py-4 rounded-xl font-semibold transition-all duration-300 ${
+                  activeTab === key 
+                    ? 'text-white' 
+                    : 'text-white/50 hover:text-white/70'
+                }`}
+              >
+                {activeTab === key && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-gradient-to-r from-orange-500 to-fuchsia-500 rounded-xl"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <span className="relative flex items-center gap-2">
+                  <tab.icon className="w-5 h-5" />
+                  {tab.title}
                 </span>
-                <span className="text-gray-500 text-sm ml-1">{plan.unit}</span>
-              </div>
+              </button>
+            ))}
+          </div>
+        </motion.div>
 
-              <div className="space-y-3 mb-8">
-                {plan.features.map((feature, i) => (
-                  <div key={i} className="flex items-center gap-3 text-gray-600">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-sm">{feature}</span>
+        {/* Content */}
+        <div className="relative min-h-[400px]">
+          {Object.entries(tabs).map(([key, tab]) => (
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{
+                opacity: activeTab === key ? 1 : 0,
+                x: activeTab === key ? 0 : 50,
+                scale: activeTab === key ? 1 : 0.95,
+              }}
+              transition={{ duration: 0.4 }}
+              className={`${activeTab === key ? 'relative' : 'absolute inset-0 pointer-events-none'}`}
+            >
+              <div className="grid lg:grid-cols-2 gap-12 items-center">
+                {/* Text Content */}
+                <div className="text-center lg:text-left">
+                  <h3 className="text-3xl md:text-4xl font-bold text-white mb-6">
+                    {tab.headline}
+                  </h3>
+                  <p className="text-lg text-white/60 mb-8">
+                    {tab.description}
+                  </p>
+
+                  {/* Stats */}
+                  <div className="flex gap-8 justify-center lg:justify-start mb-8">
+                    {tab.stats.map((stat, i) => (
+                      <div key={i} className="text-center">
+                        <p className="text-3xl font-black bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">
+                          {stat.value}
+                        </p>
+                        <p className="text-sm text-white/50">{stat.label}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              <Link href="/devenir-partenaire">
-                <Button className={`w-full py-4 rounded-xl font-bold transition-all ${
-                  plan.popular 
-                    ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:shadow-lg hover:shadow-orange-500/25' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}>
-                  {plan.cta}
-                </Button>
-              </Link>
-            </div>
+                  {/* CTA */}
+                  <button className="px-8 py-4 bg-gradient-to-r from-orange-500 to-fuchsia-500 rounded-full text-white font-bold text-lg hover:scale-105 transition-transform shadow-lg shadow-orange-500/25">
+                    {tab.cta}
+                  </button>
+                </div>
+
+                {/* Illustration */}
+                <div className="relative flex justify-center">
+                  <div className="relative w-80 h-80">
+                    {/* Glow */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-fuchsia-500/20 rounded-full blur-3xl" />
+                    {/* Placeholder for illustration */}
+                    <div className="relative w-full h-full rounded-3xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
+                      <tab.icon className="w-24 h-24 text-white/20" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -668,159 +835,191 @@ function PricingSection() {
   );
 }
 
-// ========================================
-// CTA SECTION - VIBRANT GRADIENT
-// ========================================
+// ============================================
+// PARTNERS SECTION - Marquee
+// ============================================
+function PartnersSection() {
+  const partners = [
+    { name: "Total Energies", logo: "/logos/total.svg" },
+    { name: "Oryx", logo: "/logos/oryx.svg" },
+    { name: "AXA Assurances", logo: "/logos/axa.svg" },
+    { name: "SAHAM", logo: "/logos/saham.svg" },
+    { name: "Auto Plus", logo: "/logos/autoplus.svg" },
+    { name: "Garage Moderne", logo: "/logos/moderne.svg" },
+  ];
+
+  return (
+    <section className="relative py-20 bg-gradient-to-b from-black to-gray-950 overflow-hidden">
+      {/* Glass overlay */}
+      <div className="absolute inset-0 backdrop-blur-sm bg-black/50" />
+      
+      <div className="relative max-w-7xl mx-auto px-6 mb-12">
+        <p className="text-center text-white/40 text-sm uppercase tracking-widest">
+          Ils nous font confiance
+        </p>
+      </div>
+
+      {/* Marquee Container */}
+      <div className="relative overflow-hidden">
+        {/* Gradient masks */}
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent z-10" />
+
+        {/* Scrolling logos */}
+        <motion.div
+          className="flex gap-16 items-center py-8"
+          animate={{ x: [0, -1000] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        >
+          {[...partners, ...partners, ...partners].map((partner, i) => (
+            <div
+              key={i}
+              className="flex-shrink-0 w-32 h-12 flex items-center justify-center grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-300 cursor-pointer"
+            >
+              <div className="text-white/60 font-bold text-sm">{partner.name}</div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================
+// CTA FOOTER SECTION
+// ============================================
 function CTASection() {
   return (
-    <section className="py-24 px-4 relative overflow-hidden">
-      {/* Vibrant Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-pink-500 to-orange-400" />
-      
-      {/* Animated Shapes */}
-      <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-blob" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-blob animation-delay-2000" />
-      
-      {/* Floating 3D Elements */}
-      <div className="absolute top-1/4 left-10 w-16 h-16 bg-white/20 backdrop-blur rounded-xl rotate-12 animate-float hidden lg:block" />
-      <div className="absolute bottom-1/4 right-10 w-20 h-20 bg-white/10 backdrop-blur rounded-full animate-float animation-delay-1000 hidden lg:block" />
-      <div className="absolute top-1/3 right-1/4 w-12 h-12 bg-white/15 backdrop-blur rounded-lg -rotate-12 animate-float animation-delay-2000 hidden lg:block" />
+    <section className="relative py-32 overflow-hidden">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-600 via-fuchsia-600 to-purple-900">
+        <motion.div
+          className="absolute inset-0"
+          animate={{
+            background: [
+              "radial-gradient(circle at 20% 50%, rgba(255,102,0,0.4) 0%, transparent 50%)",
+              "radial-gradient(circle at 80% 50%, rgba(255,0,127,0.4) 0%, transparent 50%)",
+              "radial-gradient(circle at 20% 50%, rgba(255,102,0,0.4) 0%, transparent 50%)",
+            ],
+          }}
+          transition={{ duration: 10, repeat: Infinity }}
+        />
+      </div>
 
-      <div className="max-w-4xl mx-auto text-center relative">
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-          Prêt à transformer votre
-          <span className="block">expérience automobile ?</span>
-        </h2>
-        <p className="text-white/90 text-lg mb-10 max-w-2xl mx-auto">
-          Rejoignez les centaines de garages et conducteurs qui font confiance à OKAR pour la transparence automobile au Sénégal.
-        </p>
+      {/* Floating shapes */}
+      <div className="absolute inset-0">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-white/10 backdrop-blur-sm"
+            style={{
+              width: 100 + Math.random() * 200,
+              height: 100 + Math.random() * 200,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              x: [0, 20, 0],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{
+              duration: 5 + Math.random() * 5,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+          />
+        ))}
+      </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/devenir-partenaire">
-            <Button className="group bg-white text-orange-500 px-10 py-7 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-white/25 transition-all hover:-translate-y-1 hover:bg-gray-50">
-              <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-              Devenir Partenaire
-            </Button>
-          </Link>
-          <Link href="/contact">
-            <Button className="bg-white/20 backdrop-blur-xl text-white border-2 border-white/30 px-10 py-7 rounded-2xl font-bold text-lg hover:bg-white/30 transition-all hover:-translate-y-1">
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Contactez-nous
-            </Button>
-          </Link>
-        </div>
+      <div className="relative max-w-4xl mx-auto px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 leading-tight">
+            Prêt à rouler
+            <br />
+            en toute confiance ?
+          </h2>
 
-        {/* Trust Indicators */}
-        <div className="flex flex-wrap justify-center gap-6 mt-12">
-          <div className="flex items-center gap-2 text-white/80">
-            <CheckCircle className="w-5 h-5" />
-            <span className="text-sm">Sans engagement</span>
+          <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto">
+            Rejoignez les milliers de Sénégalais qui protègent leur véhicule avec OKAR
+          </p>
+
+          {/* Big CTA Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+            className="relative group inline-flex items-center gap-3 px-12 py-6 bg-white rounded-full text-gray-900 font-bold text-xl shadow-2xl shadow-white/30 hover:shadow-white/50 transition-shadow"
+          >
+            {/* Neon glow */}
+            <div className="absolute -inset-2 bg-white rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity" />
+            
+            <span className="relative">Commencer Gratuitement</span>
+            <Sparkles className="relative w-6 h-6" />
+          </motion.button>
+
+          {/* Secondary actions */}
+          <div className="mt-8 flex items-center justify-center gap-6 text-white/60 text-sm">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Sans carte de crédit
+            </span>
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              30 jours d&apos;essai
+            </span>
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Annulation facile
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-white/80">
-            <Shield className="w-5 h-5" />
-            <span className="text-sm">100% sécurisé</span>
-          </div>
-          <div className="flex items-center gap-2 text-white/80">
-            <Clock className="w-5 h-5" />
-            <span className="text-sm">Support 24/7</span>
-          </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
 }
 
-// ========================================
-// FOOTER
-// ========================================
-function Footer() {
+// ============================================
+// MAIN HOMEPAGE COMPONENT
+// ============================================
+export default function HomePage() {
   return (
-    <footer className="bg-gray-900 text-white py-16 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid md:grid-cols-4 gap-10 mb-12">
-          {/* Logo & Description */}
-          <div className="md:col-span-1">
-            <Link href="/" className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <QrCode className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold">OKAR</span>
-            </Link>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Le passeport numérique automobile de référence au Sénégal. Transparence, confiance et certification.
-            </p>
-          </div>
-
-          {/* Product */}
-          <div>
-            <h4 className="font-semibold mb-4 text-white">Produit</h4>
-            <ul className="space-y-3 text-gray-400 text-sm">
-              <li><a href="#solutions" className="hover:text-orange-400 transition-colors">Solutions</a></li>
-              <li><a href="#comment" className="hover:text-orange-400 transition-colors">Comment ça marche</a></li>
-              <li><a href="#tarifs" className="hover:text-orange-400 transition-colors">Tarifs</a></li>
-              <li><Link href="/contact" className="hover:text-orange-400 transition-colors">Contact</Link></li>
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h4 className="font-semibold mb-4 text-white">Entreprise</h4>
-            <ul className="space-y-3 text-gray-400 text-sm">
-              <li><Link href="/a-propos" className="hover:text-orange-400 transition-colors">À propos</Link></li>
-              <li><Link href="/devenir-partenaire" className="hover:text-orange-400 transition-colors">Partenaires</Link></li>
-              <li><Link href="/mentions-legales" className="hover:text-orange-400 transition-colors">Mentions légales</Link></li>
-              <li><Link href="/confidentialite" className="hover:text-orange-400 transition-colors">Confidentialité</Link></li>
-            </ul>
-          </div>
-
-          {/* Spaces */}
-          <div>
-            <h4 className="font-semibold mb-4 text-white">Espaces</h4>
-            <ul className="space-y-3 text-gray-400 text-sm">
-              <li><Link href="/garage/connexion" className="hover:text-orange-400 transition-colors">Espace Garage</Link></li>
-              <li><Link href="/driver/tableau-de-bord" className="hover:text-orange-400 transition-colors">Espace Conducteur</Link></li>
-              <li><Link href="/admin/connexion" className="hover:text-orange-400 transition-colors">SuperAdmin</Link></li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-sm">
-            © {new Date().getFullYear()} OKAR. Tous droits réservés. Made in Senegal 🇸🇳
-          </p>
-          <div className="flex items-center gap-4">
-            <a href="https://facebook.com/okar.sn" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center hover:bg-orange-500 transition-colors">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            </a>
-            <a href="https://instagram.com/okar.sn" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center hover:bg-pink-500 transition-colors">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-            </a>
-            <a href="https://wa.me/22178123456" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center hover:bg-green-500 transition-colors">
-              <MessageCircle className="w-5 h-5" />
-            </a>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-// ========================================
-// MAIN PAGE COMPONENT
-// ========================================
-export default function Home() {
-  return (
-    <main className="min-h-screen bg-gray-50 text-gray-900 overflow-x-hidden">
-      <AnimatedBackground />
+    <main className="bg-black">
       <Navigation />
       <HeroSection />
       <TrustSection />
       <DemoSection />
-      <StatsSection />
-      <PricingSection />
+      <SegmentationSection />
+      <PartnersSection />
       <CTASection />
-      <Footer />
+      
+      {/* Footer */}
+      <footer className="bg-gray-950 border-t border-white/5 py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-fuchsia-500 flex items-center justify-center">
+                <QrCode className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-black text-white">OKAR</span>
+            </div>
+            
+            <div className="flex items-center gap-8 text-sm text-white/40">
+              <a href="/a-propos" className="hover:text-white transition-colors">À propos</a>
+              <a href="/cgu" className="hover:text-white transition-colors">CGU</a>
+              <a href="/confidentialite" className="hover:text-white transition-colors">Confidentialité</a>
+              <a href="/contact" className="hover:text-white transition-colors">Contact</a>
+            </div>
+            
+            <p className="text-sm text-white/30">
+              © 2024 OKAR. Fait au Sénégal 🇸🇳
+            </p>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

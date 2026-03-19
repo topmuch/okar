@@ -23,7 +23,9 @@ import {
   Download,
   Eye,
   Copy,
-  Check
+  Check,
+  User,
+  ShoppingCart
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -68,9 +70,10 @@ export default function GenererQRPage() {
   // Form state
   const [form, setForm] = useState({
     count: 50,
-    garageId: '',
+    garageId: 'none',
     prefix: 'OKAR',
     notes: '',
+    type: 'garage', // 'garage' or 'individual'
   });
 
   useEffect(() => {
@@ -101,6 +104,11 @@ export default function GenererQRPage() {
       return;
     }
 
+    if (form.type === 'garage' && form.garageId === 'none') {
+      setErrorMessage('Veuillez sélectionner un garage pour les QR codes assignés');
+      return;
+    }
+
     setQrGenerating(true);
 
     try {
@@ -109,7 +117,7 @@ export default function GenererQRPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           count: form.count,
-          garageId: form.garageId || undefined,
+          garageId: form.type === 'garage' ? form.garageId : undefined,
           prefix: form.prefix,
           notes: form.notes || undefined,
         }),
@@ -121,15 +129,16 @@ export default function GenererQRPage() {
         setGeneratedLot(data.lot);
         setGeneratedQRCodes(data.qrCodes);
         setSuccessMessage(`✅ ${data.qrCodes.length} codes QR générés avec succès !`);
-        
+
         // Reset form
         setForm({
           count: 50,
-          garageId: '',
+          garageId: 'none',
           prefix: 'OKAR',
           notes: '',
+          type: 'garage',
         });
-        
+
         setTimeout(() => setSuccessMessage(''), 5000);
       } else {
         setErrorMessage(data.error || 'Erreur lors de la génération');
@@ -177,7 +186,7 @@ export default function GenererQRPage() {
           Génération de QR Codes
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1">
-          Créez des lots de QR Codes pour les garages partenaires
+          Créez des lots de QR Codes pour les garages ou pour la vente aux particuliers
         </p>
       </div>
 
@@ -207,6 +216,41 @@ export default function GenererQRPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Type Selection */}
+            <div className="space-y-2">
+              <Label className="text-slate-700 dark:text-slate-300">Type de QR Code *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, type: 'garage', garageId: 'none' })}
+                  className={cn(
+                    "p-3 rounded-xl border-2 text-left transition-all",
+                    form.type === 'garage'
+                      ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10"
+                      : "border-slate-200 dark:border-slate-700 hover:border-orange-300"
+                  )}
+                >
+                  <Building2 className={cn("w-5 h-5 mb-1", form.type === 'garage' ? 'text-orange-500' : 'text-slate-400')} />
+                  <p className="font-medium text-sm">Garage</p>
+                  <p className="text-xs text-slate-500">Assigné à un garage partenaire</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, type: 'individual' })}
+                  className={cn(
+                    "p-3 rounded-xl border-2 text-left transition-all",
+                    form.type === 'individual'
+                      ? "border-purple-500 bg-purple-50 dark:bg-purple-500/10"
+                      : "border-slate-200 dark:border-slate-700 hover:border-purple-300"
+                  )}
+                >
+                  <ShoppingCart className={cn("w-5 h-5 mb-1", form.type === 'individual' ? 'text-purple-500' : 'text-slate-400')} />
+                  <p className="font-medium text-sm">Particulier</p>
+                  <p className="text-xs text-slate-500">Vente directe aux clients</p>
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label className="text-slate-700 dark:text-slate-300">Préfixe</Label>
               <Input
@@ -230,25 +274,43 @@ export default function GenererQRPage() {
               <p className="text-xs text-slate-500">Entre 1 et 1000 QR codes par lot</p>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-slate-700 dark:text-slate-300">Garage (optionnel)</Label>
-              <Select
-                value={form.garageId}
-                onValueChange={(v) => setForm({ ...form, garageId: v })}
-              >
-                <SelectTrigger className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white">
-                  <SelectValue placeholder="Sélectionner un garage" />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                  <SelectItem value="">Aucun (stock central)</SelectItem>
-                  {garages.filter(g => g.active && g.isCertified).map((garage) => (
-                    <SelectItem key={garage.id} value={garage.id}>
-                      {garage.name} {garage.isCertified && '✓'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Garage Selection - Only for garage type */}
+            {form.type === 'garage' && (
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">Garage partenaire *</Label>
+                <Select
+                  value={form.garageId}
+                  onValueChange={(v) => setForm({ ...form, garageId: v })}
+                >
+                  <SelectTrigger className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white">
+                    <SelectValue placeholder="Sélectionner un garage" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <SelectItem value="none">Sélectionner un garage...</SelectItem>
+                    {garages.filter(g => g.active && g.isCertified).map((garage) => (
+                      <SelectItem key={garage.id} value={garage.id}>
+                        {garage.name} {garage.isCertified && '✓'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Individual Info */}
+            {form.type === 'individual' && (
+              <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+                <div className="flex items-start gap-2">
+                  <User className="w-5 h-5 text-purple-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-purple-800 dark:text-purple-300">QR Codes Non Assignés</p>
+                    <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+                      Ces QR codes pourront être vendus à des particuliers. Ils seront activés par n'importe quel garage certifié lors de l'enregistrement du véhicule.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label className="text-slate-700 dark:text-slate-300">Notes</Label>
@@ -261,7 +323,12 @@ export default function GenererQRPage() {
             </div>
 
             <Button
-              className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-xl"
+              className={cn(
+                "w-full text-white rounded-xl",
+                form.type === 'individual'
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  : "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600"
+              )}
               onClick={handleGenerateQR}
               disabled={qrGenerating}
             >
@@ -294,11 +361,16 @@ export default function GenererQRPage() {
             {generatedLot ? (
               <div>
                 {/* Lot Info */}
-                <div className="bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-500/10 dark:to-pink-500/10 rounded-xl p-4 mb-4">
+                <div className={cn(
+                  "rounded-xl p-4 mb-4",
+                  generatedLot.garageId
+                    ? "bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-500/10 dark:to-pink-500/10"
+                    : "bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-500/10 dark:to-pink-500/10"
+                )}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-lg">{generatedLot.id}</span>
-                    <Badge variant="default" className="bg-green-500">
-                      {generatedLot.status === 'ASSIGNED' ? 'Assigné' : 'Créé'}
+                    <Badge className={generatedLot.garageId ? "bg-orange-500" : "bg-purple-500"}>
+                      {generatedLot.garageId ? 'Assigné au garage' : 'Vente Particuliers'}
                     </Badge>
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400">
@@ -360,19 +432,19 @@ export default function GenererQRPage() {
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-5 text-white">
           <div className="flex items-center gap-3">
-            <QrCode className="w-8 h-8" />
-            <div>
-              <p className="text-2xl font-bold">{form.count}</p>
-              <p className="text-sm text-white/80">QR à générer</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-r from-pink-500 to-pink-600 rounded-2xl p-5 text-white">
-          <div className="flex items-center gap-3">
             <Building2 className="w-8 h-8" />
             <div>
               <p className="text-2xl font-bold">{garages.filter(g => g.active && g.isCertified).length}</p>
               <p className="text-sm text-white/80">Garages certifiés</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-5 text-white">
+          <div className="flex items-center gap-3">
+            <ShoppingCart className="w-8 h-8" />
+            <div>
+              <p className="text-lg font-bold">Vente Directe</p>
+              <p className="text-sm text-white/80">QR pour particuliers</p>
             </div>
           </div>
         </div>
@@ -392,24 +464,30 @@ export default function GenererQRPage() {
         <CardContent className="p-6">
           <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
             <Shield className="w-5 h-5 text-orange-400" />
-            Sécurité des QR Codes
+            Workflow des QR Codes
           </h3>
           <div className="grid md:grid-cols-2 gap-4 text-sm text-slate-300">
-            <div>
-              <p className="font-medium text-white mb-1">Code Unique (interne)</p>
-              <p>UUID 32 caractères hexadécimaux - Impossible à deviner, utilisé en interne pour la sécurité.</p>
+            <div className="bg-slate-800 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 className="w-5 h-5 text-orange-400" />
+                <p className="font-medium text-white">QR Codes Garage</p>
+              </div>
+              <p>Assignés à un garage spécifique. Seul ce garage peut les activer pour ses clients.</p>
             </div>
-            <div>
-              <p className="font-medium text-white mb-1">Code Court (URL)</p>
-              <p>8 caractères alphanumériques - Facile à scanner, utilisé dans les URLs publiques.</p>
+            <div className="bg-slate-800 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ShoppingCart className="w-5 h-5 text-purple-400" />
+                <p className="font-medium text-white">QR Codes Particuliers</p>
+              </div>
+              <p>Non assignés, vendus directement aux clients. Activables par n'importe quel garage certifié.</p>
             </div>
             <div>
               <p className="font-medium text-white mb-1">Statut STOCK</p>
-              <p>QR Code créé mais non activé - Ne peut pas être utilisé tant qu'un garage ne l'active pas.</p>
+              <p>QR Code créé mais non activé - En attente d'activation par un garage.</p>
             </div>
             <div>
               <p className="font-medium text-white mb-1">Statut ACTIVE</p>
-              <p>QR Code lié à un véhicule - Redirige vers le passeport automobile lors du scan.</p>
+              <p>QR Code lié à un véhicule - Affiche le passeport automobile lors du scan.</p>
             </div>
           </div>
         </CardContent>

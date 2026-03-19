@@ -22,7 +22,10 @@ import {
   Megaphone,
   Newspaper,
   Database,
-  TrendingUp
+  TrendingUp,
+  LayoutDashboard,
+  Building2,
+  Package
 } from "lucide-react";
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,11 +64,23 @@ function Sidebar({
 
   // Menu items with permissions
   const allMenuItems: MenuItem[] = useMemo(() => [
+    // Dashboard
+    { label: "Tableau de bord", icon: <LayoutDashboard className="w-5 h-5" />, href: "/admin/tableau-de-bord", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+
     // Users - superadmin and admin only
     { label: "Utilisateurs", icon: <Users className="w-5 h-5" />, href: "/admin/utilisateurs", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
 
+    // QR Codes Category
+    { label: "QR CODES", icon: null, isCategory: true },
+
     // Generate QR
     { label: "Générer QR", icon: <QrCode className="w-5 h-5" />, href: "/admin/generer", permission: PERMISSIONS.GENERATE_QR },
+
+    // QR Codes Management
+    { label: "QR Codes", icon: <Package className="w-5 h-5" />, href: "/admin/qrcodes", permission: PERMISSIONS.GENERATE_QR },
+
+    // Garages
+    { label: "Garages", icon: <Building2 className="w-5 h-5" />, href: "/admin/garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
 
     // Messages
     { label: "Messages", icon: <MessageSquare className="w-5 h-5" />, href: "/admin/messages", badge: unreadMessages, permission: PERMISSIONS.VIEW_MESSAGES },

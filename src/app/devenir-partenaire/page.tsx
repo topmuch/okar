@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   QrCode,
   Menu,
@@ -9,11 +10,16 @@ import {
   MapPin,
   Phone,
   Mail,
-  Facebook,
-  Instagram,
-  Twitter,
   CheckCircle,
-  Send
+  Send,
+  Wrench,
+  Users,
+  TrendingUp,
+  Shield,
+  Star,
+  Award,
+  Clock,
+  ArrowRight
 } from "lucide-react";
 
 // Navigation Component
@@ -21,39 +27,42 @@ function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#080c1a]/95 backdrop-blur-md border-b border-[#1a1a3a]">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff2a6d]/20">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-fuchsia-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
               <QrCode className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">QRBag</span>
+            <span className="text-2xl font-black text-white">OKAR</span>
           </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6">
-            {["Solutions", "Comment ça marche", "Tarifs", "Contact"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase().replace(/ /g, '-')}`}
-                className="text-[#a0a8b8] hover:text-[#ff2a6d] transition-colors text-sm"
-              >
-                {item}
-              </a>
-            ))}
+            <a href="#avantages" className="text-white/70 hover:text-white transition-colors text-sm">
+              Avantages
+            </a>
+            <a href="#temoignages" className="text-white/70 hover:text-white transition-colors text-sm">
+              Témoignages
+            </a>
+            <a href="#tarifs" className="text-white/70 hover:text-white transition-colors text-sm">
+              Tarifs
+            </a>
+            <a href="#formulaire" className="text-white/70 hover:text-white transition-colors text-sm">
+              Contact
+            </a>
           </nav>
 
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/demo">
-              <button className="text-[#a0a8b8] hover:text-white transition-colors text-sm">
-                Démo
+            <Link href="/login">
+              <button className="text-white/70 hover:text-white transition-colors text-sm font-medium">
+                Connexion
               </button>
             </Link>
             <a href="#formulaire">
-              <button className="bg-[#ff2a6d] text-white px-5 py-2 rounded-lg font-medium hover:bg-[#e01e5a] transition text-sm">
+              <button className="bg-gradient-to-r from-orange-500 to-fuchsia-500 text-white px-5 py-2 rounded-full font-medium hover:shadow-lg hover:shadow-orange-500/25 transition text-sm">
                 Devenir Partenaire
               </button>
             </a>
@@ -61,7 +70,7 @@ function Navigation() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-[#e0e6f0]"
+            className="md:hidden text-white"
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -70,20 +79,19 @@ function Navigation() {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-[#1a2238]">
+          <div className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col gap-4">
-              {["Solutions", "Comment ça marche", "Tarifs", "Contact"].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase().replace(/ /g, '-')}`}
-                  className="text-[#a0a8b8] hover:text-[#ff2a6d]"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item}
-                </a>
-              ))}
+              <a href="#avantages" className="text-white/70 hover:text-white" onClick={() => setIsOpen(false)}>
+                Avantages
+              </a>
+              <a href="#temoignages" className="text-white/70 hover:text-white" onClick={() => setIsOpen(false)}>
+                Témoignages
+              </a>
+              <a href="#tarifs" className="text-white/70 hover:text-white" onClick={() => setIsOpen(false)}>
+                Tarifs
+              </a>
               <a href="#formulaire" onClick={() => setIsOpen(false)}>
-                <button className="w-full bg-[#ff2a6d] text-white px-5 py-2 rounded-lg font-medium hover:bg-[#e01e5a] transition">
+                <button className="w-full bg-gradient-to-r from-orange-500 to-fuchsia-500 text-white px-5 py-2 rounded-full font-medium">
                   Devenir Partenaire
                 </button>
               </a>
@@ -98,38 +106,85 @@ function Navigation() {
 // Hero Section
 function HeroSection() {
   return (
-    <section className="pt-24 pb-20 px-4 bg-gradient-to-br from-[#080c1a] via-[#0d1220] to-[#1e3a2e]/30 relative overflow-hidden">
+    <section className="pt-24 pb-20 px-4 bg-gradient-to-br from-black via-gray-950 to-black relative overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#ff2a6d]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-[#d35400]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
       
       <div className="max-w-4xl mx-auto text-center relative z-10">
-        <div className="inline-flex items-center gap-2 mb-6">
-          <span className="px-4 py-2 bg-[#ff2a6d]/20 border border-[#ff2a6d]/50 text-[#ff2a6d] text-sm rounded-full font-medium">
-            🤝 Programme Partenaire
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="inline-flex items-center gap-2 mb-6"
+        >
+          <span className="px-4 py-2 bg-gradient-to-r from-orange-500/20 to-fuchsia-500/20 border border-orange-500/50 text-orange-400 text-sm rounded-full font-medium">
+            🤝 Programme Partenaire OKAR
           </span>
-        </div>
+        </motion.div>
         
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-          Devenez partenaire <span className="bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">QRBag</span>
-        </h1>
+        <motion.h1
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6"
+        >
+          Devenez Garage{' '}
+          <span className="bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">
+            Certifié OKAR
+          </span>
+        </motion.h1>
         
-        <p className="text-[#a0a8b8] max-w-2xl mx-auto mb-8 text-lg">
-          Rejoignez plus de 500 agences de voyage et organisateurs de Hajj qui protègent déjà les bagages de leurs clients avec nos QR codes intelligents.
-        </p>
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="text-white/60 max-w-2xl mx-auto mb-8 text-lg"
+        >
+          Rejoignez le réseau de garages certifiés qui révolutionnent la confiance automobile au Sénégal. 
+          Offrez un service premium à vos clients et développez votre notoriété.
+        </motion.p>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center"
+        >
           <a href="#formulaire">
-            <button className="bg-[#ff2a6d] text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-[#e01e5a] shadow-lg shadow-[#ff2a6d]/30 transition-all hover:scale-105 inline-flex items-center gap-2">
-              📩 Demander un devis
+            <button className="group bg-gradient-to-r from-orange-500 to-fuchsia-500 text-white px-8 py-4 rounded-full font-bold text-lg hover:shadow-xl hover:shadow-orange-500/30 transition-all hover:scale-105 inline-flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Demander l&apos;agrément
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </a>
           <a href="#avantages">
-            <button className="border-2 border-[#ff2a6d] text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-[#ff2a6d]/10 transition-all inline-flex items-center gap-2">
-              📊 Voir les avantages
+            <button className="border-2 border-white/30 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white/10 transition-all inline-flex items-center gap-2">
+              Découvrir les avantages
             </button>
           </a>
-        </div>
+        </motion.div>
+
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-16 grid grid-cols-3 gap-8"
+        >
+          <div>
+            <p className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">500+</p>
+            <p className="text-white/50 text-sm mt-1">Garages certifiés</p>
+          </div>
+          <div>
+            <p className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">2000+</p>
+            <p className="text-white/50 text-sm mt-1">Véhicules suivis</p>
+          </div>
+          <div>
+            <p className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">4.9/5</p>
+            <p className="text-white/50 text-sm mt-1">Note moyenne</p>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -139,44 +194,73 @@ function HeroSection() {
 function WhyPartnerSection() {
   const cards = [
     {
-      title: "Revenus supplémentaires",
-      desc: "Gagnez jusqu'à 3€ par QR code vendu — sans investissement.",
-      icon: "💰"
+      icon: TrendingUp,
+      title: "Développez votre CA",
+      desc: "Attirez de nouveaux clients grâce à votre visibilité sur la plateforme OKAR. Les conducteurs recherchent des garages certifiés.",
+      gradient: "from-orange-400 to-amber-500"
     },
     {
-      title: "Service clé en main",
-      desc: "Nous fournissons les QR codes, le dashboard, le support 24/7.",
-      icon: "🛠️"
+      icon: Shield,
+      title: "Badge de Confiance",
+      desc: "Le label OKAR Certified vous démarque de la concurrence. Gagnez la confiance instantanée de vos clients.",
+      gradient: "from-fuchsia-400 to-purple-500"
     },
     {
-      title: "Confiance renforcée",
-      desc: "Vos clients retrouvent leurs bagages en moins de 2h — votre réputation s'élève.",
-      icon: "⭐"
+      icon: Users,
+      title: "Fidélisez vos Clients",
+      desc: "Chaque intervention est tracée dans le carnet numérique. Vos clients reviennent chez vous pour l'historique complet.",
+      gradient: "from-cyan-400 to-blue-500"
+    },
+    {
+      icon: Clock,
+      title: "Gain de Temps",
+      desc: "Digitalisez vos interventions en 2 minutes. Plus de paperasse, tout est automatiquement enregistré.",
+      gradient: "from-green-400 to-emerald-500"
     }
   ];
 
   return (
-    <section id="avantages" className="py-20 px-4 bg-[#0d1220]">
+    <section id="avantages" className="py-24 px-4 bg-gradient-to-b from-black to-gray-950">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent mb-4">
-            Pourquoi collaborer avec nous ?
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4">
+            Pourquoi devenir{' '}
+            <span className="bg-gradient-to-r from-orange-400 to-fuchsia-400 bg-clip-text text-transparent">
+              partenaire OKAR ?
+            </span>
           </h2>
-          <p className="text-[#a0a8b8] text-lg">
-            Trois raisons de devenir partenaire QRBag
+          <p className="text-white/50 text-lg max-w-2xl mx-auto">
+            Rejoignez le réseau des garages de confiance au Sénégal
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {cards.map((card, i) => (
-            <div
+            <motion.div
               key={i}
-              className="bg-[#0a0f2c] p-6 rounded-xl border border-[#1a1a3a] hover:border-[#ff2a6d]/50 transition-all hover:scale-105 group"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="group relative p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10"
             >
-              <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">{card.icon}</div>
-              <h3 className="text-xl font-bold text-white mb-2">{card.title}</h3>
-              <p className="text-[#a0a8b8]">{card.desc}</p>
-            </div>
+              {/* Glow effect */}
+              <div className={`absolute -inset-px rounded-3xl bg-gradient-to-r ${card.gradient} opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500`} />
+              
+              {/* Icon */}
+              <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-r ${card.gradient} p-3 mb-6`}>
+                <card.icon className="w-full h-full text-white" />
+              </div>
+
+              {/* Content */}
+              <h3 className="text-xl font-bold text-white mb-3">{card.title}</h3>
+              <p className="text-white/50 group-hover:text-white/70 transition-colors">{card.desc}</p>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -184,34 +268,69 @@ function WhyPartnerSection() {
   );
 }
 
-// Who Can Partner Section
-function WhoCanPartnerSection() {
-  const partners = [
-    { icon: "✈️", label: "Agences de voyages (Hajj, Omra, tourisme)" },
-    { icon: "🕋", label: "Tour-opérateurs" },
-    { icon: "🤝", label: "Organisateurs de pèlerinage" },
-    { icon: "🛫", label: "Compagnies aériennes (B2B)" },
-    { icon: "🕌", label: "Associations religieuses" },
+// How It Works Section
+function HowItWorksSection() {
+  const steps = [
+    {
+      step: "01",
+      title: "Demandez votre agrément",
+      desc: "Remplissez le formulaire ci-dessous avec les informations de votre garage."
+    },
+    {
+      step: "02",
+      title: "Validation OKAR",
+      desc: "Notre équipe vérifie votre dossier et vous contacte sous 48h."
+    },
+    {
+      step: "03",
+      title: "Formation rapide",
+      desc: "Une session de 30 minutes pour maîtriser la plateforme OKAR."
+    },
+    {
+      step: "04",
+      title: "Vous êtes certifié !",
+      desc: "Recevez votre badge OKAR et commencez à attirer de nouveaux clients."
+    }
   ];
 
   return (
-    <section className="py-20 px-4 bg-[#080c1a]">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent mb-4">
-            Qui peut devenir partenaire ?
+    <section className="py-24 px-4 bg-gradient-to-b from-gray-950 to-black">
+      <div className="max-w-5xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+            Comment ça marche ?
           </h2>
-        </div>
+          <p className="text-white/50 text-lg">
+            4 étapes simples pour rejoindre le réseau OKAR
+          </p>
+        </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {partners.map((partner, i) => (
-            <div
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {steps.map((item, i) => (
+            <motion.div
               key={i}
-              className="flex items-center gap-4 bg-[#0d1220] p-4 rounded-xl border border-[#1a2238] hover:border-[#ff2a6d]/30 transition-all"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.15 }}
+              className="text-center relative"
             >
-              <span className="text-3xl">{partner.icon}</span>
-              <span className="text-white font-medium">{partner.label}</span>
-            </div>
+              {/* Connector line */}
+              {i < steps.length - 1 && (
+                <div className="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-orange-500/50 to-transparent z-0" />
+              )}
+              
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-r from-orange-500 to-fuchsia-500 flex items-center justify-center mx-auto mb-4 text-white font-black text-xl">
+                {item.step}
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+              <p className="text-white/50 text-sm">{item.desc}</p>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -223,48 +342,186 @@ function WhoCanPartnerSection() {
 function TestimonialsSection() {
   const testimonials = [
     {
-      name: "Amadou Diallo",
-      role: "Directeur, Pèlerins du Sénégal",
-      text: "QRBag a réduit de 90% les pertes de bagages lors du Hajj 2025. Un service révolutionnaire.",
-      avatar: "AD"
+      name: "Mamadou Sy",
+      role: "Gérant, Auto Plus Dakar",
+      text: "Depuis que je suis certifié OKAR, j'ai gagné 40% de nouveaux clients. Le badge de confiance fait la différence.",
+      avatar: "MS",
+      rating: 5
     },
     {
-      name: "Sophie Martin",
-      role: "Responsable client, Voyage Senegal",
-      text: "Simple, efficace et pas cher. Nos clients adorent la notification WhatsApp instantanée.",
-      avatar: "SM"
+      name: "Fatou Ndiaye",
+      role: "Directrice, Garage Moderne",
+      text: "La plateforme est simple et rapide. Mes clients sont rassurés de voir l'historique de leurs véhicules.",
+      avatar: "FN",
+      rating: 5
+    },
+    {
+      name: "Ibrahima Fall",
+      role: "Mécanicien, Auto Service",
+      text: "Fini les carnets papier perdus ! Tout est digital et mes clients me font confiance aveuglément.",
+      avatar: "IF",
+      rating: 5
     }
   ];
 
   return (
-    <section className="py-20 px-4 bg-[#0d1220]">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent mb-12">
-          Ce que disent nos partenaires
-        </h2>
+    <section id="temoignages" className="py-24 px-4 bg-gradient-to-b from-black to-gray-950">
+      <div className="max-w-5xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+            Ce que disent nos partenaires
+          </h2>
+          <p className="text-white/50 text-lg">
+            Des garagistes satisfaits partout au Sénégal
+          </p>
+        </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {testimonials.map((t, i) => (
-            <div
+            <motion.div
               key={i}
-              className="bg-[#0a0f2c] p-6 rounded-xl border border-[#1a1a3a] hover:border-[#ff2a6d]/30 transition-all"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
             >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ff2a6d] to-[#d35400] flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-fuchsia-500 flex items-center justify-center text-white font-bold">
                   {t.avatar}
                 </div>
                 <div>
                   <div className="font-bold text-white">{t.name}</div>
-                  <div className="text-[#a0a8b8] text-sm">{t.role}</div>
+                  <div className="text-white/50 text-sm">{t.role}</div>
                 </div>
               </div>
-              <p className="text-[#e0e6f0] italic">&ldquo;{t.text}&rdquo;</p>
-              <div className="flex gap-1 mt-4">
-                {[...Array(5)].map((_, i) => (
-                  <span key={i} className="text-[#ff2a6d]">★</span>
+              <p className="text-white/70 italic mb-4">&ldquo;{t.text}&rdquo;</p>
+              <div className="flex gap-1">
+                {[...Array(t.rating)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                 ))}
               </div>
-            </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Pricing Section
+function PricingSection() {
+  const plans = [
+    {
+      name: "Starter",
+      price: "Gratuit",
+      period: "",
+      features: [
+        "Profil garage sur OKAR",
+        "10 QR codes/mois",
+        "Historique basique",
+        "Support email"
+      ],
+      cta: "Commencer",
+      popular: false
+    },
+    {
+      name: "Pro",
+      price: "25 000",
+      period: "FCFA/mois",
+      features: [
+        "Tout Starter inclus",
+        "QR codes illimités",
+        "Statistiques avancées",
+        "Badge certifié visible",
+        "Support prioritaire",
+        "Formation incluse"
+      ],
+      cta: "Choisir Pro",
+      popular: true
+    },
+    {
+      name: "Premium",
+      price: "75 000",
+      period: "FCFA/mois",
+      features: [
+        "Tout Pro inclus",
+        "Mise en avant recherche",
+        "Page garage personnalisée",
+        "API pour votre logiciel",
+        "Account manager dédié",
+        "Publicité sur OKAR"
+      ],
+      cta: "Nous contacter",
+      popular: false
+    }
+  ];
+
+  return (
+    <section id="tarifs" className="py-24 px-4 bg-gradient-to-b from-gray-950 to-black">
+      <div className="max-w-5xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+            Nos offres
+          </h2>
+          <p className="text-white/50 text-lg">
+            Choisissez le plan adapté à votre garage
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.map((plan, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className={`relative p-8 rounded-3xl border ${
+                plan.popular 
+                  ? 'bg-gradient-to-b from-orange-500/20 to-fuchsia-500/20 border-orange-500/50' 
+                  : 'bg-white/5 border-white/10'
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-orange-500 to-fuchsia-500 rounded-full text-white text-xs font-bold">
+                  POPULAIRE
+                </div>
+              )}
+              
+              <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
+              <div className="mb-6">
+                <span className="text-4xl font-black text-white">{plan.price}</span>
+                <span className="text-white/50 ml-1">{plan.period}</span>
+              </div>
+              
+              <ul className="space-y-3 mb-8">
+                {plan.features.map((feature, j) => (
+                  <li key={j} className="flex items-center gap-2 text-white/70">
+                    <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              
+              <button className={`w-full py-3 rounded-full font-bold transition-all ${
+                plan.popular
+                  ? 'bg-gradient-to-r from-orange-500 to-fuchsia-500 text-white hover:shadow-lg hover:shadow-orange-500/25'
+                  : 'border border-white/30 text-white hover:bg-white/10'
+              }`}>
+                {plan.cta}
+              </button>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -277,7 +534,9 @@ function ContactFormSection() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    company: '',
+    phone: '',
+    garage: '',
+    city: '',
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
@@ -292,11 +551,13 @@ function ContactFormSection() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'partenaire',
+          type: 'partenaire_okar',
           senderName: formData.name,
           senderEmail: formData.email,
+          senderPhone: formData.phone,
           content: {
-            agence: formData.company,
+            garage: formData.garage,
+            city: formData.city,
             message: formData.message,
           },
         }),
@@ -310,64 +571,107 @@ function ContactFormSection() {
   };
 
   return (
-    <section id="formulaire" className="py-20 px-4 bg-[#080c1a]">
+    <section id="formulaire" className="py-24 px-4 bg-gradient-to-b from-black to-gray-950">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-[#0a0f2c] rounded-2xl p-8 border border-[#1a1a3a]">
-          <h3 className="text-2xl font-bold text-white mb-2">Prêt à booster votre offre ?</h3>
-          <p className="text-[#a0a8b8] mb-8">
-            Remplissez ce formulaire — nous vous répondrons sous 24h avec un devis personnalisé.
-          </p>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-white/5 rounded-3xl p-8 border border-white/10"
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-orange-500 to-fuchsia-500 flex items-center justify-center mx-auto mb-4">
+              <Award className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Demandez votre agrément OKAR</h3>
+            <p className="text-white/50">
+              Remplissez ce formulaire — nous vous répondrons sous 48h.
+            </p>
+          </div>
 
           {submitted ? (
-            <div className="text-center py-8">
-              <CheckCircle className="w-16 h-16 text-[#ff2a6d] mx-auto mb-4" />
-              <h4 className="text-xl font-semibold text-white mb-2">Demande envoyée !</h4>
-              <p className="text-[#a0a8b8]">Nous vous contacterons sous 24h avec votre devis personnalisé.</p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-8"
+            >
+              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+              <h4 className="text-xl font-bold text-white mb-2">Demande envoyée !</h4>
+              <p className="text-white/50">Notre équipe vous contactera sous 48h pour finaliser votre agrément.</p>
+            </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Votre nom *"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full p-4 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-orange-500 transition-colors"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Nom du garage *"
+                  value={formData.garage}
+                  onChange={(e) => setFormData({ ...formData, garage: e.target.value })}
+                  className="w-full p-4 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-orange-500 transition-colors"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="email"
+                  placeholder="Email *"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full p-4 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-orange-500 transition-colors"
+                  required
+                />
+                <input
+                  type="tel"
+                  placeholder="Téléphone *"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full p-4 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-orange-500 transition-colors"
+                  required
+                />
+              </div>
               <input
                 type="text"
-                placeholder="Votre nom"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full p-4 bg-[#0d152a] border border-[#1a1a3a] rounded-xl text-white placeholder-[#a0a8b8] focus:outline-none focus:border-[#ff2a6d] transition-colors"
-                required
-              />
-              <input
-                type="email"
-                placeholder="Votre email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full p-4 bg-[#0d152a] border border-[#1a1a3a] rounded-xl text-white placeholder-[#a0a8b8] focus:outline-none focus:border-[#ff2a6d] transition-colors"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Votre agence / entreprise"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                className="w-full p-4 bg-[#0d152a] border border-[#1a1a3a] rounded-xl text-white placeholder-[#a0a8b8] focus:outline-none focus:border-[#ff2a6d] transition-colors"
+                placeholder="Ville *"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full p-4 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-orange-500 transition-colors"
                 required
               />
               <textarea
-                placeholder="Message (ex: nombre de pèlerins, pays, besoins...)"
+                placeholder="Parlez-nous de votre garage (nombre de mécaniciens, spécialités, années d'expérience...)"
                 rows={4}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="w-full p-4 bg-[#0d152a] border border-[#1a1a3a] rounded-xl text-white placeholder-[#a0a8b8] focus:outline-none focus:border-[#ff2a6d] transition-colors resize-none"
-                required
+                className="w-full p-4 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-orange-500 transition-colors resize-none"
               />
               <button
                 type="submit"
-                className="w-full bg-[#ff2a6d] text-white py-4 rounded-xl font-bold hover:bg-[#e01e5a] transition-all hover:scale-[1.02] shadow-lg shadow-[#ff2a6d]/30 inline-flex items-center justify-center gap-2"
+                disabled={submitting}
+                className="w-full bg-gradient-to-r from-orange-500 to-fuchsia-500 text-white py-4 rounded-xl font-bold hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
               >
-                <Send className="w-5 h-5" />
-                Envoyer ma demande
+                {submitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Envoi en cours...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Envoyer ma demande
+                  </>
+                )}
               </button>
             </form>
           )}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -376,99 +680,74 @@ function ContactFormSection() {
 // Footer
 function Footer() {
   return (
-    <footer className="border-t border-[#1a2238] py-12 px-4 bg-[#080c1a]">
+    <footer className="border-t border-white/10 py-12 px-4 bg-black">
       <div className="max-w-6xl mx-auto">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Logo */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-fuchsia-500 rounded-xl flex items-center justify-center">
                 <QrCode className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">QRBag</span>
+              <span className="text-2xl font-black text-white">OKAR</span>
             </div>
-            <p className="text-[#a0a8b8] text-sm">
-              Protection intelligente des bagages pour voyageurs et pèlerins.
+            <p className="text-white/50 text-sm">
+              Le passeport numérique de votre véhicule au Sénégal.
             </p>
           </div>
 
           {/* Produit */}
           <div>
             <h4 className="font-semibold mb-4 text-white">Produit</h4>
-            <ul className="space-y-2 text-[#a0a8b8] text-sm">
-              <li><a href="/#solutions" className="hover:text-[#ff2a6d] transition-colors">Solutions</a></li>
-              <li><a href="/#comment" className="hover:text-[#ff2a6d] transition-colors">Comment ça marche</a></li>
-              <li><a href="/#tarifs" className="hover:text-[#ff2a6d] transition-colors">Tarifs</a></li>
-              <li><Link href="/demo" className="hover:text-[#ff2a6d] transition-colors">Démo</Link></li>
+            <ul className="space-y-2 text-white/50 text-sm">
+              <li><Link href="/" className="hover:text-white transition-colors">Accueil</Link></li>
+              <li><Link href="/scan" className="hover:text-white transition-colors">Scanner un QR</Link></li>
+              <li><Link href="/devenir-partenaire" className="hover:text-white transition-colors">Devenir Partenaire</Link></li>
             </ul>
           </div>
 
           {/* Entreprise */}
           <div>
             <h4 className="font-semibold mb-4 text-white">Entreprise</h4>
-            <ul className="space-y-2 text-[#a0a8b8] text-sm">
-              <li><Link href="/contact" className="hover:text-[#ff2a6d] transition-colors">Contact</Link></li>
-              <li><Link href="/a-propos" className="hover:text-[#ff2a6d] transition-colors">À propos</Link></li>
-              <li><Link href="/devenir-partenaire" className="hover:text-[#ff2a6d] transition-colors">Partenaires</Link></li>
+            <ul className="space-y-2 text-white/50 text-sm">
+              <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="/a-propos" className="hover:text-white transition-colors">À propos</Link></li>
+              <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
             </ul>
           </div>
 
           {/* Légal */}
           <div>
             <h4 className="font-semibold mb-4 text-white">Légal</h4>
-            <ul className="space-y-2 text-[#a0a8b8] text-sm">
-              <li><Link href="/mentions-legales" className="hover:text-[#ff2a6d] transition-colors">Mentions légales</Link></li>
-              <li><Link href="/confidentialite" className="hover:text-[#ff2a6d] transition-colors">Politique de confidentialité</Link></li>
-              <li><Link href="/cgu" className="hover:text-[#ff2a6d] transition-colors">CGU</Link></li>
+            <ul className="space-y-2 text-white/50 text-sm">
+              <li><Link href="/mentions-legales" className="hover:text-white transition-colors">Mentions légales</Link></li>
+              <li><Link href="/confidentialite" className="hover:text-white transition-colors">Confidentialité</Link></li>
+              <li><Link href="/cgu" className="hover:text-white transition-colors">CGU</Link></li>
             </ul>
           </div>
         </div>
 
         {/* Contact Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-8 border-t border-[#1a2238]">
-          <div className="flex items-center gap-3 text-[#a0a8b8]">
-            <MapPin className="w-5 h-5 text-[#ff2a6d]" />
-            <span>Poissy, France</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-8 border-t border-white/10">
+          <div className="flex items-center gap-3 text-white/50">
+            <MapPin className="w-5 h-5 text-orange-400" />
+            <span>Dakar, Sénégal</span>
           </div>
-          <div className="flex items-center gap-3 text-[#a0a8b8]">
-            <Phone className="w-5 h-5 text-[#ff2a6d]" />
-            <span>+33 7 45 34 93 39</span>
+          <div className="flex items-center gap-3 text-white/50">
+            <Phone className="w-5 h-5 text-orange-400" />
+            <span>+221 77 123 45 67</span>
           </div>
-          <div className="flex items-center gap-3 text-[#a0a8b8]">
-            <Mail className="w-5 h-5 text-[#ff2a6d]" />
-            <span>contact@qrbag.com</span>
+          <div className="flex items-center gap-3 text-white/50">
+            <Mail className="w-5 h-5 text-orange-400" />
+            <span>contact@okar.sn</span>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-[#1a2238] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[#a0a8b8] text-sm">
-            © {new Date().getFullYear()} QRBag by MMASOLUTION. Tous droits réservés.
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-white/30 text-sm">
+            © {new Date().getFullYear()} OKAR. Fait au Sénégal 🇸🇳
           </p>
-
-          {/* Social Icons */}
-          <div className="flex items-center gap-4">
-            <a href="https://facebook.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#ff2a6d] transition-colors" aria-label="Facebook">
-              <Facebook className="w-5 h-5" aria-hidden="true" />
-            </a>
-            <a href="https://instagram.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#ff2a6d] transition-colors" aria-label="Instagram">
-              <Instagram className="w-5 h-5" aria-hidden="true" />
-            </a>
-            <a href="https://twitter.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#ff2a6d] transition-colors" aria-label="Twitter">
-              <Twitter className="w-5 h-5" aria-hidden="true" />
-            </a>
-          </div>
-
-          {/* Map Link */}
-          <a
-            href="https://maps.google.com/?q=Poissy+France"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#a0a8b8] hover:text-[#ff2a6d] text-sm flex items-center gap-1 transition-colors"
-          >
-            <MapPin className="w-4 h-4" />
-            Nous trouver
-          </a>
         </div>
       </div>
     </footer>
@@ -478,12 +757,13 @@ function Footer() {
 // Main Page Component
 export default function DevenirPartenairePage() {
   return (
-    <main className="min-h-screen bg-[#080c1a]">
+    <main className="min-h-screen bg-black">
       <Navigation />
       <HeroSection />
       <WhyPartnerSection />
-      <WhoCanPartnerSection />
+      <HowItWorksSection />
       <TestimonialsSection />
+      <PricingSection />
       <ContactFormSection />
       <Footer />
     </main>
