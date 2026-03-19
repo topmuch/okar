@@ -1,3 +1,4 @@
+// PWA Registration Component
 'use client';
 
 import { useEffect } from 'react';
