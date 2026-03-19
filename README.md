@@ -1,8 +1,8 @@
-# QRBag 🎒
+# OKAR 🎒
 
 **Protection intelligente des bagages avec QR codes**
 
-QRBag est une application web moderne permettant de protéger vos bagages grâce à des étiquettes QR intelligentes. Sans application, sans batterie, sans GPS - un simple scan suffit pour retrouver vos effets.
+OKAR est une application web moderne permettant de disposer un carnet dentretient numerique et de suivi des proprietairess. Sans application, sans batterie, sans GPS - un simple scan suffit pour voir un carnet d"entretient.
 
 ## ✨ Fonctionnalités
 
