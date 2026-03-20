@@ -41,7 +41,14 @@ import {
   FileText,
   Check,
   AlertCircle,
-  ChevronUp
+  ChevronUp,
+  Flag,
+  Award,
+  ThumbsUp,
+  ThumbsDown,
+  Mail,
+  ArrowRightLeft,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -143,7 +150,7 @@ interface UserProfile {
 }
 
 type UserRole = 'public' | 'owner' | 'garage';
-type TabId = 'home' | 'carnet' | 'history' | 'alerts';
+type TabId = 'home' | 'carnet' | 'history' | 'alerts' | 'validation';
 
 // ============================================
 // CONSTANTS
@@ -222,6 +229,10 @@ export default function QRWebApp() {
   const [expandedRecord, setExpandedRecord] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -265,7 +276,6 @@ export default function QRWebApp() {
           ownerCount: data.ownershipHistory?.length || 1,
         });
       } else if (data.status === 'inactive') {
-        // Redirect to activation if not activated
         router.push(`/activate/${code}`);
       } else {
         setError(data.message || 'QR Code non trouvé');
@@ -308,6 +318,28 @@ export default function QRWebApp() {
     }
   }, [vehicle, currentUser]);
   
+  // Share functionality
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/v/${code}`;
+    const shareData = {
+      title: `${vehicle?.make} ${vehicle?.model} - OKAR`,
+      text: `Consultez l'historique certifié de ce véhicule ${vehicle?.make} ${vehicle?.model} ${vehicle?.year}`,
+      url: shareUrl,
+    };
+    
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Lien copié dans le presse-papier !');
+    }
+  };
+  
   // Loading state
   if (loading) {
     return (
@@ -349,6 +381,13 @@ export default function QRWebApp() {
     );
   }
   
+  // Calculate confidence score
+  const validatedRecords = vehicle.maintenanceRecords.filter(r => r.ownerValidation === 'VALIDATED' && r.isLocked);
+  const confidenceScore = Math.min(100, validatedRecords.length * 15 + 25);
+  
+  // Get pending records count for owner
+  const pendingRecords = vehicle.maintenanceRecords.filter(r => r.ownerValidation === 'PENDING');
+  
   // Main render
   return (
     <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 flex flex-col overflow-hidden">
@@ -384,10 +423,13 @@ export default function QRWebApp() {
           </div>
           
           <div className="flex items-center gap-2">
-            <button className={cn(
-              "p-2 rounded-xl transition-colors",
-              headerTransparent ? "bg-white/20 text-white" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600"
-            )}>
+            <button 
+              onClick={handleShare}
+              className={cn(
+                "p-2 rounded-xl transition-colors",
+                headerTransparent ? "bg-white/20 text-white" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600"
+              )}
+            >
               <Share2 className="w-5 h-5" />
             </button>
           </div>
@@ -403,6 +445,12 @@ export default function QRWebApp() {
           <HomeTab 
             vehicle={vehicle} 
             userRole={userRole}
+            confidenceScore={confidenceScore}
+            validatedCount={validatedRecords.length}
+            onShowQR={() => setShowQRModal(true)}
+            onReport={() => setShowReportModal(true)}
+            onEdit={() => setShowEditModal(true)}
+            onTransfer={() => setShowTransferModal(true)}
           />
         )}
         
@@ -415,6 +463,7 @@ export default function QRWebApp() {
             setSelectedFilter={setSelectedFilter}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
+            userRole={userRole}
           />
         )}
         
@@ -428,6 +477,13 @@ export default function QRWebApp() {
         
         {activeTab === 'alerts' && userRole === 'owner' && (
           <AlertsTab vehicle={vehicle} />
+        )}
+        
+        {activeTab === 'validation' && userRole === 'owner' && (
+          <ValidationTab 
+            vehicle={vehicle}
+            onRefresh={fetchVehicleData}
+          />
         )}
       </main>
       
@@ -458,6 +514,16 @@ export default function QRWebApp() {
           />
           {userRole === 'owner' && (
             <TabButton 
+              id="validation" 
+              icon={<CheckCircle className="w-5 h-5" />} 
+              label="Validation" 
+              badge={pendingRecords.length}
+              active={activeTab === 'validation'} 
+              onClick={() => setActiveTab('validation')}
+            />
+          )}
+          {userRole === 'owner' && (
+            <TabButton 
               id="alerts" 
               icon={<Bell className="w-5 h-5" />} 
               label="Alertes" 
@@ -478,7 +544,7 @@ export default function QRWebApp() {
         </button>
       )}
       
-      {/* ===== ADD INTERVENTION MODAL ===== */}
+      {/* ===== MODALS ===== */}
       {showAddModal && (
         <AddInterventionModal 
           vehicleId={vehicle.id}
@@ -487,6 +553,43 @@ export default function QRWebApp() {
           onSuccess={() => {
             setShowAddModal(false);
             fetchVehicleData();
+          }}
+        />
+      )}
+      
+      {showQRModal && (
+        <QRCodeModal 
+          vehicle={vehicle}
+          code={code}
+          onClose={() => setShowQRModal(false)}
+        />
+      )}
+      
+      {showReportModal && (
+        <ReportAnomalyModal 
+          vehicle={vehicle}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
+      
+      {showEditModal && (
+        <EditVehicleModal 
+          vehicle={vehicle}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            fetchVehicleData();
+          }}
+        />
+      )}
+      
+      {showTransferModal && (
+        <TransferOwnershipModal 
+          vehicle={vehicle}
+          onClose={() => setShowTransferModal(false)}
+          onSuccess={() => {
+            setShowTransferModal(false);
+            router.push('/');
           }}
         />
       )}
@@ -526,17 +629,95 @@ function TabButton({
         )}
       </div>
       <span className="text-[10px] font-medium">{label}</span>
-      {active && (
-        <div className="absolute bottom-1 w-8 h-1 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full" />
-      )}
     </button>
+  );
+}
+
+// ============================================
+// OKAR CONFIDENCE SCORE COMPONENT
+// ============================================
+function ConfidenceScore({ score, validatedCount }: { score: number; validatedCount: number }) {
+  const getScoreColor = () => {
+    if (score >= 80) return 'from-emerald-500 to-green-500';
+    if (score >= 60) return 'from-blue-500 to-cyan-500';
+    if (score >= 40) return 'from-orange-500 to-amber-500';
+    return 'from-slate-500 to-gray-500';
+  };
+  
+  const getScoreLabel = () => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Bon';
+    if (score >= 40) return 'Moyen';
+    return 'Limité';
+  };
+  
+  return (
+    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-5 shadow-lg">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className={cn(
+            "w-16 h-16 rounded-2xl bg-gradient-to-br flex items-center justify-center",
+            getScoreColor()
+          )}>
+            <Award className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-2xl font-bold text-white">{score}%</p>
+              <Badge className={cn(
+                "text-xs",
+                score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-blue-500" : "bg-orange-500"
+              )}>
+                {getScoreLabel()}
+              </Badge>
+            </div>
+            <p className="text-white/70 text-sm">Score de Confiance OKAR</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-orange-400">{validatedCount}</p>
+          <p className="text-white/50 text-xs">Interventions<br/>certifiées</p>
+        </div>
+      </div>
+      
+      {/* Score bar */}
+      <div className="mt-4 h-2 bg-white/10 rounded-full overflow-hidden">
+        <div 
+          className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-1000", getScoreColor())}
+          style={{ width: `${score}%` }}
+        />
+      </div>
+      
+      <p className="mt-2 text-white/40 text-xs flex items-center gap-1">
+        <Lock className="w-3 h-3" />
+        Historique infalsifiable vérifié par OKAR
+      </p>
+    </div>
   );
 }
 
 // ============================================
 // HOME TAB COMPONENT
 // ============================================
-function HomeTab({ vehicle, userRole }: { vehicle: VehicleData; userRole: UserRole }) {
+function HomeTab({ 
+  vehicle, 
+  userRole, 
+  confidenceScore, 
+  validatedCount,
+  onShowQR,
+  onReport,
+  onEdit,
+  onTransfer
+}: { 
+  vehicle: VehicleData; 
+  userRole: UserRole;
+  confidenceScore: number;
+  validatedCount: number;
+  onShowQR: () => void;
+  onReport: () => void;
+  onEdit: () => void;
+  onTransfer: () => void;
+}) {
   const vtDays = daysUntil(vehicle.vtEndDate);
   const insDays = daysUntil(vehicle.insuranceEndDate);
   
@@ -586,6 +767,9 @@ function HomeTab({ vehicle, userRole }: { vehicle: VehicleData; userRole: UserRo
       
       {/* Content */}
       <div className="p-4 space-y-4">
+        {/* OKAR Confidence Score */}
+        <ConfidenceScore score={confidenceScore} validatedCount={validatedCount} />
+        
         {/* Quick Stats */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="grid grid-cols-3 gap-4">
@@ -706,34 +890,6 @@ function HomeTab({ vehicle, userRole }: { vehicle: VehicleData; userRole: UserRo
           </div>
         </div>
         
-        {/* Next Maintenance */}
-        {vehicle.nextMaintenanceDueKm && (
-          <div className="bg-gradient-to-br from-orange-50 to-pink-50 dark:from-orange-500/10 dark:to-pink-500/10 rounded-3xl p-4 border border-orange-100 dark:border-orange-900/30">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                <Wrench className="w-7 h-7 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-slate-500">Prochaine échéance</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-white capitalize">
-                  {vehicle.nextMaintenanceType || 'Entretien'}
-                </p>
-                <p className="text-sm text-orange-600">
-                  À {vehicle.nextMaintenanceDueKm.toLocaleString()} km
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-orange-500">
-                  {vehicle.nextMaintenanceDueKm - vehicle.currentMileage > 0 
-                    ? (vehicle.nextMaintenanceDueKm - vehicle.currentMileage).toLocaleString()
-                    : '0'}
-                </p>
-                <p className="text-xs text-slate-400">km restants</p>
-              </div>
-            </div>
-          </div>
-        )}
-        
         {/* Garage Info */}
         {vehicle.garageName && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-800">
@@ -758,28 +914,106 @@ function HomeTab({ vehicle, userRole }: { vehicle: VehicleData; userRole: UserRo
           </div>
         )}
         
-        {/* Owner Actions (Owner Only) */}
+        {/* ===== GARAGE VIEW: Owner Contact Info ===== */}
+        {userRole === 'garage' && (
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 rounded-3xl p-5 border border-blue-200 dark:border-blue-800">
+            <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
+              <User className="w-4 h-4 text-blue-500" />
+              Informations Propriétaire
+            </h3>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500">Nom</span>
+                <span className="font-medium text-slate-800 dark:text-white">{vehicle.ownerName || 'Non renseigné'}</span>
+              </div>
+              {vehicle.ownerPhone && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">Téléphone</span>
+                  <a 
+                    href={`tel:${vehicle.ownerPhone}`}
+                    className="font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1"
+                  >
+                    <Phone className="w-4 h-4" />
+                    {vehicle.ownerPhone}
+                  </a>
+                </div>
+              )}
+              {vehicle.ownerEmail && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">Email</span>
+                  <a 
+                    href={`mailto:${vehicle.ownerEmail}`}
+                    className="font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1"
+                  >
+                    <Mail className="w-4 h-4" />
+                    {vehicle.ownerEmail}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* ===== OWNER ACTIONS ===== */}
         {userRole === 'owner' && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="p-4 space-y-2">
-              <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                <Settings className="w-4 h-4 text-orange-500" />
+                Gestion du Véhicule
+              </h3>
+            </div>
+            <div className="p-2">
+              <button 
+                onClick={onShowQR}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-500/20 rounded-xl flex items-center justify-center">
+                  <QrCode className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-slate-800 dark:text-white">Afficher mon QR Code</p>
+                  <p className="text-xs text-slate-500">Montrer au garage ou à un acheteur</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-400" />
+              </button>
+              
+              <button 
+                onClick={onEdit}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
                 <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 rounded-xl flex items-center justify-center">
                   <Camera className="w-5 h-5 text-blue-500" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-medium text-slate-800 dark:text-white">Modifier les photos</p>
-                  <p className="text-xs text-slate-500">Ajouter ou supprimer des photos</p>
+                  <p className="font-medium text-slate-800 dark:text-white">Modifier les infos</p>
+                  <p className="text-xs text-slate-500">Kilométrage, photos, documents</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-400" />
+              </button>
+              
+              <button 
+                onClick={onTransfer}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center">
+                  <ArrowRightLeft className="w-5 h-5 text-purple-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-slate-800 dark:text-white">Transférer la propriété</p>
+                  <p className="text-xs text-slate-500">Vendre ou céder ce véhicule</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
               </button>
               
               <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center">
-                  <Edit3 className="w-5 h-5 text-purple-500" />
+                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                  <Download className="w-5 h-5 text-emerald-500" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-medium text-slate-800 dark:text-white">Mettre en vente</p>
-                  <p className="text-xs text-slate-500">Publier une annonce</p>
+                  <p className="font-medium text-slate-800 dark:text-white">Télécharger le certificat</p>
+                  <p className="text-xs text-slate-500">PDF officiel OKAR</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
               </button>
@@ -787,25 +1021,39 @@ function HomeTab({ vehicle, userRole }: { vehicle: VehicleData; userRole: UserRo
           </div>
         )}
         
-        {/* Contact Actions (Public) */}
-        {userRole === 'public' && vehicle.forSale && (
-          <div className="fixed bottom-20 left-4 right-4 bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl p-4 shadow-lg z-30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/80 text-sm">Prix demandé</p>
-                <p className="text-2xl font-bold text-white">
-                  {vehicle.salePrice?.toLocaleString() || 'Sur demande'} XOF
-                </p>
+        {/* ===== PUBLIC ACTIONS ===== */}
+        {userRole === 'public' && (
+          <>
+            {/* Contact Seller (if for sale) */}
+            {vehicle.forSale && (
+              <div className="fixed bottom-20 left-4 right-4 bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl p-4 shadow-lg z-30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white/80 text-sm">Prix demandé</p>
+                    <p className="text-2xl font-bold text-white">
+                      {vehicle.salePrice?.toLocaleString() || 'Sur demande'} XOF
+                    </p>
+                  </div>
+                  <a 
+                    href={`https://wa.me/${vehicle.saleContact?.replace(/\D/g, '')}`}
+                    className="bg-white text-orange-500 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 shadow"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    WhatsApp
+                  </a>
+                </div>
               </div>
-              <a 
-                href={`https://wa.me/${vehicle.saleContact?.replace(/\D/g, '')}`}
-                className="bg-white text-orange-500 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 shadow"
-              >
-                <MessageCircle className="w-5 h-5" />
-                WhatsApp
-              </a>
-            </div>
-          </div>
+            )}
+            
+            {/* Report Anomaly Button */}
+            <button 
+              onClick={onReport}
+              className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-medium"
+            >
+              <Flag className="w-5 h-5" />
+              Signaler une anomalie
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -822,7 +1070,8 @@ function CarnetTab({
   selectedFilter,
   setSelectedFilter,
   showFilters,
-  setShowFilters
+  setShowFilters,
+  userRole
 }: { 
   records: MaintenanceRecord[];
   expandedRecord: string | null;
@@ -831,12 +1080,32 @@ function CarnetTab({
   setSelectedFilter: (filter: string) => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
+  userRole: UserRole;
 }) {
-  const filteredRecords = selectedFilter === 'all' 
-    ? records 
-    : records.filter(r => r.category === selectedFilter);
+  // For public users, only show validated records
+  // For garage and owner, show all records
+  const displayRecords = userRole === 'public' 
+    ? records.filter(r => r.ownerValidation === 'VALIDATED')
+    : records;
   
-  const categories = [...new Set(records.map(r => r.category))];
+  const filteredRecords = selectedFilter === 'all' 
+    ? displayRecords 
+    : displayRecords.filter(r => r.category === selectedFilter);
+  
+  const categories = [...new Set(displayRecords.map(r => r.category))];
+  
+  const getValidationBadge = (validation: string) => {
+    switch (validation) {
+      case 'VALIDATED':
+        return <Badge className="bg-emerald-500 text-white text-xs">Validé</Badge>;
+      case 'PENDING':
+        return <Badge className="bg-orange-500 text-white text-xs">En attente</Badge>;
+      case 'REJECTED':
+        return <Badge className="bg-red-500 text-white text-xs">Rejeté</Badge>;
+      default:
+        return null;
+    }
+  };
   
   return (
     <div className="p-4 pt-16">
@@ -892,12 +1161,15 @@ function CarnetTab({
       
       {/* Stats */}
       <div className="flex items-center gap-4 mb-6 text-sm text-slate-500">
-        <span>{records.length} interventions</span>
-        <span>•</span>
-        <span className="flex items-center gap-1">
-          <Lock className="w-3.5 h-3.5" />
-          Certifié OKAR
-        </span>
+        <span>{filteredRecords.length} interventions</span>
+        {userRole !== 'public' && (
+          <>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              {records.filter(r => r.ownerValidation === 'PENDING').length} en attente
+            </span>
+          </>
+        )}
       </div>
       
       {/* Timeline */}
@@ -946,12 +1218,14 @@ function CarnetTab({
                             {formatDate(record.interventionDate)}
                           </p>
                         </div>
-                        {record.isLocked && (
-                          <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
-                            <Lock className="w-3 h-3 text-emerald-500" />
-                            <span className="text-xs text-emerald-600 font-medium">Certifié</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {getValidationBadge(record.ownerValidation)}
+                          {record.isLocked && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 rounded-full">
+                              <Lock className="w-3 h-3 text-emerald-500" />
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
@@ -1252,6 +1526,719 @@ function AlertsTab({ vehicle }: { vehicle: VehicleData }) {
 }
 
 // ============================================
+// VALIDATION TAB COMPONENT (Owner Only)
+// ============================================
+function ValidationTab({ 
+  vehicle, 
+  onRefresh 
+}: { 
+  vehicle: VehicleData;
+  onRefresh: () => void;
+}) {
+  const [processing, setProcessing] = useState<string | null>(null);
+  
+  const pendingRecords = vehicle.maintenanceRecords.filter(r => r.ownerValidation === 'PENDING');
+  
+  const handleValidate = async (recordId: string, approve: boolean) => {
+    setProcessing(recordId);
+    
+    try {
+      const res = await fetch(`/api/maintenance-records/${recordId}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approve }),
+      });
+      
+      if (res.ok) {
+        onRefresh();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProcessing(null);
+    }
+  };
+  
+  if (pendingRecords.length === 0) {
+    return (
+      <div className="p-4 pt-16">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-6">
+          Validation des interventions
+        </h2>
+        
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-100 dark:border-slate-800">
+          <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-10 h-10 text-emerald-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
+            Tout est à jour
+          </h3>
+          <p className="text-slate-500">
+            Aucune intervention en attente de validation
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="p-4 pt-16">
+      <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+        Validation des interventions
+      </h2>
+      <p className="text-slate-500 text-sm mb-6">
+        {pendingRecords.length} intervention(s) soumises par les garages attendent votre validation
+      </p>
+      
+      <div className="space-y-4">
+        {pendingRecords.map((record) => (
+          <div 
+            key={record.id}
+            className="bg-white dark:bg-slate-900 rounded-2xl border border-orange-200 dark:border-orange-800 overflow-hidden"
+          >
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-500/10 dark:to-amber-500/10 border-b border-orange-100 dark:border-orange-800">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center text-xl",
+                  CATEGORY_CONFIG[record.category]?.color || 'bg-slate-500'
+                )}>
+                  {CATEGORY_CONFIG[record.category]?.icon || '📋'}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-800 dark:text-white">
+                    {CATEGORY_CONFIG[record.category]?.label || record.category}
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Gauge className="w-3.5 h-3.5" />
+                      {record.mileage?.toLocaleString()} km
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {formatDate(record.interventionDate)}
+                    </span>
+                  </div>
+                </div>
+                <Badge className="bg-orange-500 text-white">En attente</Badge>
+              </div>
+            </div>
+            
+            {/* Details */}
+            <div className="p-4 space-y-3">
+              {record.description && (
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  {record.description}
+                </p>
+              )}
+              
+              {record.garageName && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Building2 className="w-4 h-4" />
+                  <span>Soumis par: {record.garageName}</span>
+                </div>
+              )}
+              
+              {record.totalCost > 0 && (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span>Coût total: {record.totalCost.toLocaleString()} XOF</span>
+                </div>
+              )}
+              
+              {record.invoicePhoto && (
+                <img 
+                  src={record.invoicePhoto} 
+                  alt="Facture"
+                  className="w-full h-32 object-cover rounded-xl"
+                />
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => handleValidate(record.id, true)}
+                  disabled={processing === record.id}
+                  className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {processing === record.id ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <ThumbsUp className="w-5 h-5" />
+                      Valider
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleValidate(record.id, false)}
+                  disabled={processing === record.id}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {processing === record.id ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <ThumbsDown className="w-5 h-5" />
+                      Rejeter
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// QR CODE MODAL
+// ============================================
+function QRCodeModal({ 
+  vehicle, 
+  code, 
+  onClose 
+}: { 
+  vehicle: VehicleData;
+  code: string;
+  onClose: () => void;
+}) {
+  const qrUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/v/${code}`;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold">Mon QR Code</h3>
+              <p className="text-white/80 text-sm">OKAR Passeport</p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+        
+        {/* QR Code */}
+        <div className="p-8 flex flex-col items-center">
+          <div className="bg-white p-4 rounded-2xl shadow-lg">
+            <QRCode 
+              value={qrUrl}
+              size={200}
+              level="H"
+              includeMargin={false}
+            />
+          </div>
+          
+          <p className="mt-4 text-lg font-bold text-slate-800 dark:text-white">
+            {vehicle.make} {vehicle.model}
+          </p>
+          <p className="text-sm text-slate-500">{vehicle.licensePlate}</p>
+          <p className="mt-2 font-mono text-orange-500 text-sm">{code}</p>
+        </div>
+        
+        {/* Actions */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+          <button 
+            onClick={onClose}
+            className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl font-medium"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// REPORT ANOMALY MODAL
+// ============================================
+function ReportAnomalyModal({ 
+  vehicle, 
+  onClose 
+}: { 
+  vehicle: VehicleData;
+  onClose: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    type: 'info_incorrect',
+    description: '',
+    email: '',
+  });
+  
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setSubmitting(false);
+    setSubmitted(true);
+  };
+  
+  if (submitted) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-emerald-500" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+            Signalement envoyé
+          </h3>
+          <p className="text-slate-500 mb-6">
+            Merci pour votre signalement. Notre équipe va l'examiner dans les plus brefs délais.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-slate-900 text-white rounded-xl font-medium"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+      <div className="bg-white dark:bg-slate-900 w-full rounded-t-3xl max-h-[90vh] overflow-y-auto">
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
+        </div>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-500/20 rounded-xl flex items-center justify-center">
+              <Flag className="w-5 h-5 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+              Signaler une anomalie
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+        
+        {/* Vehicle Info */}
+        <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/50">
+          <p className="text-sm text-slate-500">Véhicule concerné</p>
+          <p className="font-semibold text-slate-800 dark:text-white">
+            {vehicle.make} {vehicle.model} - {vehicle.licensePlate}
+          </p>
+        </div>
+        
+        {/* Form */}
+        <div className="p-5 space-y-4">
+          {/* Type */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Type d'anomalie
+            </label>
+            <select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+            >
+              <option value="info_incorrect">Informations incorrectes</option>
+              <option value="fake_record">Intervention suspecte/falsifiée</option>
+              <option value="odometer_rollback">Kilométrage frauduleux</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+          
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Description
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white resize-none"
+              rows={4}
+              placeholder="Décrivez l'anomalie que vous avez constatée..."
+            />
+          </div>
+          
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Votre email (optionnel)
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+              placeholder="Pour vous tenir informé"
+            />
+          </div>
+          
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !form.description}
+            className="w-full py-4 bg-red-500 text-white font-semibold rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Envoi en cours...
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                Envoyer le signalement
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// EDIT VEHICLE MODAL
+// ============================================
+function EditVehicleModal({ 
+  vehicle, 
+  onClose, 
+  onSuccess 
+}: { 
+  vehicle: VehicleData;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    mileage: vehicle.currentMileage.toString(),
+    vtEndDate: vehicle.vtEndDate ? vehicle.vtEndDate.split('T')[0] : '',
+    insuranceEndDate: vehicle.insuranceEndDate ? vehicle.insuranceEndDate.split('T')[0] : '',
+  });
+  
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    
+    try {
+      const res = await fetch(`/api/vehicles/${vehicle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentMileage: parseInt(form.mileage),
+          vtEndDate: form.vtEndDate || null,
+          insuranceEndDate: form.insuranceEndDate || null,
+        }),
+      });
+      
+      if (res.ok) {
+        onSuccess();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+      <div className="bg-white dark:bg-slate-900 w-full rounded-t-3xl max-h-[90vh] overflow-y-auto">
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
+        </div>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <Edit3 className="w-5 h-5 text-blue-500" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+              Modifier les informations
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+        
+        {/* Form */}
+        <div className="p-5 space-y-4">
+          {/* Mileage */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Kilométrage actuel
+            </label>
+            <input
+              type="number"
+              value={form.mileage}
+              onChange={(e) => setForm({ ...form, mileage: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+              placeholder="Kilométrage"
+            />
+          </div>
+          
+          {/* VT End Date */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Expiration Visite Technique
+            </label>
+            <input
+              type="date"
+              value={form.vtEndDate}
+              onChange={(e) => setForm({ ...form, vtEndDate: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+            />
+          </div>
+          
+          {/* Insurance End Date */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Expiration Assurance
+            </label>
+            <input
+              type="date"
+              value={form.insuranceEndDate}
+              onChange={(e) => setForm({ ...form, insuranceEndDate: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+            />
+          </div>
+          
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="w-full py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Check className="w-5 h-5" />
+                Enregistrer les modifications
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// TRANSFER OWNERSHIP MODAL
+// ============================================
+function TransferOwnershipModal({ 
+  vehicle, 
+  onClose, 
+  onSuccess 
+}: { 
+  vehicle: VehicleData;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    newOwnerName: '',
+    newOwnerPhone: '',
+    transferPrice: '',
+    transferType: 'sale',
+  });
+  
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    
+    try {
+      const res = await fetch(`/api/vehicle/${vehicle.id}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newOwnerName: form.newOwnerName,
+          newOwnerPhone: form.newOwnerPhone,
+          transferPrice: form.transferPrice ? parseFloat(form.transferPrice) : null,
+          transferType: form.transferType,
+        }),
+      });
+      
+      if (res.ok) {
+        onSuccess();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+      <div className="bg-white dark:bg-slate-900 w-full rounded-t-3xl max-h-[90vh] overflow-y-auto">
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
+        </div>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center">
+              <ArrowRightLeft className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+                Transférer la propriété
+              </h3>
+              <p className="text-xs text-slate-500">Vendre ou céder ce véhicule</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+        
+        {/* Vehicle Info */}
+        <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/50">
+          <p className="text-sm text-slate-500">Véhicule</p>
+          <p className="font-semibold text-slate-800 dark:text-white">
+            {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.licensePlate}
+          </p>
+        </div>
+        
+        {/* Warning */}
+        <div className="mx-5 mt-4 p-4 bg-orange-50 dark:bg-orange-500/10 rounded-xl border border-orange-200 dark:border-orange-800">
+          <div className="flex gap-3">
+            <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                Attention
+              </p>
+              <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                Cette action est irréversible. Une fois transféré, vous n'aurez plus accès à la gestion de ce véhicule.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Form */}
+        <div className="p-5 space-y-4">
+          {/* Transfer Type */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Type de transfert
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setForm({ ...form, transferType: 'sale' })}
+                className={cn(
+                  "p-3 rounded-xl border text-center transition-all",
+                  form.transferType === 'sale'
+                    ? "border-purple-500 bg-purple-50 dark:bg-purple-500/10"
+                    : "border-slate-200 dark:border-slate-700"
+                )}
+              >
+                <span className="text-2xl">💰</span>
+                <p className="text-sm font-medium text-slate-800 dark:text-white mt-1">Vente</p>
+              </button>
+              <button
+                onClick={() => setForm({ ...form, transferType: 'gift' })}
+                className={cn(
+                  "p-3 rounded-xl border text-center transition-all",
+                  form.transferType === 'gift'
+                    ? "border-purple-500 bg-purple-50 dark:bg-purple-500/10"
+                    : "border-slate-200 dark:border-slate-700"
+                )}
+              >
+                <span className="text-2xl">🎁</span>
+                <p className="text-sm font-medium text-slate-800 dark:text-white mt-1">Don</p>
+              </button>
+            </div>
+          </div>
+          
+          {/* New Owner Name */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Nom du nouveau propriétaire *
+            </label>
+            <input
+              type="text"
+              value={form.newOwnerName}
+              onChange={(e) => setForm({ ...form, newOwnerName: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+              placeholder="Amadou Diallo"
+            />
+          </div>
+          
+          {/* New Owner Phone */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Téléphone du nouveau propriétaire *
+            </label>
+            <input
+              type="tel"
+              value={form.newOwnerPhone}
+              onChange={(e) => setForm({ ...form, newOwnerPhone: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+              placeholder="+221 77 123 45 67"
+            />
+          </div>
+          
+          {/* Price (if sale) */}
+          {form.transferType === 'sale' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Prix de vente (XOF)
+              </label>
+              <input
+                type="number"
+                value={form.transferPrice}
+                onChange={(e) => setForm({ ...form, transferPrice: e.target.value })}
+                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+                placeholder="5 000 000"
+              />
+            </div>
+          )}
+          
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !form.newOwnerName || !form.newOwnerPhone}
+            className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Transfert en cours...
+              </>
+            ) : (
+              <>
+                <ArrowRightLeft className="w-5 h-5" />
+                Confirmer le transfert
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // ADD INTERVENTION MODAL
 // ============================================
 function AddInterventionModal({
@@ -1271,6 +2258,7 @@ function AddInterventionModal({
     description: '',
     mileage: currentMileage.toString(),
     partsList: '',
+    totalCost: '',
   });
   
   const handleSubmit = async () => {
@@ -1286,6 +2274,7 @@ function AddInterventionModal({
           description: form.description,
           mileage: parseInt(form.mileage),
           partsList: form.partsList || undefined,
+          totalCost: form.totalCost ? parseFloat(form.totalCost) : 0,
         }),
       });
       
@@ -1368,6 +2357,20 @@ function AddInterventionModal({
               className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white resize-none"
               rows={3}
               placeholder="Décrivez l'intervention..."
+            />
+          </div>
+          
+          {/* Total Cost */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Coût total (XOF)
+            </label>
+            <input
+              type="number"
+              value={form.totalCost}
+              onChange={(e) => setForm({ ...form, totalCost: e.target.value })}
+              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+              placeholder="25000"
             />
           </div>
           

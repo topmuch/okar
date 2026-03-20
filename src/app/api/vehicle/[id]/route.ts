@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateCuid } from '@/lib/qr';
+import { triggerScoreCalculation } from '@/lib/score';
 
 // Vehicle row type (using new Vehicle table)
 interface VehicleRow {
@@ -115,6 +116,51 @@ export async function PUT(
       updates.push('qrStatus = ?');
       values.push(body.qrStatus);
     }
+    
+    // VT (Visite Technique) fields
+    if (body.vtStartDate !== undefined) {
+      updates.push('vtStartDate = ?');
+      values.push(body.vtStartDate || null);
+    }
+    if (body.vtEndDate !== undefined) {
+      updates.push('vtEndDate = ?');
+      values.push(body.vtEndDate || null);
+    }
+    if (body.vtCenter !== undefined) {
+      updates.push('vtCenter = ?');
+      values.push(body.vtCenter || null);
+    }
+    if (body.vtDocumentUrl !== undefined) {
+      updates.push('vtDocumentUrl = ?');
+      values.push(body.vtDocumentUrl || null);
+    }
+    
+    // Insurance fields
+    if (body.insuranceStartDate !== undefined) {
+      updates.push('insuranceStartDate = ?');
+      values.push(body.insuranceStartDate || null);
+    }
+    if (body.insuranceEndDate !== undefined) {
+      updates.push('insuranceEndDate = ?');
+      values.push(body.insuranceEndDate || null);
+    }
+    if (body.insuranceCompany !== undefined) {
+      updates.push('insuranceCompany = ?');
+      values.push(body.insuranceCompany || null);
+    }
+    if (body.insurancePolicyNum !== undefined) {
+      updates.push('insurancePolicyNum = ?');
+      values.push(body.insurancePolicyNum || null);
+    }
+    if (body.insuranceDocumentUrl !== undefined) {
+      updates.push('insuranceDocumentUrl = ?');
+      values.push(body.insuranceDocumentUrl || null);
+    }
+
+    // Track if VT/Insurance was updated for score recalculation
+    const shouldRecalculateScore = 
+      body.vtEndDate !== undefined || 
+      body.insuranceEndDate !== undefined;
 
     if (updates.length > 0) {
       updates.push('updatedAt = ?');
@@ -133,6 +179,16 @@ export async function PUT(
     `;
 
     const updatedVehicle = updatedVehicles[0];
+
+    // Trigger score calculation if VT/Insurance was updated
+    if (shouldRecalculateScore) {
+      try {
+        await triggerScoreCalculation(id);
+      } catch (scoreError) {
+        console.error('Score calculation error:', scoreError);
+        // Don't fail the request if score calculation fails
+      }
+    }
 
     // Return with backward compatible key name
     return NextResponse.json({

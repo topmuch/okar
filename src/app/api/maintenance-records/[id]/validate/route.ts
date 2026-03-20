@@ -1,18 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateCuid } from '@/lib/qr';
+import { triggerScoreCalculation } from '@/lib/score';
 
-// PUT - Validate or reject a maintenance record (owner only)
-export async function PUT(
+// POST - Validate or reject a maintenance record (owner only)
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { ownerId, action, rejectionReason } = body;
+    const { approve, rejectionReason } = body;
 
-    // action: 'validate' or 'reject'
+    // Get current user from session
+    const sessionRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/me`, {
+      headers: { cookie: request.headers.get('cookie') || '' }
+    });
+    let currentUser = null;
+    if (sessionRes.ok) {
+      const sessionData = await sessionRes.json();
+      currentUser = sessionData.user;
+    }
 
     // Get the record
     const records = await db.$queryRaw<any[]>`
@@ -30,7 +39,7 @@ export async function PUT(
     const record = records[0];
 
     // Verify owner
-    if (record.vehicleOwnerId !== ownerId) {
+    if (record.vehicleOwnerId !== currentUser?.id) {
       return NextResponse.json({ 
         error: 'Seul le propriétaire du véhicule peut valider ce rapport' 
       }, { status: 403 });
@@ -45,7 +54,7 @@ export async function PUT(
 
     const now = new Date().toISOString();
 
-    if (action === 'validate') {
+    if (approve) {
       // Validate the record
       await db.$executeRaw`
         UPDATE MaintenanceRecord SET
@@ -66,12 +75,20 @@ export async function PUT(
         )
       `;
 
+      // Trigger score calculation
+      try {
+        await triggerScoreCalculation(record.vehicleId);
+      } catch (scoreError) {
+        console.error('Score calculation error:', scoreError);
+        // Don't fail the request if score calculation fails
+      }
+
       return NextResponse.json({ 
         success: true, 
         message: 'Rapport validé avec succès' 
       });
 
-    } else if (action === 'reject') {
+    } else {
       // Reject the record
       await db.$executeRaw`
         UPDATE MaintenanceRecord SET
@@ -98,11 +115,6 @@ export async function PUT(
         success: true, 
         message: 'Rapport rejeté' 
       });
-
-    } else {
-      return NextResponse.json({ 
-        error: 'Action invalide. Utilisez "validate" ou "reject"' 
-      }, { status: 400 });
     }
 
   } catch (error) {

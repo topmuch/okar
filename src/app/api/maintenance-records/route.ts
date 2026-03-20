@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateCuid } from '@/lib/qr';
+import { triggerScoreCalculation } from '@/lib/score';
 
 // GET - List maintenance records
 export async function GET(request: NextRequest) {
@@ -88,6 +89,9 @@ export async function GET(request: NextRequest) {
       interventionDate: r.interventionDate,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
+      source: r.source,
+      paperDocumentUrl: r.paperDocumentUrl,
+      isVerified: r.isVerified === 1 || r.isVerified === true,
     }));
 
     // Calculate stats
@@ -114,6 +118,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create new maintenance record
+// Supports both OKAR certified records and PRE_OKAR_PAPER historical records
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -132,37 +137,69 @@ export async function POST(request: NextRequest) {
       invoiceNumber,
       mechanicSignature,
       interventionDate,
+      // Paper history fields
+      source = 'OKAR',
+      paperDocumentUrl,
+      isVerified = false,
     } = body;
 
     const id = generateCuid();
     const now = new Date().toISOString();
 
-    // Verify garage is certified
-    const garages = await db.$queryRaw<any[]>`
-      SELECT isCertified FROM Garage WHERE id = ${garageId} LIMIT 1
-    `;
+    // Check if this is a paper history record (no garage required)
+    const isPaperHistory = source === 'PRE_OKAR_PAPER';
 
-    if (!garages || garages.length === 0 || !garages[0].isCertified) {
-      return NextResponse.json({ 
-        error: 'Seuls les garages certifiés peuvent créer des rapports d\'entretien' 
-      }, { status: 403 });
+    // For OKAR records, verify garage is certified
+    if (!isPaperHistory && garageId) {
+      const garages = await db.$queryRaw<any[]>`
+        SELECT isCertified FROM Garage WHERE id = ${garageId} LIMIT 1
+      `;
+
+      if (!garages || garages.length === 0 || !garages[0].isCertified) {
+        return NextResponse.json({ 
+          error: 'Seuls les garages certifiés peuvent créer des rapports d\'entretien' 
+        }, { status: 403 });
+      }
     }
 
-    // Create record
-    await db.$executeRaw`
+    // Determine status based on source
+    // OKAR records need owner validation, paper history records are archived
+    const recordStatus = isPaperHistory ? 'ARCHIVED' : 'SUBMITTED';
+    const ownerValidation = isPaperHistory ? 'PENDING' : 'PENDING';
+
+    // Create record with source info
+    await db.$executeRawUnsafe(`
       INSERT INTO MaintenanceRecord (
         id, vehicleId, garageId, mechanicName, category, description,
         mileage, partsList, partsCost, laborCost, totalCost,
         invoicePhoto, invoiceNumber, mechanicSignature,
-        ownerValidation, status, interventionDate, createdAt
-      ) VALUES (
-        ${id}, ${vehicleId}, ${garageId}, ${mechanicName || null},
-        ${category}, ${description || null}, ${mileage || null},
-        ${partsList || null}, ${partsCost || 0}, ${laborCost || 0}, ${totalCost || 0},
-        ${invoicePhoto || null}, ${invoiceNumber || null}, ${mechanicSignature || null},
-        'PENDING', 'SUBMITTED', ${interventionDate || now}, ${now}
-      )
-    `;
+        ownerValidation, status, interventionDate, createdAt, updatedAt,
+        source, paperDocumentUrl, isVerified
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, 
+      id, 
+      vehicleId, 
+      garageId || null, 
+      mechanicName || null,
+      category, 
+      description || null, 
+      mileage || null,
+      partsList || null, 
+      partsCost || 0, 
+      laborCost || 0, 
+      totalCost || 0,
+      invoicePhoto || null, 
+      invoiceNumber || null, 
+      mechanicSignature || null,
+      ownerValidation, 
+      recordStatus, 
+      interventionDate || now, 
+      now,
+      now,
+      source,
+      paperDocumentUrl || null,
+      isVerified ? 1 : 0
+    );
 
     // Update vehicle mileage
     if (mileage) {
@@ -172,26 +209,42 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    // Create notification for vehicle owner
-    const vehicles = await db.$queryRaw<any[]>`
-      SELECT ownerId, ownerName FROM Vehicle WHERE id = ${vehicleId} LIMIT 1
-    `;
-
-    if (vehicles && vehicles.length > 0 && vehicles[0].ownerId) {
-      const notificationId = generateCuid();
-      await db.$executeRaw`
-        INSERT INTO Notification (id, type, userId, vehicleId, message, createdAt)
-        VALUES (
-          ${notificationId}, 'validation_required', ${vehicles[0].ownerId},
-          ${vehicleId}, 'Un nouveau rapport d''entretien est en attente de validation', ${now}
-        )
+    // For OKAR records, notify vehicle owner
+    if (!isPaperHistory) {
+      const vehicles = await db.$queryRaw<any[]>`
+        SELECT ownerId, ownerName FROM Vehicle WHERE id = ${vehicleId} LIMIT 1
       `;
+
+      if (vehicles && vehicles.length > 0 && vehicles[0].ownerId) {
+        const notificationId = generateCuid();
+        await db.$executeRaw`
+          INSERT INTO Notification (id, type, userId, vehicleId, message, createdAt)
+          VALUES (
+            ${notificationId}, 'validation_required', ${vehicles[0].ownerId},
+            ${vehicleId}, 'Un nouveau rapport d''entretien est en attente de validation', ${now}
+          )
+        `;
+      }
+    }
+
+    // Trigger score calculation for paper history (if verified)
+    if (isPaperHistory && isVerified) {
+      try {
+        await triggerScoreCalculation(vehicleId);
+      } catch (scoreError) {
+        console.error('Score calculation error:', scoreError);
+        // Don't fail the request if score calculation fails
+      }
     }
 
     return NextResponse.json({ 
       success: true, 
       recordId: id,
-      message: 'Rapport d\'entretien créé avec succès'
+      message: isPaperHistory 
+        ? 'Historique papier ajouté avec succès' 
+        : 'Rapport d\'entretien créé avec succès',
+      source,
+      isPaperHistory,
     });
 
   } catch (error) {

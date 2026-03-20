@@ -79,6 +79,32 @@ model Garage {
   active                Boolean             @default(true)
   whatsappNumber        String?
   whatsappVerified      Boolean             @default(false)
+  
+  // Champs pour le flux d'inscription sécurisé
+  managerName           String?             // Nom du gérant
+  managerPhone          String?             // Téléphone du gérant
+  businessRegistryNumber String?            // Numéro de registre de commerce / agrément
+  shopPhoto             String?             // Photo de la façade du garage
+  idDocumentUrl         String?             // Pièce d'identité du gérant
+  agreementDocumentUrl  String?             // Photo de l'agrément
+  validationStatus      String              @default("PENDING")  // PENDING, APPROVED, REJECTED
+  rejectionReason       String?             // Motif de rejet si applicable
+  validatedAt           DateTime?           // Date de validation
+  validatedBy           String?             // ID de l'admin qui a validé
+  temporaryPassword     String?             // Mot de passe temporaire généré
+  
+  // PARTIE 1.5 - SUSPENSION MANUELLE (Monétisation)
+  accountStatus         String              @default("ACTIVE")  // ACTIVE, SUSPENDED_BY_ADMIN
+  suspendedAt           DateTime?
+  suspendedBy           String?             // ID de l'admin qui a suspendu
+  suspensionReason      String?
+  contractEndDate       DateTime?           // Date de fin de contrat (informatif)
+  
+  // PARTIE 2.7 - Géolocalisation pour Urgence Panne
+  latitude              Float?
+  longitude             Float?
+  geoUpdatedAt          DateTime?
+  
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   profile               GarageProfile?
@@ -89,9 +115,13 @@ model Garage {
   transactions          Transaction[]
   users                 User[]
   vehicles              Vehicle[]
+  auditLogs             AuditLog[]
+  qrSwapRequests        QRSwapRequest[]
 
   @@index([slug])
   @@index([isCertified])
+  @@index([validationStatus])
+  @@index([accountStatus])
 }
 
 model QRCodeLot {
@@ -117,7 +147,7 @@ model QRCodeStock {
   codeUnique       String       @unique
   shortCode        String       @unique
   lotId            String
-  status           String       @default("STOCK")
+  status           String       @default("STOCK")  // STOCK, ASSIGNED, ACTIVE, LOST, REVOKED, SWAPPED
   assignedGarageId String?
   linkedVehicleId  String?      @unique
   activationDate   DateTime?
@@ -127,6 +157,13 @@ model QRCodeStock {
   replacementForId String?      @unique
   printedAt        DateTime?
   printedBy        String?
+  
+  // PARTIE 1.4 - QR Codes Perdus/Volés
+  lostAt           DateTime?
+  markedLostBy     String?      // ID de l'utilisateur qui a marqué comme perdu
+  lostReason       String?
+  swappedToId      String?      @unique  // ID du nouveau QR en cas de swap
+  
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   replacementFor   QRCodeStock? @relation("QRReplacement", fields: [replacementForId], references: [id])
@@ -187,6 +224,12 @@ model Vehicle {
   declaredLostAt         DateTime?
   foundAt                DateTime?
   activatedAt            DateTime?
+  
+  // PARTIE 2.6 - Score de Santé OKAR (Gamification)
+  okarScore              Int                 @default(0)      // Score 0-100
+  okarBadge              String?             // BRONZE, SILVER, GOLD
+  scoreUpdatedAt         DateTime?
+  
   createdAt              DateTime            @default(now())
   expiresAt              DateTime?
   updatedAt              DateTime            @updatedAt
@@ -204,6 +247,8 @@ model Vehicle {
   garage                 Garage?             @relation(fields: [garageId], references: [id])
   photos                 VehiclePhoto[]
   sale                   VehicleSale?
+  transferCodes          TransferCode[]
+  accessTickets          AccessTicket[]
 
   @@index([reference])
   @@index([licensePlate])
@@ -212,6 +257,7 @@ model Vehicle {
   @@index([garageId])
   @@index([vtEndDate])
   @@index([insuranceEndDate])
+  @@index([okarScore])
 }
 
 model VehiclePhoto {
@@ -238,16 +284,23 @@ model MaintenanceRecord {
   subCategory       String?
   description       String?
   mileage           Int?
-  partsList         String?
+  partsList         String?             // Ancien champ texte (deprecated)
+  partsListJson     String?             // PARTIE 2.8 - Nouveau champ JSON structuré
   partsCost         Float?              @default(0)
   laborCost         Float?              @default(0)
   totalCost         Float?              @default(0)
   invoicePhoto      String?
   invoiceNumber     String?
   workPhotos        String?
-  status            String              @default("PENDING")
+  status            String              @default("PENDING")  // PENDING, VALIDATED, ARCHIVED
   ownerValidation   String              @default("PENDING")
   isLocked          Boolean             @default(false)
+  
+  // PARTIE 1.2 - Historique Antérieur (Véhicules sans historique)
+  source            String              @default("OKAR")    // OKAR, PRE_OKAR_PAPER
+  paperDocumentUrl  String?             // URL du document papier scanné
+  isVerified        Boolean             @default(false)     // Vérifié visuellement
+  
   serverCreatedAt   DateTime            @default(now())
   serverValidatedAt DateTime?
   correctionOfId    String?
@@ -267,6 +320,7 @@ model MaintenanceRecord {
   @@index([status])
   @@index([interventionDate])
   @@index([isLocked])
+  @@index([source])
 }
 
 model OwnershipHistory {
@@ -858,4 +912,99 @@ model PdfReport {
 
   @@index([vehicleId])
   @@index([verificationCode])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  action       String   // APPROVE_GARAGE, REJECT_GARAGE, CREATE_USER, etc.
+  entityType   String   // GARAGE, USER, VEHICLE, etc.
+  entityId     String   // ID de l'entité concernée
+  userId       String?  // ID de l'utilisateur qui a effectué l'action
+  userEmail    String?  // Email de l'utilisateur
+  details      String?  // Détails supplémentaires en JSON
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  garageId     String?
+  garage       Garage?  @relation(fields: [garageId], references: [id])
+
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// PARTIE 1.1 - Ticket d'Accès Client
+model AccessTicket {
+  id                String   @id @default(cuid())
+  vehicleId         String
+  garageId          String
+  driverName        String
+  driverPhone       String
+  driverEmail       String?
+  vehicleInfo       String   // "Toyota Corolla - AA-1234-BB"
+  qrReference       String
+  tempPassword      String
+  generatedAt       DateTime @default(now())
+  sentViaWhatsApp   Boolean  @default(false)
+  sentViaSMS        Boolean  @default(false)
+  printedAt         DateTime?
+  expiresAt         DateTime?
+  createdBy         String?  // ID de l'utilisateur garage
+  vehicle           Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  
+  @@index([vehicleId])
+  @@index([driverPhone])
+  @@index([generatedAt])
+}
+
+// PARTIE 1.3 - Code de Transfert Sécurisé
+model TransferCode {
+  id              String   @id @default(cuid())
+  code            String   @unique  // Code à 6 chiffres
+  vehicleId       String
+  sellerId        String   // ID du propriétaire actuel
+  sellerName      String
+  sellerPhone     String
+  buyerId         String?  // ID du nouveau propriétaire (rempli à la saisie)
+  buyerName       String?
+  buyerPhone      String?
+  status          String   @default("PENDING")  // PENDING, USED, EXPIRED, CANCELLED
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime  // 48h par défaut
+  usedAt          DateTime?
+  confirmedBy     String?  // ID du vendeur qui a confirmé
+  confirmedAt     DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  
+  @@index([code])
+  @@index([vehicleId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// PARTIE 1.4 - Demande de remplacement QR
+model QRSwapRequest {
+  id              String   @id @default(cuid())
+  vehicleId       String
+  oldQrCodeId     String
+  newQrCodeId     String?
+  requesterId     String   // ID du propriétaire
+  requesterPhone  String
+  reason          String   // ENDOMMAGE, PERDU, ILLISIBLE
+  status          String   @default("PENDING")  // PENDING, APPROVED, COMPLETED, REJECTED
+  adminNotes      String?
+  createdAt       DateTime @default(now())
+  processedAt     DateTime?
+  processedBy     String?  // ID de l'admin
+  garageId        String?
+  garage          Garage?  @relation(fields: [garageId], references: [id])
+  
+  @@index([vehicleId])
+  @@index([requesterId])
+  @@index([status])
 }

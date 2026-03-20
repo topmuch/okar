@@ -85,6 +85,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Vérifier le statut de validation du garage
+    if (user.role === 'garage' && user.garageId) {
+      const garage = await prisma.garage.findUnique({
+        where: { id: user.garageId }
+      });
+
+      if (!garage || garage.validationStatus !== 'APPROVED') {
+        await logLoginAttempt({
+          userId: user.id,
+          email,
+          success: false,
+          failureReason: 'Garage non validé',
+        });
+
+        const statusMessage = garage?.validationStatus === 'PENDING'
+          ? 'Votre inscription est en cours de validation. Vous recevrez vos accès par SMS/WhatsApp une fois validée.'
+          : garage?.validationStatus === 'REJECTED'
+          ? `Votre inscription a été rejetée. Motif: ${garage.rejectionReason || 'Non spécifié'}`
+          : 'Votre compte garage n\'est pas encore activé.';
+
+        return NextResponse.json(
+          { error: statusMessage, code: 'GARAGE_NOT_APPROVED' },
+          { status: 403 }
+        );
+      }
+
+      // Vérifier si le compte est suspendu par l'admin (PARTIE 1.5 - Suspension manuelle)
+      if (garage.accountStatus === 'SUSPENDED_BY_ADMIN') {
+        await logLoginAttempt({
+          userId: user.id,
+          email,
+          success: false,
+          failureReason: 'Compte garage suspendu',
+        });
+
+        const suspensionDate = garage.suspendedAt
+          ? new Date(garage.suspendedAt).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })
+          : 'date inconnue';
+
+        const reasonText = garage.suspensionReason
+          ? ` Motif: ${garage.suspensionReason}`
+          : '';
+
+        return NextResponse.json(
+          {
+            error: `Compte suspendu le ${suspensionDate}.${reasonText} Contactez l'administration OKAR.`,
+            code: 'GARAGE_SUSPENDED'
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // Créer une session sécurisée avec cookie HTTP-only
     await createSession(user.id);
 

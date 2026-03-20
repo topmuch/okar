@@ -25,7 +25,8 @@ import {
   TrendingUp,
   LayoutDashboard,
   Building2,
-  Package
+  Package,
+  ClipboardCheck
 } from "lucide-react";
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,6 +82,9 @@ function Sidebar({
 
     // Garages
     { label: "Garages", icon: <Building2 className="w-5 h-5" />, href: "/admin/garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+
+    // Garage Applications
+    { label: "Demandes Garages", icon: <ClipboardCheck className="w-5 h-5" />, href: "/admin/demandes-garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
 
     // Messages
     { label: "Messages", icon: <MessageSquare className="w-5 h-5" />, href: "/admin/messages", badge: unreadMessages, permission: PERMISSIONS.VIEW_MESSAGES },

@@ -25,7 +25,17 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json({ garages });
+    // Transformer les données pour inclure les champs de suspension
+    const garagesWithStatus = garages.map(garage => ({
+      ...garage,
+      accountStatus: garage.accountStatus || 'ACTIVE',
+      suspendedAt: garage.suspendedAt,
+      suspendedBy: garage.suspendedBy,
+      suspensionReason: garage.suspensionReason,
+      contractEndDate: garage.contractEndDate,
+    }));
+
+    return NextResponse.json({ garages: garagesWithStatus });
 
   } catch (error) {
     console.error('Get garages error:', error);

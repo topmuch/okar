@@ -18,7 +18,10 @@ export const authOptions: NextAuthOptions = {
 
         const user = await db.user.findUnique({
           where: { email: credentials.email },
-          include: { agency: true }
+          include: {
+            agency: true,
+            garage: true
+          }
         });
 
         if (!user) {
@@ -34,13 +37,27 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Vérification pour les utilisateurs garage
+        if (user.role === 'garage' && user.garageId) {
+          const garage = await db.garage.findUnique({
+            where: { id: user.garageId }
+          });
+
+          // Si le garage n'est pas validé, bloquer l'accès
+          if (!garage || garage.validationStatus !== 'APPROVED') {
+            throw new Error('GARAGE_NOT_APPROVED');
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           agencyId: user.agencyId,
-          agencyName: user.agency?.name || null
+          agencyName: user.agency?.name || null,
+          garageId: user.garageId,
+          garageName: user.garage?.name || null
         };
       }
     })
@@ -52,6 +69,8 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.agencyId = user.agencyId;
         token.agencyName = user.agencyName;
+        token.garageId = user.garageId;
+        token.garageName = user.garageName;
       }
       return token;
     },
@@ -61,6 +80,8 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.agencyId = token.agencyId as string | null;
         session.user.agencyName = token.agencyName as string | null;
+        session.user.garageId = token.garageId as string | null;
+        session.user.garageName = token.garageName as string | null;
       }
       return session;
     }

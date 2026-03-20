@@ -21,6 +21,7 @@ import {
   Clock,
   FileText
 } from 'lucide-react';
+import EmergencyButton from '@/components/EmergencyButton';
 
 // Driver context
 interface DriverContextType {
@@ -281,6 +282,9 @@ export default function DriverLayout({
             {children}
           </div>
         </main>
+
+        {/* Emergency Button */}
+        <EmergencyButton />
       </div>
     </DriverContext.Provider>
   );

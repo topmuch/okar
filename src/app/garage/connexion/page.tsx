@@ -138,9 +138,14 @@ export default function GarageLoginPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-sm flex items-center gap-2">
-              <span>⚠️</span>
-              {error}
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-sm">
+              <div className="flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <div>
+                  <p className="font-medium">Connexion impossible</p>
+                  <p className="mt-1 text-red-600 dark:text-red-300">{error}</p>
+                </div>
+              </div>
             </div>
           )}
 
