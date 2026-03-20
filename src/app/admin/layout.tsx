@@ -26,7 +26,12 @@ import {
   LayoutDashboard,
   Building2,
   Package,
-  ClipboardCheck
+  ClipboardCheck,
+  Car,
+  Calendar,
+  MapPin,
+  AlertTriangle,
+  Wrench
 } from "lucide-react";
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,65 +73,47 @@ function Sidebar({
     // Dashboard
     { label: "Tableau de bord", icon: <LayoutDashboard className="w-5 h-5" />, href: "/admin/tableau-de-bord", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
 
-    // Users - superadmin and admin only
-    { label: "Utilisateurs", icon: <Users className="w-5 h-5" />, href: "/admin/utilisateurs", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    // VÉHICULES Category
+    { label: "VÉHICULES", icon: null, isCategory: true },
+    { label: "Tous les véhicules", icon: <Car className="w-5 h-5" />, href: "/admin/vehicles", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    { label: "Expirations", icon: <Calendar className="w-5 h-5" />, href: "/admin/expirations", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
 
-    // QR Codes Category
+    // GARAGES Category
+    { label: "GARAGES", icon: null, isCategory: true },
+    { label: "Garages partenaires", icon: <Building2 className="w-5 h-5" />, href: "/admin/garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    { label: "Demandes d'adhésion", icon: <ClipboardCheck className="w-5 h-5" />, href: "/admin/demandes-garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    { label: "Carte interactive", icon: <MapPin className="w-5 h-5" />, href: "/admin/map", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+
+    // QR CODES Category
     { label: "QR CODES", icon: null, isCategory: true },
-
-    // Generate QR
     { label: "Générer QR", icon: <QrCode className="w-5 h-5" />, href: "/admin/generer", permission: PERMISSIONS.GENERATE_QR },
+    { label: "Stock QR", icon: <Package className="w-5 h-5" />, href: "/admin/qrcodes", permission: PERMISSIONS.GENERATE_QR },
 
-    // QR Codes Management
-    { label: "QR Codes", icon: <Package className="w-5 h-5" />, href: "/admin/qrcodes", permission: PERMISSIONS.GENERATE_QR },
+    // SÉCURITÉ Category
+    { label: "SÉCURITÉ", icon: null, isCategory: true, roles: ['superadmin', 'admin'] },
+    { label: "Signalements", icon: <AlertTriangle className="w-5 h-5" />, href: "/admin/reports", permission: PERMISSIONS.VIEW_SETTINGS, roles: ['superadmin', 'admin'] },
+    { label: "Utilisateurs", icon: <Users className="w-5 h-5" />, href: "/admin/utilisateurs", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    { label: "Audit & Logs", icon: <Shield className="w-5 h-5" />, href: "/admin/securite", permission: PERMISSIONS.VIEW_SETTINGS, roles: ['superadmin', 'admin'] },
 
-    // Garages
-    { label: "Garages", icon: <Building2 className="w-5 h-5" />, href: "/admin/garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
-
-    // Garage Applications
-    { label: "Demandes Garages", icon: <ClipboardCheck className="w-5 h-5" />, href: "/admin/demandes-garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
-
-    // Messages
+    // COMMUNICATION Category
+    { label: "COMMUNICATION", icon: null, isCategory: true },
+    { label: "Notifications globales", icon: <Megaphone className="w-5 h-5" />, href: "/admin/broadcast", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin', 'admin'] },
+    { label: "Templates SMS/WA", icon: <MessageSquare className="w-5 h-5" />, href: "/admin/templates", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin', 'admin'] },
     { label: "Messages", icon: <MessageSquare className="w-5 h-5" />, href: "/admin/messages", badge: unreadMessages, permission: PERMISSIONS.VIEW_MESSAGES },
 
-    // CRM - superadmin, admin, agent only
-    { label: "CRM", icon: <UserPlus className="w-5 h-5" />, href: "/admin/crm", permission: PERMISSIONS.VIEW_CRM, roles: ['superadmin', 'admin', 'agent'] },
-
-    // Analysis Category
-    { label: "ANALYSE", icon: null, isCategory: true },
-
-    // Reports
-    { label: "Rapports", icon: <BarChart3 className="w-5 h-5" />, href: "/admin/rapports", permission: PERMISSIONS.VIEW_REPORTS },
-
-    // Marketing - superadmin only
-    { label: "Marketing", icon: <TrendingUp className="w-5 h-5" />, href: "/admin/marketing", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin'] },
-
-    // Advertisements - superadmin only
-    { label: "Publicités", icon: <Megaphone className="w-5 h-5" />, href: "/admin/publicites", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin'] },
-
-    // Blog - superadmin and admin only
-    { label: "Blog", icon: <Newspaper className="w-5 h-5" />, href: "/admin/blog", permission: PERMISSIONS.VIEW_MESSAGES, roles: ['superadmin', 'admin'] },
-
-    // Security Category - superadmin and admin only
-    { label: "SÉCURITÉ", icon: null, isCategory: true, roles: ['superadmin', 'admin'] },
-
-    // Security & Audit - superadmin and admin only
-    { label: "Sécurité & Audit", icon: <Shield className="w-5 h-5" />, href: "/admin/securite", permission: PERMISSIONS.VIEW_SETTINGS, roles: ['superadmin', 'admin'] },
-
-    // Settings Category
-    { label: "PARAMÈTRES", icon: null, isCategory: true, permission: PERMISSIONS.VIEW_SETTINGS },
-
-    // Settings
+    // CONFIGURATION Category
+    { label: "CONFIGURATION", icon: null, isCategory: true, permission: PERMISSIONS.VIEW_SETTINGS },
+    { label: "Catégories intervention", icon: <Wrench className="w-5 h-5" />, href: "/admin/categories", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin', 'admin'] },
     { label: "Paramètres", icon: <Settings className="w-5 h-5" />, href: "/admin/parametres", permission: PERMISSIONS.VIEW_SETTINGS },
-
-    // Email Config - superadmin and admin only
-    { label: "Configuration Email", icon: <Mail className="w-5 h-5" />, href: "/admin/parametres?tab=email", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin', 'admin'] },
-
-    // Features - superadmin and admin only
     { label: "Fonctionnalités", icon: <Globe className="w-5 h-5" />, href: "/admin/parametres/fonctionnalites", permission: PERMISSIONS.MANAGE_FEATURES, roles: ['superadmin', 'admin'] },
-
-    // Backup - superadmin only
     { label: "Sauvegardes", icon: <Database className="w-5 h-5" />, href: "/admin/sauvegardes", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin'] },
+
+    // MARKETING Category
+    { label: "MARKETING", icon: null, isCategory: true, roles: ['superadmin'] },
+    { label: "CRM", icon: <UserPlus className="w-5 h-5" />, href: "/admin/crm", permission: PERMISSIONS.VIEW_CRM, roles: ['superadmin', 'admin', 'agent'] },
+    { label: "Rapports", icon: <BarChart3 className="w-5 h-5" />, href: "/admin/rapports", permission: PERMISSIONS.VIEW_REPORTS },
+    { label: "Publicités", icon: <Megaphone className="w-5 h-5" />, href: "/admin/publicites", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin'] },
+    { label: "Blog", icon: <Newspaper className="w-5 h-5" />, href: "/admin/blog", permission: PERMISSIONS.VIEW_MESSAGES, roles: ['superadmin', 'admin'] },
   ], [unreadMessages]);
 
   // Filter menu items based on permissions

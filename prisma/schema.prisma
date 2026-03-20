@@ -1008,3 +1008,256 @@ model QRSwapRequest {
   @@index([requesterId])
   @@index([status])
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOUVEAUX MODÈLES - SUPERADMIN AVANCÉ
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Signalements (Fraude, QR perdus, Garages suspects)
+model Report {
+  id              String   @id @default(cuid())
+  type            String   // FRAUD, LOST_QR, SUSPICIOUS_GARAGE, FAKE_INTERVENTION, OTHER
+  status          String   @default("PENDING")  // PENDING, INVESTIGATING, RESOLVED, DISMISSED
+  priority        String   @default("NORMAL")   // LOW, NORMAL, HIGH, CRITICAL
+  
+  // Reporter info
+  reporterId      String?  // ID de l'utilisateur qui signale
+  reporterName    String?
+  reporterPhone   String?
+  reporterEmail   String?
+  reporterRole    String?  // driver, garage, anonymous
+  
+  // Reported entity
+  reportedType    String   // USER, GARAGE, VEHICLE, INTERVENTION, QR_CODE
+  reportedId      String?  // ID de l'entité signalée
+  reportedName    String?
+  
+  // Details
+  title           String
+  description     String
+  evidenceUrls    String?  // JSON array of evidence URLs
+  
+  // Admin handling
+  assignedToId    String?  // Admin assigné
+  adminNotes      String?
+  resolution      String?
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  
+  // Actions taken
+  actionTaken     String?  // WARNING, SUSPENSION, BAN, NO_ACTION
+  vehicleId       String?
+  garageId        String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([status])
+  @@index([priority])
+  @@index([reportedType])
+  @@index([createdAt])
+}
+
+// Templates de messages (SMS/WhatsApp)
+model MessageTemplate {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  slug            String   @unique
+  type            String   // SMS, WHATSAPP, EMAIL
+  category        String   // WELCOME, VALIDATION, REMINDER, ALERT, TRANSFER, MARKETING
+  
+  // Content
+  subject         String?  // Pour emails
+  content         String   // Contenu avec variables {{var}}
+  variables       String?  // JSON list of available variables
+  
+  // Settings
+  isActive        Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  language        String   @default("fr")
+  
+  // Tracking
+  sentCount       Int      @default(0)
+  lastSentAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([category])
+  @@index([isActive])
+}
+
+// Notifications broadcast (envoi global)
+model BroadcastNotification {
+  id              String   @id @default(cuid())
+  title           String
+  message         String
+  type            String   // INFO, WARNING, MAINTENANCE, PROMO, FEATURE
+  
+  // Targeting
+  targetScope     String   // ALL, GARAGES, DRIVERS, FLEETS
+  targetFilters   String?  // JSON for advanced filtering
+  
+  // Channels
+  channels        String   // JSON: ["sms", "whatsapp", "email", "push"]
+  
+  // Scheduling
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  status          String   @default("DRAFT")  // DRAFT, SCHEDULED, SENDING, SENT, FAILED
+  
+  // Stats
+  totalRecipients Int      @default(0)
+  sentCount       Int      @default(0)
+  deliveredCount  Int      @default(0)
+  failedCount     Int      @default(0)
+  
+  // Metadata
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([status])
+  @@index([targetScope])
+  @@index([scheduledAt])
+}
+
+// Catégories d'intervention dynamiques
+model InterventionCategory {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  icon            String?  // Emoji or icon name
+  color           String?  // Hex color
+  
+  // Hierarchy
+  parentId        String?
+  parent          InterventionCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children        InterventionCategory[] @relation("CategoryHierarchy")
+  
+  // Settings
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  
+  // Pricing defaults
+  avgCostMin      Float?
+  avgCostMax      Float?
+  avgDuration     Int?     // Minutes
+  
+  // Stats
+  usageCount      Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([isActive])
+  @@index([parentId])
+}
+
+// Expirations tracking
+model ExpirationAlert {
+  id              String   @id @default(cuid())
+  vehicleId       String
+  type            String   // VT, INSURANCE, MAINTENANCE
+  
+  expiryDate      DateTime
+  daysRemaining   Int
+  
+  // Alert tracking
+  firstAlertAt    DateTime?
+  secondAlertAt   DateTime?
+  finalAlertAt    DateTime?
+  
+  // Status
+  status          String   @default("PENDING")  // PENDING, NOTIFIED, RESOLVED, EXPIRED
+  resolvedAt      DateTime?
+  
+  // Channels used
+  channelsUsed    String?  // JSON: ["sms", "whatsapp", "email"]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([vehicleId])
+  @@index([type])
+  @@index([expiryDate])
+  @@index([status])
+}
+
+// Revenus et facturation
+model RevenueRecord {
+  id              String   @id @default(cuid())
+  garageId        String?
+  
+  type            String   // SUBSCRIPTION, QR_PURCHASE, FEATURE_UPGRADE, AD_CAMPAIGN
+  amount          Float
+  currency        String   @default("XOF")
+  
+  // Period
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  
+  // Payment
+  paymentStatus   String   @default("PENDING")  // PENDING, PAID, OVERDUE, CANCELLED
+  paymentMethod   String?
+  paidAt          DateTime?
+  
+  // Invoice
+  invoiceNumber   String?
+  invoiceUrl      String?
+  
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([garageId])
+  @@index([type])
+  @@index([paymentStatus])
+  @@index([periodStart])
+}
+
+// Dashboard stats cache
+model DashboardStats {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  
+  // Vehicles
+  totalVehicles   Int      @default(0)
+  newVehicles     Int      @default(0)
+  
+  // Garages
+  totalGarages    Int      @default(0)
+  activeGarages   Int      @default(0)
+  pendingGarages  Int      @default(0)
+  suspendedGarages Int     @default(0)
+  
+  // QR Codes
+  totalQR         Int      @default(0)
+  activeQR        Int      @default(0)
+  pendingQR       Int      @default(0)
+  
+  // Interventions
+  totalInterventions Int   @default(0)
+  pendingValidations Int   @default(0)
+  
+  // Users
+  totalUsers      Int      @default(0)
+  newUsers        Int      @default(0)
+  
+  // Revenue
+  dailyRevenue    Float    @default(0)
+  monthlyRevenue  Float    @default(0)
+  
+  // Expirations
+  vtExpiring7     Int      @default(0)
+  vtExpiring30    Int      @default(0)
+  insuranceExpiring7 Int   @default(0)
+  insuranceExpiring30 Int  @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([date])
+}
