@@ -66,7 +66,7 @@ export default function GarageLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true); // Dark mode by default for OKAR
@@ -75,6 +75,30 @@ export default function GarageLayout({
   const garageId = user?.garageId || '';
   const garageName = user?.garage?.name || 'Mon Garage OKAR';
   const isCertified = user?.garage?.isCertified || false;
+
+  // Redirect if not authenticated or not a garage
+  useEffect(() => {
+    if (loading) return;
+
+    // Skip redirect for login and registration pages
+    if (pathname === '/garage/connexion' || pathname === '/garage/inscrire' || pathname === '/garage/activate') {
+      return;
+    }
+
+    if (!user) {
+      router.replace('/garage/connexion');
+      return;
+    }
+
+    if (user.role !== 'garage') {
+      // User is authenticated but not a garage - redirect to their area
+      if (['superadmin', 'admin', 'agent'].includes(user.role)) {
+        router.replace('/admin/tableau-de-bord');
+      } else {
+        router.replace('/agence/tableau-de-bord');
+      }
+    }
+  }, [user, loading, router, pathname]);
 
   // Force dark mode for OKAR (workshop-friendly)
   useEffect(() => {
@@ -98,6 +122,28 @@ export default function GarageLayout({
     await logout();
     router.push('/garage/connexion');
   };
+
+  // Don't wrap login/registration pages with sidebar
+  if (pathname === '/garage/connexion' || pathname === '/garage/inscrire' || pathname === '/garage/activate') {
+    return <>{children}</>;
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#FF6600]/30 border-t-[#FF6600] rounded-full animate-spin"></div>
+          <p className="text-zinc-400 text-sm">Vérification...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated or not a garage
+  if (!user || user.role !== 'garage') {
+    return null;
+  }
 
   return (
     <GarageContext.Provider value={{ garageId, garageName, isCertified }}>
