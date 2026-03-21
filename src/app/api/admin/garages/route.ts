@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSession } from '@/lib/session';
 import { z } from 'zod';
 
 // Generate a unique slug from name
@@ -27,9 +28,32 @@ const garageSchema = z.object({
   isCertified: z.boolean().optional(),
 });
 
+/**
+ * Verify authentication and admin role
+ */
+async function verifyAdminAuth() {
+  const session = await getSession();
+  
+  if (!session) {
+    return { authorized: false, error: 'Non authentifié', status: 401 };
+  }
+  
+  if (!['superadmin', 'admin', 'agent'].includes(session.role)) {
+    return { authorized: false, error: 'Accès non autorisé. Droits admin requis.', status: 403 };
+  }
+  
+  return { authorized: true, user: session };
+}
+
 // GET - List all garages
 export async function GET() {
   try {
+    // Verify authentication
+    const auth = await verifyAdminAuth();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const garages = await db.garage.findMany({
       include: {
         _count: {
@@ -63,6 +87,12 @@ export async function GET() {
 // POST - Create new garage
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const auth = await verifyAdminAuth();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await request.json();
     const validatedData = garageSchema.parse(body);
 
@@ -98,6 +128,22 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Log creation
+    await db.auditLog.create({
+      data: {
+        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        action: 'GARAGE_CREATED',
+        entityType: 'GARAGE',
+        entityId: garage.id,
+        userId: auth.user!.id,
+        userEmail: auth.user!.email,
+        details: JSON.stringify({
+          garageName: garage.name,
+          slug: garage.slug,
+        }),
+      },
+    });
+
     return NextResponse.json({ garage });
 
   } catch (error) {
@@ -120,6 +166,12 @@ export async function POST(request: NextRequest) {
 // PUT - Update garage
 export async function PUT(request: NextRequest) {
   try {
+    // Verify authentication
+    const auth = await verifyAdminAuth();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await request.json();
     const { id, isCertified, ...data } = body;
     const validatedData = garageSchema.partial().parse(data);
@@ -127,13 +179,29 @@ export async function PUT(request: NextRequest) {
     const updateData: Record<string, unknown> = { ...validatedData };
     
     // Handle certification separately (superadmin only)
-    if (isCertified !== undefined) {
+    if (isCertified !== undefined && auth.user!.role === 'superadmin') {
       updateData.isCertified = isCertified;
     }
 
     const garage = await db.garage.update({
       where: { id },
       data: updateData
+    });
+
+    // Log update
+    await db.auditLog.create({
+      data: {
+        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        action: 'GARAGE_UPDATED',
+        entityType: 'GARAGE',
+        entityId: garage.id,
+        userId: auth.user!.id,
+        userEmail: auth.user!.email,
+        details: JSON.stringify({
+          garageName: garage.name,
+          updatedFields: Object.keys(updateData),
+        }),
+      },
     });
 
     return NextResponse.json({ garage });
@@ -150,6 +218,19 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete garage
 export async function DELETE(request: NextRequest) {
   try {
+    // Verify authentication - only superadmin can delete
+    const auth = await verifyAdminAuth();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+    
+    if (auth.user!.role !== 'superadmin') {
+      return NextResponse.json(
+        { error: 'Seul le superadmin peut supprimer un garage' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -160,8 +241,37 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Get garage info before deletion
+    const garage = await db.garage.findUnique({
+      where: { id },
+      select: { id: true, name: true, slug: true },
+    });
+
+    if (!garage) {
+      return NextResponse.json(
+        { error: 'Garage non trouvé' },
+        { status: 404 }
+      );
+    }
+
     await db.garage.delete({
       where: { id }
+    });
+
+    // Log deletion
+    await db.auditLog.create({
+      data: {
+        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        action: 'GARAGE_DELETED',
+        entityType: 'GARAGE',
+        entityId: id,
+        userId: auth.user!.id,
+        userEmail: auth.user!.email,
+        details: JSON.stringify({
+          garageName: garage.name,
+          slug: garage.slug,
+        }),
+      },
     });
 
     return NextResponse.json({ success: true });

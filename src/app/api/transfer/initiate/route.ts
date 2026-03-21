@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { generateCuid } from '@/lib/qr';
+import { randomBytes } from 'crypto';
 
 // ========================================
 // SCHÉMA DE VALIDATION
 // ========================================
 const initiateTransferSchema = z.object({
   vehicleId: z.string().min(1, "L'ID du véhicule est requis"),
+  buyerPhone: z.string().optional(), // Optionnel: téléphone de l'acheteur pour notifier
 });
 
 // ========================================
@@ -16,13 +18,14 @@ const initiateTransferSchema = z.object({
 // ========================================
 
 /**
- * Génère un code de transfert à 6 chiffres unique
+ * Génère un code de transfert à 6 chiffres sécurisé
  */
 function generateTransferCode(): string {
   const chars = '0123456789';
   let code = '';
+  const randomBytesBuffer = randomBytes(6);
   for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(randomBytesBuffer[i] % chars.length);
   }
   return code;
 }
@@ -52,6 +55,113 @@ async function generateUniqueTransferCode(): Promise<string> {
   // Fallback avec timestamp si on n'arrive pas à générer un code unique
   const timestamp = Date.now().toString().slice(-6);
   return timestamp;
+}
+
+/**
+ * Nettoie un numéro de téléphone (format Sénégal)
+ */
+function cleanPhoneNumber(phone: string): string {
+  // Supprimer tous les caractères non numériques
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Si ça commence par 221, c'est déjà au format international
+  if (cleaned.startsWith('221')) {
+    return cleaned;
+  }
+  
+  // Si ça commence par 77, 78, 76, 70 (numéros sénégalais), ajouter 221
+  if (cleaned.length === 9 && ['77', '78', '76', '70'].includes(cleaned.substring(0, 2))) {
+    return '221' + cleaned;
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Envoie un SMS via l'API configurée (Twilio ou Orange)
+ */
+async function sendSMS(phone: string, message: string): Promise<{ success: boolean; error?: string }> {
+  const cleanedPhone = cleanPhoneNumber(phone);
+  
+  // Mode développement: logger seulement
+  if (process.env.NODE_ENV !== 'production' || !process.env.SMS_ENABLED) {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📱 SMS (Mode Dev)');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`To: +${cleanedPhone}`);
+    console.log(`Message: ${message}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    return { success: true };
+  }
+
+  // Twilio SMS
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    try {
+      const twilio = await import('twilio').then(m => m.default);
+      const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      
+      await client.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: `+${cleanedPhone}`,
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Twilio SMS Error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  
+  // Orange SMS API
+  if (process.env.ORANGE_SMS_API_KEY) {
+    try {
+      const sender = process.env.ORANGE_SMS_SENDER || 'OKAR';
+      const response = await fetch(
+        `https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B221${sender}/requests`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.ORANGE_SMS_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            outboundSMSMessageRequest: {
+              address: `tel:+${cleanedPhone}`,
+              senderAddress: `tel:+221${sender}`,
+              outboundSMSTextMessage: {
+                message: message.substring(0, 160),
+              },
+            },
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Orange API error: ${response.status}`);
+      }
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Orange SMS Error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  
+  // Fallback: logger
+  console.log('📱 SMS (No provider configured)');
+  console.log(`To: +${cleanedPhone}`);
+  console.log(`Message: ${message}`);
+  return { success: true };
+}
+
+/**
+ * Envoie un message WhatsApp via lien wa.me
+ */
+function generateWhatsAppLink(phone: string, message: string): string {
+  const cleanedPhone = cleanPhoneNumber(phone);
+  const encodedMessage = encodeURIComponent(message);
+  return `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
 }
 
 /**
@@ -187,7 +297,59 @@ export async function POST(request: NextRequest) {
       garageId: user.garageId
     });
 
-    // 9. Réponse
+    // 9. Préparer les messages
+    const vehicleDescription = `${vehicle.make || ''} ${vehicle.model || ''} (${vehicle.licensePlate || vehicle.reference})`.trim();
+    
+    // Message SMS pour le vendeur
+    const smsMessage = `OKAR - Transfert de propriété
+Code: ${transferCode}
+Véhicule: ${vehicleDescription}
+Valable 48h
+Donnez ce code à l'acheteur pour finaliser le transfert.`;
+
+    // Message WhatsApp pour le vendeur (plus détaillé)
+    const whatsappMessage = `🚗 *OKAR - Transfert de Propriété*
+
+Votre véhicule a été marqué pour transfert.
+
+━━━━━━━━━━━━━━━━━━━━━
+🔢 *Code de transfert:* \`${transferCode}\`
+🚙 *Véhicule:* ${vehicleDescription}
+⏰ *Valable:* 48 heures
+━━━━━━━━━━━━━━━━━━━━━
+
+📝 *Instructions:*
+Partagez ce code avec l'acheteur pour qu'il puisse finaliser le transfert sur okar.sn/transfer/valider
+
+_Ce code expire dans 48 heures._`;
+
+    // 10. Envoyer les notifications
+    let smsSent = false;
+    let whatsappLink = null;
+    
+    // Envoyer SMS au vendeur si téléphone disponible
+    const sellerPhone = user.garage?.phone || vehicle.ownerPhone;
+    if (sellerPhone) {
+      const smsResult = await sendSMS(sellerPhone, smsMessage);
+      smsSent = smsResult.success;
+      
+      // Générer lien WhatsApp
+      whatsappLink = generateWhatsAppLink(sellerPhone, whatsappMessage);
+    }
+    
+    // Si acheteur fourni, envoyer aussi le code
+    let buyerNotified = false;
+    if (validatedData.buyerPhone) {
+      const buyerMessage = `OKAR - Transfert en attente
+Code: ${transferCode}
+Véhicule: ${vehicleDescription}
+Allez sur okar.sn/transfer/valider pour accepter.`;
+      
+      const buyerSmsResult = await sendSMS(validatedData.buyerPhone, buyerMessage);
+      buyerNotified = buyerSmsResult.success;
+    }
+
+    // 11. Réponse
     return NextResponse.json({
       success: true,
       message: 'Code de transfert généré avec succès',
@@ -203,6 +365,11 @@ export async function POST(request: NextRequest) {
         },
         expiresAt: expiresAt.toISOString(),
         expiresIn: '48 heures'
+      },
+      notification: {
+        smsSent,
+        whatsappLink,
+        buyerNotified
       }
     });
 

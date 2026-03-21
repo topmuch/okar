@@ -8,12 +8,13 @@ const suspendSchema = z.object({
   garageId: z.string().min(1, 'ID du garage requis'),
   action: z.enum(['suspend', 'reactivate']),
   reason: z.string().optional(),
+  force: z.boolean().optional(), // Force suspension even with pending interventions
 });
 
 /**
  * POST - Suspendre ou réactiver un garage
  * 
- * Body: { garageId, action: 'suspend' | 'reactivate', reason? }
+ * Body: { garageId, action: 'suspend' | 'reactivate', reason?, force? }
  * 
  * Sécurité: Seul le Superadmin peut modifier accountStatus
  */
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Vérifier l'authentification et les droits
     const session = await getSession();
     
-    if (!session?.userId) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Récupérer l'utilisateur pour vérifier le rôle
     const user = await db.user.findUnique({
-      where: { id: session.userId },
+      where: { id: session.id },
       select: { id: true, email: true, role: true, name: true },
     });
 
@@ -39,10 +40,11 @@ export async function POST(request: NextRequest) {
       // Log la tentative d'accès non autorisé
       await db.auditLog.create({
         data: {
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
           action: 'UNAUTHORIZED_SUSPENSION_ATTEMPT',
           entityType: 'GARAGE',
           entityId: 'unknown',
-          userId: session.userId,
+          userId: session.id,
           userEmail: user?.email || 'unknown',
           details: JSON.stringify({
             message: 'Tentative de suspension sans droit superadmin',
@@ -109,6 +111,35 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // ⚠️ CRITICAL FIX: Vérifier les interventions en cours
+      const pendingInterventions = await db.maintenanceRecord.count({
+        where: {
+          garageId: validatedData.garageId,
+          status: 'PENDING',
+        },
+      });
+
+      const pendingValidations = await db.maintenanceRecord.count({
+        where: {
+          garageId: validatedData.garageId,
+          ownerValidation: 'PENDING',
+        },
+      });
+
+      if ((pendingInterventions > 0 || pendingValidations > 0) && !validatedData.force) {
+        return NextResponse.json(
+          {
+            error: 'ATTENTION: Interventions en cours détectées',
+            message: `Ce garage a ${pendingInterventions} intervention(s) en cours et ${pendingValidations} validation(s) en attente. La suspension bloquera ces opérations.`,
+            pendingInterventions,
+            pendingValidations,
+            requiresConfirmation: true,
+            hint: 'Ajoutez "force: true" pour confirmer la suspension malgré les interventions en cours.',
+          },
+          { status: 400 }
+        );
+      }
+
       // Suspendre le garage
       updatedGarage = await db.garage.update({
         where: { id: validatedData.garageId },
@@ -127,6 +158,9 @@ export async function POST(request: NextRequest) {
         reason: validatedData.reason,
         garageName: garage.name,
         suspendedBy: user.name || user.email,
+        pendingInterventions,
+        pendingValidations,
+        forced: validatedData.force || false,
       };
 
     } else {
@@ -164,6 +198,7 @@ export async function POST(request: NextRequest) {
     // Créer un log d'audit
     await db.auditLog.create({
       data: {
+        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         action: auditAction,
         entityType: 'GARAGE',
         entityId: garage.id,
@@ -210,6 +245,12 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Verify authentication
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const garageId = searchParams.get('garageId');
 

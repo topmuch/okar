@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { getSession } from '@/lib/session';
 import { randomBytes } from 'crypto';
 
 // ============================================
@@ -80,29 +81,84 @@ function calculateNextMaintenance(
   return { nextKm, nextDate, nextType: category };
 }
 
+/**
+ * Vérifier l'authentification et le statut du garage
+ */
+async function verifyGarageAuth() {
+  const session = await getSession();
+  
+  if (!session) {
+    return { authorized: false, error: 'Non authentifié. Veuillez vous connecter.', status: 401 };
+  }
+  
+  if (session.role !== 'garage') {
+    return { authorized: false, error: 'Accès réservé aux garages certifiés.', status: 403 };
+  }
+  
+  if (!session.garageId) {
+    return { authorized: false, error: 'Aucun garage associé à votre compte.', status: 403 };
+  }
+  
+  // Vérifier le statut du garage
+  const garage = await db.garage.findUnique({
+    where: { id: session.garageId },
+    select: {
+      id: true,
+      name: true,
+      isCertified: true,
+      active: true,
+      accountStatus: true,
+      validationStatus: true,
+    },
+  });
+  
+  if (!garage) {
+    return { authorized: false, error: 'Garage non trouvé.', status: 404 };
+  }
+  
+  if (!garage.isCertified || !garage.active) {
+    return { authorized: false, error: 'Votre garage n\'est pas certifié ou actif.', status: 403 };
+  }
+  
+  if (garage.accountStatus === 'SUSPENDED_BY_ADMIN') {
+    return { 
+      authorized: false, 
+      error: 'Votre garage est suspendu. Impossible d\'enregistrer des interventions.', 
+      status: 403 
+    };
+  }
+  
+  if (garage.validationStatus !== 'APPROVED') {
+    return { 
+      authorized: false, 
+      error: 'Votre garage n\'est pas encore validé par l\'administration.', 
+      status: 403 
+    };
+  }
+  
+  return { authorized: true, garage, user: session };
+}
+
 // ============================================
 // API: SUBMIT INTERVENTION (Garage Certifié)
 // ============================================
 export async function POST(request: NextRequest) {
   try {
+    // ⚠️ CRITICAL FIX: Authentification obligatoire
+    const auth = await verifyGarageAuth();
+    if (!auth.authorized) {
+      return NextResponse.json({
+        success: false,
+        error: auth.error
+      }, { status: auth.status });
+    }
+    
+    const garage = auth.garage!;
+    const user = auth.user!;
+    
     const body = await request.json();
     const validatedData = submitInterventionSchema.parse(body);
     const now = new Date();
-    
-    // 1. RÉCUPÉRER LE GARAGE (simulation - en production: depuis session/token)
-    // TODO: Implémenter l'authentification garage
-    const garageResult = await db.$queryRawUnsafe<any[]>(
-      `SELECT id, name, isCertified, active FROM Garage WHERE isCertified = 1 AND active = 1 LIMIT 1`
-    );
-    
-    if (!garageResult || garageResult.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Aucun garage certifié trouvé. Veuillez vous connecter.'
-      }, { status: 403 });
-    }
-    
-    const garage = garageResult[0];
     
     // 2. TROUVER LE VÉHICULE
     let vehicleId = validatedData.vehicleId;
@@ -147,6 +203,24 @@ export async function POST(request: NextRequest) {
     const newMileage = validatedData.mileage;
     
     if (newMileage < currentMileage) {
+      // Log l'anomalie pour audit
+      await db.auditLog.create({
+        data: {
+          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+          action: 'MILEAGE_ANOMALY_DETECTED',
+          entityType: 'VEHICLE',
+          entityId: vehicleId,
+          userId: user.id,
+          userEmail: user.email,
+          garageId: garage.id,
+          details: JSON.stringify({
+            currentMileage,
+            proposedMileage: newMileage,
+            garageName: garage.name,
+          }),
+        },
+      });
+      
       // Anomalie détectée - on accepte mais on signale
       return NextResponse.json({
         success: false,
@@ -239,7 +313,8 @@ export async function POST(request: NextRequest) {
     // 7. DÉCLENCHER WEBHOOK NOTIFICATION (n8n)
     // En production: appeler le webhook n8n pour notifier le propriétaire
     try {
-      await fetch(`${process.env.N8N_WEBHOOK_URL || 'http://localhost:5678'}/webhook/okar/intervention`, {
+      const webhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678';
+      await fetch(`${webhookUrl}/webhook/okar/intervention`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -282,6 +357,10 @@ export async function POST(request: NextRequest) {
           dueDate: nextDate?.toISOString(),
           type: nextType,
         }
+      },
+      garage: {
+        id: garage.id,
+        name: garage.name,
       },
       notification: {
         sent: true,

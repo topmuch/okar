@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Camera,
   Flashlight,
   SwitchCamera,
   X,
@@ -15,11 +14,9 @@ import {
   Loader2,
   ChevronRight,
   ArrowLeft,
-  Wifi,
-  WifiOff,
   Keyboard,
-  ScanLine
 } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 // OKAR Brand
 const OKAR_ORANGE = '#FF6600';
@@ -45,13 +42,11 @@ interface ScanResult {
 
 export default function OKARScannerPage() {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [torch, setTorch] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [manualCode, setManualCode] = useState('');
@@ -89,61 +84,27 @@ export default function OKARScannerPage() {
     }
   };
 
-  // Start camera
-  const startCamera = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      });
-      
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setHasPermission(true);
-      setIsScanning(true);
-    } catch (err) {
-      console.error('Camera error:', err);
-      setHasPermission(false);
-      setError('Accès caméra refusé. Veuillez autoriser l\'accès.');
+  // Process scanned code - extract shortCode from URL or use direct code
+  const extractCode = (scannedText: string): string | null => {
+    // If it's a URL like https://okar.sn/v/ABC123 or /v/ABC123
+    const urlMatch = scannedText.match(/\/v\/([A-Z0-9]{8})/i);
+    if (urlMatch) {
+      return urlMatch[1].toUpperCase();
     }
-  }, [facingMode]);
-
-  // Stop camera
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+    
+    // If it's a direct short code (8 chars alphanumeric)
+    const shortCodeMatch = scannedText.match(/^[A-Z0-9]{8}$/i);
+    if (shortCodeMatch) {
+      return scannedText.toUpperCase();
     }
-    setIsScanning(false);
-  }, []);
-
-  // Toggle torch
-  const toggleTorch = async () => {
-    if (streamRef.current) {
-      const track = streamRef.current.getVideoTracks()[0];
-      if (track) {
-        try {
-          await track.applyConstraints({
-            advanced: [{ torch: !torch } as any]
-          });
-          setTorch(!torch);
-        } catch (err) {
-          console.error('Torch not supported');
-        }
-      }
+    
+    // If it contains OKAR- reference
+    const refMatch = scannedText.match(/OKAR-([A-Z0-9]+)/i);
+    if (refMatch) {
+      return 'OKAR-' + refMatch[1].toUpperCase();
     }
-  };
-
-  // Switch camera
-  const switchCamera = async () => {
-    stopCamera();
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    
+    return null;
   };
 
   // Process scanned code
@@ -153,6 +114,11 @@ export default function OKARScannerPage() {
     triggerHaptic([30, 50, 30]);
 
     try {
+      // Stop scanner while processing
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        await scannerRef.current.pause();
+      }
+
       const response = await fetch('/api/scan/' + code);
       const data = await response.json();
       
@@ -169,13 +135,92 @@ export default function OKARScannerPage() {
       } else {
         setError(data.error || 'Code invalide');
         triggerHaptic([100, 50, 100]);
+        // Resume scanning after error
+        if (scannerRef.current && scannerRef.current.isScanning) {
+          await scannerRef.current.resume();
+        }
       }
     } catch (err) {
       console.error('Scan error:', err);
       setError('Erreur de connexion. Vérifiez votre réseau.');
+      // Resume scanning after error
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        await scannerRef.current.resume();
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  // Start QR scanner with html5-qrcode
+  const startScanner = useCallback(async () => {
+    if (!containerRef.current) return;
+
+    try {
+      // Create scanner instance
+      const html5QrCode = new Html5Qrcode('qr-reader');
+      scannerRef.current = html5QrCode;
+
+      const config = {
+        fps: 10,
+        qrbox: { width: 280, height: 280 },
+        aspectRatio: 1.0,
+      };
+
+      await html5QrCode.start(
+        { facingMode: facingMode },
+        config,
+        (decodedText) => {
+          // Success callback - QR code detected
+          console.log('QR Code detected:', decodedText);
+          const code = extractCode(decodedText);
+          
+          if (code) {
+            processCode(code);
+          } else {
+            setError('Format de QR code non reconnu');
+            triggerHaptic([100, 50, 100]);
+          }
+        },
+        (errorMessage) => {
+          // Ignore scan errors (no QR found in frame)
+          // console.warn('Scan error:', errorMessage);
+        }
+      );
+
+      setHasPermission(true);
+      setIsScanning(true);
+    } catch (err: any) {
+      console.error('Scanner start error:', err);
+      setHasPermission(false);
+      setError('Accès caméra refusé. Veuillez autoriser l\'accès.');
+    }
+  }, [facingMode]);
+
+  // Stop scanner
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch (err) {
+        console.error('Error stopping scanner:', err);
+      }
+    }
+    setIsScanning(false);
+  }, []);
+
+  // Switch camera
+  const switchCamera = async () => {
+    await stopScanner();
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  // Toggle torch (flash)
+  const toggleTorch = async () => {
+    // html5-qrcode doesn't have built-in torch support
+    // This would require direct MediaStream access
+    console.log('Torch toggle not implemented in this version');
   };
 
   // Manual code submission
@@ -244,11 +289,13 @@ export default function OKARScannerPage() {
     }
   };
 
-  // Start camera on mount
+  // Start scanner on mount
   useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-  }, [startCamera, stopCamera]);
+    startScanner();
+    return () => {
+      stopScanner();
+    };
+  }, [startScanner, stopScanner]);
 
   const statusInfo = getStatusInfo();
 
@@ -291,7 +338,7 @@ export default function OKARScannerPage() {
                 OKAR a besoin de votre caméra pour scanner les QR codes
               </p>
               <button
-                onClick={startCamera}
+                onClick={startScanner}
                 className="px-6 py-3 bg-[#FF6600] rounded-xl text-white font-semibold"
               >
                 Autoriser l'accès
@@ -300,31 +347,15 @@ export default function OKARScannerPage() {
           </div>
         )}
 
-        {isScanning && (
-          <>
-            <video
-              ref={videoRef}
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline
-              muted
-            />
-            <canvas ref={canvasRef} className="hidden" />
-
-            {/* Scan Overlay */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative w-72 h-72">
-                {/* Corner markers */}
-                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-[#FF6600] rounded-tl-2xl" />
-                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-[#FF6600] rounded-tr-2xl" />
-                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-[#FF6600] rounded-bl-2xl" />
-                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-[#FF6600] rounded-br-2xl" />
-                
-                {/* Scanning animation */}
-                <div className="absolute top-4 left-4 right-4 h-1 bg-gradient-to-r from-transparent via-[#FF6600] to-transparent animate-pulse" />
-              </div>
-            </div>
-          </>
-        )}
+        {/* QR Scanner Container */}
+        <div 
+          id="qr-reader"
+          ref={containerRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ 
+            opacity: isScanning ? 1 : 0,
+          }}
+        />
       </div>
 
       {/* Manual Entry */}
@@ -340,7 +371,7 @@ export default function OKARScannerPage() {
                   type="text"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                  placeholder="OKAR-XXXXXX"
+                  placeholder="OKAR-XXXXXX ou code 8 caractères"
                   className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white font-mono text-lg focus:border-[#FF6600] focus:ring-1 focus:ring-[#FF6600] outline-none"
                 />
                 <button
@@ -361,9 +392,8 @@ export default function OKARScannerPage() {
         <div className="flex items-center justify-center gap-6 max-w-lg mx-auto">
           <button
             onClick={toggleTorch}
-            className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${
-              torch ? 'bg-[#FF6600]' : 'bg-zinc-800'
-            }`}
+            className="w-14 h-14 bg-zinc-800 rounded-xl flex items-center justify-center"
+            title="Flash non disponible"
           >
             <Flashlight className="w-6 h-6 text-white" />
           </button>
@@ -467,9 +497,13 @@ export default function OKARScannerPage() {
               )}
               
               <button
-                onClick={() => {
+                onClick={async () => {
                   setScanResult(null);
                   setManualCode('');
+                  // Resume scanning
+                  if (scannerRef.current && scannerRef.current.isScanning) {
+                    await scannerRef.current.resume();
+                  }
                 }}
                 className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-white font-medium transition-colors"
               >
