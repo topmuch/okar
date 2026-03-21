@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "OKAR",
+    "tagline": "L'histoire réelle de votre voiture"
+  },
+  "landing": {
+    "hero": {
+      "title": "Le passeport numérique de votre véhicule",
+      "subtitle": "Historique d'entretien infalsifiable, accessible partout via QR Code. Intégration Orange Money et Wave pour les paiements.",
+      "ctaGarage": "Je suis un garage",
+      "ctaDriver": "Je suis un conducteur"
+    },
+    "howItWorks": {
+      "title": "Comment ça marche ?",
+      "garage": {
+        "title": "Pour les garages",
+        "step1": "Activez un QR code pour le véhicule de votre client",
+        "step2": "Enregistrez chaque intervention (facture, signature)",
+        "step3": "Le propriétaire valide le rapport via son application"
+      },
+      "driver": {
+        "title": "Pour les conducteurs",
+        "step1": "Recevez votre QR code auprès d'un garage partenaire",
+        "step2": "Consultez l'historique complet de votre véhicule",
+        "step3": "Validez les rapports d'entretien en un clic"
+      }
+    },
+    "pricing": {
+      "title": "Tarifs pour les garages",
+      "basic": {
+        "title": "Basique",
+        "price": "25 000 FCFA",
+        "duration": "/mois",
+        "features": ["50 QR codes/mois", "Rapports d'entretien", "Support email"]
+      },
+      "premium": {
+        "title": "Premium",
+        "price": "75 000 FCFA",
+        "duration": "/mois",
+        "features": ["200 QR codes/mois", "Signature numérique", "Support prioritaire", "Statistiques avancées"]
+      },
+      "enterprise": {
+        "title": "Entreprise",
+        "price": "Sur devis",
+        "duration": "",
+        "features": ["QR codes illimités", "API dédiée", "Account manager", "Formation sur site"]
+      }
+    },
+    "contact": {
+      "title": "Contactez-nous",
+      "address": "Dakar, Sénégal",
+      "phone": "+221 78 123 45 67",
+      "email": "contact@okar.sn"
+    }
+  },
+  "scan": {
+    "title": "Véhicule de {name}",
+    "notFound": "Code QR non valide",
+    "notActivated": "Ce QR code n'a pas encore été activé",
+    "expired": "Ce passeport a expiré",
+    "blocked": "Ce passeport a été bloqué",
+    "vehicleInfo": "Informations véhicule",
+    "history": "Historique d'entretien",
+    "noHistory": "Aucune intervention enregistrée"
+  },
+  "activate": {
+    "garage": {
+      "title": "Activation QR Code Véhicule",
+      "subtitle": "Activez le passeport numérique du véhicule",
+      "vehicleInfo": "Informations véhicule",
+      "driverInfo": "Informations conducteur",
+      "submit": "Activer le QR Code",
+      "success": "Le passeport véhicule a été activé avec succès !"
+    }
+  },
+  "dashboard": {
+    "garage": {
+      "title": "Dashboard Garage",
+      "total": "Total véhicules",
+      "active": "QR actifs",
+      "pending": "En attente",
+      "reports": "Rapports",
+      "searchPlaceholder": "Rechercher un véhicule...",
+      "activateQR": "Activer QR",
+      "newIntervention": "Nouvelle intervention",
+      "registerDriver": "Inscrire conducteur"
+    },
+    "admin": {
+      "title": "SuperAdmin",
+      "garages": "Garages",
+      "generateQR": "Générer des lots QR",
+      "users": "Utilisateurs",
+      "certifications": "Certifications",
+      "settings": "Paramètres"
+    },
+    "driver": {
+      "title": "Mon Véhicule",
+      "myVehicle": "Mon véhicule",
+      "history": "Historique",
+      "validations": "Validations en attente",
+      "qrCode": "Mon QR Code"
+    }
+  },
+  "status": {
+    "INACTIVE": "Inactif",
+    "ACTIVE": "Actif",
+    "BLOCKED": "Bloqué",
+    "PENDING": "En attente",
+    "VALIDATED": "Validé",
+    "REJECTED": "Rejeté"
+  },
+  "maintenance": {
+    "categories": {
+      "vidange": "Vidange",
+      "freins": "Freins",
+      "pneus": "Pneus",
+      "moteur": "Moteur",
+      "electricite": "Électricité",
+      "carrosserie": "Carrosserie",
+      "autre": "Autre"
+    }
+  },
+  "payment": {
+    "orangeMoney": "Orange Money",
+    "wave": "Wave",
+    "bankTransfer": "Virement bancaire",
+    "cash": "Espèces"
+  }
+}

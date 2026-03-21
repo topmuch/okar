@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "OKAR",
+    "tagline": "The digital passport for your vehicle"
+  },
+  "landing": {
+    "hero": {
+      "title": "The digital passport for your vehicle",
+      "subtitle": "Unfalsifiable maintenance history, accessible everywhere via QR Code. Orange Money and Wave integration for payments.",
+      "ctaGarage": "I am a garage",
+      "ctaDriver": "I am a driver"
+    },
+    "howItWorks": {
+      "title": "How does it work?",
+      "garage": {
+        "title": "For garages",
+        "step1": "Activate a QR code for your client's vehicle",
+        "step2": "Record each intervention (invoice, signature)",
+        "step3": "Owner validates the report via their app"
+      },
+      "driver": {
+        "title": "For drivers",
+        "step1": "Receive your QR code from a partner garage",
+        "step2": "Consult the complete history of your vehicle",
+        "step3": "Validate maintenance reports in one click"
+      }
+    },
+    "pricing": {
+      "title": "Pricing for garages",
+      "basic": {
+        "title": "Basic",
+        "price": "25,000 FCFA",
+        "duration": "/month",
+        "features": ["50 QR codes/month", "Maintenance reports", "Email support"]
+      },
+      "premium": {
+        "title": "Premium",
+        "price": "75,000 FCFA",
+        "duration": "/month",
+        "features": ["200 QR codes/month", "Digital signature", "Priority support", "Advanced statistics"]
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "price": "On quote",
+        "duration": "",
+        "features": ["Unlimited QR codes", "Dedicated API", "Account manager", "On-site training"]
+      }
+    },
+    "contact": {
+      "title": "Contact us",
+      "address": "Dakar, Senegal",
+      "phone": "+221 78 123 45 67",
+      "email": "contact@okar.sn"
+    }
+  },
+  "scan": {
+    "title": "Vehicle of {name}",
+    "notFound": "Invalid QR code",
+    "notActivated": "This QR code has not been activated yet",
+    "expired": "This passport has expired",
+    "blocked": "This passport has been blocked",
+    "vehicleInfo": "Vehicle information",
+    "history": "Maintenance history",
+    "noHistory": "No interventions recorded"
+  },
+  "activate": {
+    "garage": {
+      "title": "Vehicle QR Code Activation",
+      "subtitle": "Activate the vehicle's digital passport",
+      "vehicleInfo": "Vehicle information",
+      "driverInfo": "Driver information",
+      "submit": "Activate QR Code",
+      "success": "The vehicle passport has been successfully activated!"
+    }
+  },
+  "dashboard": {
+    "garage": {
+      "title": "Garage Dashboard",
+      "total": "Total vehicles",
+      "active": "Active QR",
+      "pending": "Pending",
+      "reports": "Reports",
+      "searchPlaceholder": "Search for a vehicle...",
+      "activateQR": "Activate QR",
+      "newIntervention": "New intervention",
+      "registerDriver": "Register driver"
+    },
+    "admin": {
+      "title": "SuperAdmin",
+      "garages": "Garages",
+      "generateQR": "Generate QR lots",
+      "users": "Users",
+      "certifications": "Certifications",
+      "settings": "Settings"
+    },
+    "driver": {
+      "title": "My Vehicle",
+      "myVehicle": "My vehicle",
+      "history": "History",
+      "validations": "Pending validations",
+      "qrCode": "My QR Code"
+    }
+  },
+  "status": {
+    "INACTIVE": "Inactive",
+    "ACTIVE": "Active",
+    "BLOCKED": "Blocked",
+    "PENDING": "Pending",
+    "VALIDATED": "Validated",
+    "REJECTED": "Rejected"
+  },
+  "maintenance": {
+    "categories": {
+      "vidange": "Oil change",
+      "freins": "Brakes",
+      "pneus": "Tires",
+      "moteur": "Engine",
+      "electricite": "Electrical",
+      "carrosserie": "Bodywork",
+      "autre": "Other"
+    }
+  },
+  "payment": {
+    "orangeMoney": "Orange Money",
+    "wave": "Wave",
+    "bankTransfer": "Bank transfer",
+    "cash": "Cash"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "common": {
+    "loading": "جاري التحقق من رمز QR...",
+    "welcome": "مرحباً! 👋",
+    "activate_in": "تفعيل هذه المركبة في 30 ثانية",
+    "vehicle_type": "نوع المركبة",
+    "auto_redirect": "إعادة التوجيه التلقائي خلال",
+    "start_activation": "ابدأ التفعيل",
+    "back_home": "العودة إلى الصفحة الرئيسية",
+    "powered_by": "OKAR © 2026 by MMASOLUTION"
+  },
+  "errors": {
+    "qr_not_valid": "رمز QR غير صالح",
+    "qr_not_valid_desc": "رمز QR هذا غير موجود في نظامنا.",
+    "vehicle_blocked": "المركبة محظورة",
+    "vehicle_blocked_desc": "تم حظر هذه المركبة لأسباب أمنية.",
+    "protection_expired": "انتهت الحماية",
+    "protection_expired_desc": "انتهت صلاحية جواز هذه المركبة.",
+    "server_error": "خطأ في الخادم",
+    "geolocation_not_supported": "المتصفح الخاص بك لا يدعم تحديد الموقع. يرجى إدخال المكان يدوياً.",
+    "location_failed": "تعذر الحصول على موقعك. يرجى إدخال المكان يدوياً أدناه.",
+    "location_permission_denied": "تم رفض إذن الموقع. يرجى السماح بالوصول إلى الموقع في إعدادات المتصفح، أو أدخل المكان يدوياً أدناه.",
+    "location_unavailable": "الموقع غير متاح. يرجى إدخال المكان يدوياً.",
+    "location_timeout": "انتهت مهلة تحديد الموقع. يرجى إدخال المكان يدوياً أو المحاولة مرة أخرى.",
+    "error_occurred": "حدث خطأ. يرجى المحاولة مرة أخرى."
+  },
+  "vehicle": {
+    "vehicle_found": "معلومات المركبة",
+    "owner": "المالك",
+    "make": "الشركة المصنعة",
+    "model": "الموديل",
+    "year": "السنة",
+    "color": "اللون",
+    "license_plate": "رقم اللوحة",
+    "vin": "رقم الهيكل",
+    "mileage": "المسافة المقطوعة",
+    "engine_type": "نوع المحرك",
+    "history": "سجل الصيانة",
+    "no_history": "لا توجد سجلات صيانة بعد",
+    "garage": "كراج معتمد"
+  },
+  "maintenance": {
+    "categories": {
+      "vidange": "تغيير الزيت",
+      "freins": "الفرامل",
+      "pneus": "الإطارات",
+      "moteur": "المحرك",
+      "electricite": "الكهرباء",
+      "carrosserie": "الهيكل",
+      "autre": "أخرى"
+    },
+    "date": "التاريخ",
+    "mileage": "المسافة",
+    "description": "الوصف",
+    "cost": "التكلفة",
+    "validated": "معتمد من المالك"
+  }
+}
