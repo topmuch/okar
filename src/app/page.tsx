@@ -117,7 +117,7 @@ function Navigation() {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center gap-4">
-              <Link href="/login">
+              <Link href="/garage/connexion">
                 <motion.button 
                   className="px-5 py-2.5 text-gray-700 hover:text-gray-900 transition-colors font-semibold"
                   whileHover={{ scale: 1.02 }}

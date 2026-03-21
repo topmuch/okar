@@ -47,19 +47,17 @@ export default function AdminLayout({
     // 👥 Gestion des personnes
     { label: "GESTION DES PERSONNES", isCategory: true },
     { label: "Utilisateurs", icon: "👥", href: "/admin/utilisateurs" },
-    { label: "Agences", icon: "🏢", href: "/admin/agences" },
+    { label: "Garages", icon: "🔧", href: "/admin/garages" },
     // 🧾 Produits & QR
     { label: "PRODUITS & QR", isCategory: true },
     { label: "Générer QR", icon: "🔢", href: "/admin/generer" },
-    { label: "Les Étiquettes", icon: "🏷️", href: "/admin/etiquettes" },
-    // 🧳 Voyageurs & Pèlerins
-    { label: "VOYAGEURS & PÈLERINS", isCategory: true },
-    { label: "Pèlerins Hajj", icon: "🕋", href: "/admin/hajj" },
-    { label: "Voyageurs", icon: "✈️", href: "/admin/voyageurs" },
+    { label: "QR Codes", icon: "📱", href: "/admin/qrcodes" },
+    // 🚗 Véhicules
+    { label: "VÉHICULES", isCategory: true },
+    { label: "Tous les véhicules", icon: "🚗", href: "/admin/vehicles" },
     // 📬 Opérations
     { label: "OPÉRATIONS", isCategory: true },
     { label: "Messages", icon: "📩", href: "/admin/messages", badge: unreadMessages },
-    { label: "Trouvailles", icon: "🔍", href: "/admin/trouvailles" },
     // ⚙️ Configuration
     { label: "CONFIGURATION", isCategory: true },
     { label: "Paramètres", icon: "⚙️", href: "/admin/parametres" },

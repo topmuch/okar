@@ -7,14 +7,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 function LoginRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const role = searchParams.get('role') || 'agency';
+  const role = searchParams.get('role') || 'garage';
 
   useEffect(() => {
     // Redirect to the appropriate login page
     if (role === 'admin') {
       router.replace('/admin/connexion');
     } else {
-      router.replace('/agence/connexion');
+      router.replace('/garage/connexion');
     }
   }, [router, role]);
 

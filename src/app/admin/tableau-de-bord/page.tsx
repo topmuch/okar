@@ -136,9 +136,9 @@ function KPICard({
 function QuickActions() {
   const actions = [
     { label: "Générer QR", icon: <QrCode className="w-5 h-5" />, href: "/admin/generer", color: "bg-emerald-500" },
-    { label: "Hajj 2026", icon: <Users className="w-5 h-5" />, href: "/admin/hajj", color: "bg-blue-500" },
-    { label: "Commandes", icon: <ShoppingCart className="w-5 h-5" />, href: "/admin/messages", color: "bg-orange-500" },
-    { label: "Agences", icon: <Building className="w-5 h-5" />, href: "/admin/agences", color: "bg-purple-500" },
+    { label: "Véhicules", icon: <Car className="w-5 h-5" />, href: "/admin/vehicles", color: "bg-blue-500" },
+    { label: "Messages", icon: <MessageSquare className="w-5 h-5" />, href: "/admin/messages", color: "bg-orange-500" },
+    { label: "Garages", icon: <Building className="w-5 h-5" />, href: "/admin/garages", color: "bg-purple-500" },
   ];
 
   return (
@@ -261,8 +261,8 @@ function RecentActivityList({ activities }: { activities: RecentActivity[] }) {
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
       <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
         <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Activité récente</h3>
-        <Link href="/admin/trouvailles" className="text-sm text-emerald-500 hover:text-emerald-600 font-medium flex items-center gap-1">
-          Voir tout <ArrowUpRight className="w-3 h-3" />
+        <Link href="/admin/vehicles" className="text-sm text-emerald-500 hover:text-emerald-600 font-medium flex items-center gap-1">
+          Voir les véhicules <ArrowUpRight className="w-3 h-3" />
         </Link>
       </div>
 

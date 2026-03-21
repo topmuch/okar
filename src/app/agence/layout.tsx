@@ -372,10 +372,10 @@ export default function AgencyRootLayout({
     if (loading) return;
     
     // Skip redirect for login page
-    if (pathname === '/agence/connexion') return;
+    if (pathname === '/garage/connexion') return;
     
     if (!user) {
-      router.replace('/agence/connexion');
+      router.replace('/garage/connexion');
       return;
     }
     
@@ -387,7 +387,7 @@ export default function AgencyRootLayout({
 
   // Fetch unread messages count
   useEffect(() => {
-    if (!user || !isAgency || pathname === '/agence/connexion') return;
+    if (!user || !isAgency || pathname === '/garage/connexion') return;
     
     const fetchUnreadCount = async () => {
       try {
@@ -411,7 +411,7 @@ export default function AgencyRootLayout({
   // Handle logout
   const handleLogout = async () => {
     await logout();
-    router.replace('/agence/connexion');
+    router.replace('/garage/connexion');
   };
 
   // Get the actual agency ID from user data or use demo agency
@@ -429,7 +429,7 @@ export default function AgencyRootLayout({
   } : null;
 
   // Don't wrap login page with sidebar
-  if (pathname === '/agence/connexion') {
+  if (pathname === '/garage/connexion') {
     return <>{children}</>;
   }
 

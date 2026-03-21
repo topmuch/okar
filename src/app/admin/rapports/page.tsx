@@ -367,7 +367,7 @@ export default function AdminReportsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <Link 
-                            href={`/admin/baggage/${baggage.id}`}
+                            href={`/admin/vehicles`}
                             className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors"
                           >
                             Détails

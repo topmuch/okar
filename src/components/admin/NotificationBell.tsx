@@ -62,7 +62,7 @@ export default function NotificationBell() {
 
   const handleViewBaggage = (notification: Notification) => {
     if (notification.baggageId) {
-      router.push(`/admin/baggage/${notification.baggageId}`);
+      router.push(`/admin/vehicles`);
     }
     markAsRead(notification.id);
     setIsOpen(false);

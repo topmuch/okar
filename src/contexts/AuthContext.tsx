@@ -167,7 +167,7 @@ export function useRequireAuth(allowedRoles?: Role[]) {
     if (!user) {
       // Check if this is admin area or agency area
       const isAdminArea = pathname?.startsWith('/admin');
-      const loginPath = isAdminArea ? '/admin/connexion' : '/agence/connexion';
+      const loginPath = isAdminArea ? '/admin/connexion' : '/garage/connexion';
       router.replace(loginPath);
       return;
     }
@@ -201,7 +201,7 @@ export function useRequirePermission(permission: Permission | Permission[]) {
     // Not authenticated
     if (!user) {
       const isAdminArea = pathname?.startsWith('/admin');
-      router.replace(isAdminArea ? '/admin/connexion' : '/agence/connexion');
+      router.replace(isAdminArea ? '/admin/connexion' : '/garage/connexion');
       return;
     }
 

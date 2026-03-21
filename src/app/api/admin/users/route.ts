@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       try {
         const emailSettings = await getEmailSettings();
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-        const loginUrl = `${baseUrl}/agence/connexion`;
+        const loginUrl = `${baseUrl}/garage/connexion`;
         
         const template = getWelcomeAgencyEmailTemplate(
           validatedData.agencyName || validatedData.name || 'Agence',

@@ -9,7 +9,7 @@ export function middleware(req: NextRequest) {
   if (
     pathname === '/admin/connexion' ||
     pathname === '/admin/login' ||
-    pathname === '/agence/connexion' ||
+    pathname === '/garage/connexion' ||
     pathname === '/agence/login' ||
     pathname === '/login' ||
     pathname.startsWith('/api/auth') ||

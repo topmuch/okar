@@ -188,7 +188,7 @@ export function getRolePermissions(role: string): Permission[] {
 export function canAccessRoute(role: string, route: string): boolean {
   const routePermissions: Record<string, Permission[]> = {
     '/admin': [PERMISSIONS.VIEW_DASHBOARD],
-    '/admin/etiquettes': [PERMISSIONS.VIEW_VEHICLES],
+    
     '/admin/qrcodes': [PERMISSIONS.VIEW_QR_LOTS],
     '/admin/garages': [PERMISSIONS.VIEW_GARAGES],
     '/admin/certifications': [PERMISSIONS.CERTIFY_GARAGES],
