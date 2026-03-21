@@ -310,7 +310,15 @@ export default function PublicitesPage() {
       return (
         <span className="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
           <Globe className="w-3 h-3" />
-          Toutes les agences
+          Tout le monde
+        </span>
+      );
+    }
+    if (scope === 'garages') {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
+          <Building2 className="w-3 h-3" />
+          Tous les garages
         </span>
       );
     }
@@ -772,7 +780,13 @@ export default function PublicitesPage() {
                       <SelectItem value="all">
                         <div className="flex items-center gap-2">
                           <Globe className="w-4 h-4" />
-                          Toutes les agences
+                          Tout le monde
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="garages">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4" />
+                          Tous les garages
                         </div>
                       </SelectItem>
                       <SelectItem value="agents">

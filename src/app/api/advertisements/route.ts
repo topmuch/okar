@@ -1,28 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { getSession } from '@/lib/session';
 
 // GET - Get active advertisements for current user/garage
 export async function GET() {
   try {
-    // Check authentication
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
+    // Check authentication using the session module
+    const user = await getSession();
 
-    if (!sessionToken) {
+    if (!user) {
       return NextResponse.json({ advertisements: [] });
     }
 
-    const session = await db.session.findUnique({
-      where: { id: sessionToken },
-      include: { user: true }
-    });
-
-    if (!session) {
-      return NextResponse.json({ advertisements: [] });
-    }
-
-    const user = session.user;
     const now = new Date();
 
     // Get all active advertisements and filter in JS for simplicity
