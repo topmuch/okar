@@ -3,6 +3,10 @@ import { db } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { 
+  sendGarageApprovalNotification, 
+  sendGarageRejectionNotification 
+} from '@/lib/notification-service';
 
 // Fonction pour générer un mot de passe temporaire
 function generateTemporaryPassword(): string {
@@ -129,13 +133,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Envoyer les identifiants par notification
-      await sendCredentialsNotification(
-        garage.whatsappNumber || garage.phone || '',
-        garage.name,
-        garageEmail,
-        temporaryPassword
-      );
+      // Envoyer les identifiants par notification multi-canal
+      await sendGarageApprovalNotification({
+        garageId: garage.id,
+        garageName: garage.name,
+        phone: garage.phone || '',
+        whatsappNumber: garage.whatsappNumber,
+        email: garageEmail,
+        managerName: garage.managerName,
+        managerPhone: garage.managerPhone,
+        loginEmail: garageEmail,
+        temporaryPassword: temporaryPassword,
+        loginUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://okar.sn'}/garage/connexion`,
+      });
 
       return NextResponse.json({
         success: true,
@@ -182,12 +192,18 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Notifier le demandeur
-      await sendRejectionNotification(
-        garage.whatsappNumber || garage.phone || '',
-        garage.name,
-        rejectionReason
-      );
+      // Notifier le demandeur via multi-canal
+      await sendGarageRejectionNotification({
+        garageId: garage.id,
+        garageName: garage.name,
+        phone: garage.phone || '',
+        whatsappNumber: garage.whatsappNumber,
+        email: garage.email,
+        managerName: garage.managerName,
+        managerPhone: garage.managerPhone,
+        rejectionReason: rejectionReason,
+        correctionUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://okar.sn'}/garage/correction?phone=${encodeURIComponent(garage.phone || '')}`,
+      });
 
       return NextResponse.json({
         success: true,
@@ -211,64 +227,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Fonction pour envoyer les identifiants par notification
-async function sendCredentialsNotification(
-  phone: string,
-  garageName: string,
-  email: string,
-  password: string
-) {
-  try {
-    // Créer une notification dans la base de données
-    await db.notification.create({
-      data: {
-        type: 'GARAGE_APPROVED',
-        message: `Félicitations ${garageName} ! Votre inscription OKAR est validée. Email: ${email}, Mot de passe: ${password}. Connectez-vous sur https://okar.sn/garage/connexion`,
-      },
-    });
-
-    // TODO: Intégrer avec un service SMS/WhatsApp réel
-    // Pour l'instant, on log juste
-    console.log('=== IDENTIFIANTS GARAGE ===');
-    console.log(`Garage: ${garageName}`);
-    console.log(`Téléphone: ${phone}`);
-    console.log(`Email: ${email}`);
-    console.log(`Mot de passe: ${password}`);
-    console.log('===========================');
-
-    // Envoyer un email si configuré
-    // await sendEmail({
-    //   to: email,
-    //   subject: 'Votre inscription OKAR est validée !',
-    //   body: `Félicitations ${garageName}, votre inscription OKAR est validée !\n\nVos identifiants de connexion:\nEmail: ${email}\nMot de passe: ${password}\n\nConnectez-vous sur https://okar.sn/garage/connexion`
-    // });
-
-  } catch (error) {
-    console.error('Error sending notification:', error);
-  }
-}
-
-// Fonction pour envoyer une notification de rejet
-async function sendRejectionNotification(
-  phone: string,
-  garageName: string,
-  reason: string
-) {
-  try {
-    await db.notification.create({
-      data: {
-        type: 'GARAGE_REJECTED',
-        message: `${garageName}, votre demande d'inscription OKAR a été rejetée. Motif: ${reason}. Vous pouvez corriger et resoumettre votre demande.`,
-      },
-    });
-
-    console.log('=== REJET GARAGE ===');
-    console.log(`Garage: ${garageName}`);
-    console.log(`Téléphone: ${phone}`);
-    console.log(`Motif: ${reason}`);
-    console.log('====================');
-
-  } catch (error) {
-    console.error('Error sending rejection notification:', error);
-  }
-}
+// Les fonctions de notification ont été déplacées vers /lib/notification-service.ts

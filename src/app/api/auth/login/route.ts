@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
       include: {
-        garage: true,
+        Garage: true,
       },
     });
 
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
         phone: user.phone,
         garageId: user.garageId,
-        garage: user.garage,
+        garage: user.Garage,
       },
       redirectUrl,
     });

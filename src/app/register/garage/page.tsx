@@ -20,8 +20,10 @@ import {
   Shield,
   Clock,
   MessageCircle,
-  AlertTriangle
+  AlertTriangle,
+  Navigation
 } from 'lucide-react';
+import GeolocationButton from '@/components/map/GeolocationButton';
 
 export default function GarageRegistrationPage() {
   return <GarageRegistrationContent />;
@@ -39,6 +41,9 @@ function GarageRegistrationContent() {
     whatsappNumber: '',
     address: '',
     city: '',
+    // Géolocalisation
+    latitude: null as number | null,
+    longitude: null as number | null,
     // Infos gérant
     managerName: '',
     managerPhone: '',
@@ -164,12 +169,15 @@ function GarageRegistrationContent() {
           phone: formData.phone,
           whatsappNumber: formData.whatsappNumber,
           address: `${formData.address}, ${formData.city}`,
+          city: formData.city,
           managerName: formData.managerName,
           managerPhone: formData.managerPhone,
           businessRegistryNumber: formData.businessRegistryNumber,
           agreementDocumentUrl: uploadData.agreementDocumentUrl,
           shopPhoto: uploadData.shopPhotoUrl,
           idDocumentUrl: uploadData.idDocumentUrl,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
         }),
       });
 
@@ -433,6 +441,39 @@ function GarageRegistrationContent() {
                   <option value="Diourbel">Diourbel</option>
                   <option value="Autre">Autre</option>
                 </select>
+              </div>
+
+              {/* Géolocalisation */}
+              <div className="p-4 bg-slate-900/50 border border-slate-600 rounded-xl">
+                <div className="flex items-start gap-3 mb-3">
+                  <Navigation className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-white">
+                      Localisation GPS (optionnel)
+                    </p>
+                    <p className="text-sm text-slate-400">
+                      Capturez votre position pour apparaître sur la carte OKAR
+                    </p>
+                  </div>
+                </div>
+
+                <GeolocationButton
+                  onLocationCaptured={(lat, lng) => {
+                    setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-slate-500 text-slate-300 hover:bg-slate-700"
+                />
+
+                {formData.latitude && formData.longitude && (
+                  <div className="mt-3 p-2 bg-emerald-500/10 rounded-lg text-sm text-emerald-400 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>
+                      Coordonnées: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -19,6 +19,17 @@ export interface User {
     phone?: string | null;
     address?: string | null;
   } | null;
+  garageId?: string | null;
+  garage?: {
+    id: string;
+    name: string;
+    slug: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    logo?: string | null;
+    isCertified?: boolean;
+  } | null;
 }
 
 // Auth context type

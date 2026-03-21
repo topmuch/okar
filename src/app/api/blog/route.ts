@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         publishedAt: true,
         views: true,
         createdAt: true,
-        author: {
+        User: {
           select: { name: true }
         }
       },

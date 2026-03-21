@@ -25,9 +25,26 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
+// ========================================
+// 🎨 OKAR DESIGN SYSTEM 2.0 - DASHBOARD PRO
+// ========================================
+const COLORS = {
+  // Backgrounds
+  pageBg: '#121214',           // Anthracite profond
+  cardBg: '#1E1E24',           // Gris foncé soft
+  cardBgHover: '#252530',      // Carte éclaircie au hover
+  cardBorder: '#2A2A35',       // Bordure subtile
+  cardBorderHover: '#FF6600',  // Bordure orange au hover
+  
+  // Brand
+  primary: '#FF6600',          // Orange OKAR
+  primaryLight: '#FF8533',     // Orange clair
+  primaryDark: '#E65C00',      // Orange foncé
+};
+
 // OKAR Brand Colors
-const OKAR_ORANGE = '#FF6600';
-const OKAR_ORANGE_DARK = '#E65C00';
+const OKAR_ORANGE = COLORS.primary;
+const OKAR_ORANGE_DARK = COLORS.primaryDark;
 
 // Garage context
 const GarageContext = createContext<{
@@ -131,10 +148,10 @@ export default function GarageLayout({
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.pageBg }}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-[#FF6600]/30 border-t-[#FF6600] rounded-full animate-spin"></div>
-          <p className="text-zinc-400 text-sm">Vérification...</p>
+          <p className="text-[#B0B0B0] text-sm">Vérification...</p>
         </div>
       </div>
     );
@@ -147,28 +164,38 @@ export default function GarageLayout({
 
   return (
     <GarageContext.Provider value={{ garageId, garageName, isCertified }}>
-      <div className="min-h-screen bg-black dark:bg-black text-white">
+      <div className="min-h-screen text-white" style={{ backgroundColor: COLORS.pageBg }}>
         {/* Mobile Header - OKAR Style */}
-        <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-zinc-950 border-b border-zinc-800 z-40 flex items-center justify-between px-4">
+        <header 
+          className="lg:hidden fixed top-0 left-0 right-0 h-16 z-40 flex items-center justify-between px-4"
+          style={{ backgroundColor: COLORS.cardBg, borderBottom: `1px solid ${COLORS.cardBorder}` }}
+        >
           <Link href="/garage/tableau-de-bord" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#FF6600] to-[#FF8533] rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)', boxShadow: '0 10px 30px -5px rgba(255, 102, 0, 0.4)' }}
+            >
               <Car className="w-5 h-5 text-white" />
             </div>
             <div>
               <span className="font-black text-lg text-white tracking-tight">OKAR</span>
-              <span className="text-[10px] text-zinc-500 block -mt-1">PASS</span>
+              <span className="text-[10px] text-[#6B6B75] block -mt-1">PASS</span>
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <button className="relative p-2.5 hover:bg-zinc-800 rounded-xl transition-colors">
-              <Bell className="w-5 h-5 text-zinc-400" />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#FF6600] rounded-full animate-pulse" />
+            <button 
+              className="relative p-2.5 rounded-xl transition-colors"
+              style={{ backgroundColor: '#121214' }}
+            >
+              <Bell className="w-5 h-5 text-[#B0B0B0]" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: COLORS.primary }} />
             </button>
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2.5 hover:bg-zinc-800 rounded-xl transition-colors"
+              className="p-2.5 rounded-xl transition-colors"
+              style={{ backgroundColor: '#121214' }}
             >
-              <Menu className="w-6 h-6 text-zinc-300" />
+              <Menu className="w-6 h-6 text-[#B0B0B0]" />
             </button>
           </div>
         </header>
@@ -183,42 +210,53 @@ export default function GarageLayout({
 
         {/* Sidebar - Desktop */}
         <aside
-          className={`fixed top-0 left-0 h-full w-72 bg-zinc-950 border-r border-zinc-800 z-50 transform transition-transform duration-300 lg:translate-x-0 ${
+          className={`fixed top-0 left-0 h-full w-72 z-50 transform transition-transform duration-300 lg:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
+          style={{ backgroundColor: COLORS.cardBg, borderRight: `1px solid ${COLORS.cardBorder}` }}
         >
           <div className="h-full flex flex-col">
             {/* Logo - OKAR Brand */}
-            <div className="h-20 flex items-center justify-between px-5 border-b border-zinc-800">
+            <div 
+              className="h-20 flex items-center justify-between px-5"
+              style={{ borderBottom: `1px solid ${COLORS.cardBorder}` }}
+            >
               <Link href="/garage/tableau-de-bord" className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#FF6600] to-[#FF8533] rounded-2xl flex items-center justify-center shadow-xl shadow-orange-500/40">
+                <div 
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)', boxShadow: '0 10px 30px -5px rgba(255, 102, 0, 0.5)' }}
+                >
                   <Car className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <span className="font-black text-2xl text-white tracking-tight">OKAR</span>
-                  <span className="text-[10px] text-zinc-500 block -mt-1">L'histoire réelle de votre voiture.</span>
+                  <span className="text-[10px] text-[#6B6B75] block -mt-1">L'histoire réelle de votre voiture.</span>
                 </div>
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="lg:hidden p-2 hover:bg-zinc-800 rounded-xl transition-colors"
+                className="lg:hidden p-2 rounded-xl transition-colors"
+                style={{ backgroundColor: '#121214' }}
               >
-                <X className="w-5 h-5 text-zinc-400" />
+                <X className="w-5 h-5 text-[#B0B0B0]" />
               </button>
             </div>
 
             {/* Garage Info Badge */}
-            <div className="px-5 py-4 border-b border-zinc-800">
-              <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-2xl">
-                <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-zinc-400" />
+            <div 
+              className="px-5 py-4"
+              style={{ borderBottom: `1px solid ${COLORS.cardBorder}` }}
+            >
+              <div className="flex items-center gap-3 p-3 rounded-2xl" style={{ backgroundColor: '#121214' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#252530' }}>
+                  <User className="w-6 h-6 text-[#B0B0B0]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">
                     {garageName}
                   </p>
                   {isCertified && (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-[#FF6600] font-medium">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: COLORS.primary }}>
                       <Shield className="w-3.5 h-3.5" />
                       CERTIFIÉ OKAR
                     </span>
@@ -228,13 +266,17 @@ export default function GarageLayout({
             </div>
 
             {/* Quick Actions */}
-            <div className="px-5 py-4 border-b border-zinc-800">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Actions Rapides</p>
+            <div 
+              className="px-5 py-4"
+              style={{ borderBottom: `1px solid ${COLORS.cardBorder}` }}
+            >
+              <p className="text-xs font-semibold text-[#6B6B75] uppercase tracking-wider mb-3">Actions Rapides</p>
               <div className="space-y-2">
                 <Link
                   href="/garage/scanner"
                   onClick={() => setSidebarOpen(false)}
-                  className="flex items-center gap-3 p-3 bg-gradient-to-r from-[#FF6600] to-[#FF8533] rounded-2xl text-white font-semibold shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all"
+                  className="flex items-center gap-3 p-3 rounded-2xl text-white font-semibold transition-all"
+                  style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)', boxShadow: '0 10px 30px -5px rgba(255, 102, 0, 0.4)' }}
                 >
                   <Camera className="w-5 h-5" />
                   Scanner un Véhicule
@@ -242,17 +284,23 @@ export default function GarageLayout({
                 <Link
                   href="/garage/activer-qr"
                   onClick={() => setSidebarOpen(false)}
-                  className="flex items-center gap-3 p-3 bg-zinc-900 hover:bg-zinc-800 rounded-2xl text-white font-medium border border-zinc-700 transition-all"
+                  className="flex items-center gap-3 p-3 rounded-2xl text-white font-medium transition-all"
+                  style={{ backgroundColor: '#121214', border: `1px solid ${COLORS.cardBorder}` }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#252530'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#121214'}
                 >
-                  <QrCode className="w-5 h-5 text-[#FF6600]" />
+                  <QrCode className="w-5 h-5" style={{ color: COLORS.primary }} />
                   Activer un Pass OKAR
                 </Link>
                 <Link
                   href="/garage/inscrire"
                   onClick={() => setSidebarOpen(false)}
-                  className="flex items-center gap-3 p-3 bg-zinc-900 hover:bg-zinc-800 rounded-2xl text-white font-medium border border-zinc-700 transition-all"
+                  className="flex items-center gap-3 p-3 rounded-2xl text-white font-medium transition-all"
+                  style={{ backgroundColor: '#121214', border: `1px solid ${COLORS.cardBorder}` }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#252530'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#121214'}
                 >
-                  <User className="w-5 h-5 text-[#FF6600]" />
+                  <User className="w-5 h-5" style={{ color: COLORS.primary }} />
                   Inscription Client
                 </Link>
               </div>
@@ -260,7 +308,7 @@ export default function GarageLayout({
 
             {/* Navigation */}
             <nav className="flex-1 py-4 px-5 overflow-y-auto">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Navigation</p>
+              <p className="text-xs font-semibold text-[#6B6B75] uppercase tracking-wider mb-3">Navigation</p>
               <ul className="space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -272,9 +320,14 @@ export default function GarageLayout({
                         onClick={() => setSidebarOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                           active
-                            ? 'bg-[#FF6600]/10 text-[#FF6600] border-l-4 border-[#FF6600] pl-3'
-                            : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                            ? 'border-l-4 pl-3'
+                            : 'hover:bg-[#252530] hover:text-white'
                         }`}
+                        style={active ? { 
+                          backgroundColor: 'rgba(255, 102, 0, 0.1)', 
+                          color: COLORS.primary,
+                          borderLeftColor: COLORS.primary 
+                        } : { color: '#B0B0B0' }}
                       >
                         <Icon className="w-5 h-5" />
                         {item.label}
@@ -286,34 +339,41 @@ export default function GarageLayout({
             </nav>
 
             {/* User Menu */}
-            <div className="p-5 border-t border-zinc-800">
+            <div className="p-5" style={{ borderTop: `1px solid ${COLORS.cardBorder}` }}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-800 transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-xl transition-colors"
+                style={{ backgroundColor: '#121214' }}
               >
-                <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-zinc-400" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#252530' }}>
+                  <Settings className="w-5 h-5 text-[#B0B0B0]" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-white">Paramètres</p>
-                  <p className="text-xs text-zinc-500">Configuration garage</p>
+                  <p className="text-xs text-[#6B6B75]">Configuration garage</p>
                 </div>
-                <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} style={{ color: '#6B6B75' }} />
               </button>
 
               {userMenuOpen && (
                 <div className="mt-2 py-2">
                   <Link
                     href="/garage/profil"
-                    className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 rounded-xl transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors"
+                    style={{ color: '#B0B0B0' }}
                     onClick={() => setUserMenuOpen(false)}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#252530'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <User className="w-4 h-4" />
                     Mon Profil
                   </Link>
                   <button
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors"
+                    style={{ color: '#EF4444' }}
                     onClick={handleLogout}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <LogOut className="w-4 h-4" />
                     Déconnexion
@@ -332,7 +392,10 @@ export default function GarageLayout({
         </main>
 
         {/* Bottom Navigation - Mobile PWA */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-zinc-950 border-t border-zinc-800 z-40">
+        <nav 
+          className="lg:hidden fixed bottom-0 left-0 right-0 h-20 z-40"
+          style={{ backgroundColor: COLORS.cardBg, borderTop: `1px solid ${COLORS.cardBorder}` }}
+        >
           <div className="flex items-center justify-around h-full px-2">
             {bottomNavItems.map((item) => {
               const Icon = item.icon;
@@ -343,7 +406,8 @@ export default function GarageLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex flex-col items-center justify-center w-16 h-16 -mt-8 bg-gradient-to-br from-[#FF6600] to-[#FF8533] rounded-2xl shadow-xl shadow-orange-500/40 hover:shadow-2xl hover:shadow-orange-500/50 transition-all"
+                    className="flex flex-col items-center justify-center w-16 h-16 -mt-8 rounded-2xl transition-all"
+                    style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)', boxShadow: '0 10px 30px -5px rgba(255, 102, 0, 0.5)' }}
                   >
                     <Icon className="w-6 h-6 text-white" />
                     <span className="text-[10px] font-semibold text-white mt-1">{item.label}</span>
@@ -355,9 +419,8 @@ export default function GarageLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center w-16 h-16 rounded-xl transition-colors ${
-                    active ? 'text-[#FF6600]' : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
+                  className="flex flex-col items-center justify-center w-16 h-16 rounded-xl transition-colors"
+                  style={{ color: active ? COLORS.primary : '#6B6B75' }}
                 >
                   <Icon className="w-6 h-6" />
                   <span className="text-[10px] font-medium mt-1">{item.label}</span>

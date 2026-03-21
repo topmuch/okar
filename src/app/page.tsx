@@ -224,7 +224,8 @@ function HeroSection() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (plate.trim()) {
-      window.location.href = `/v/${plate.trim()}`;
+      // Rediriger vers la page de teasing pour monétisation
+      window.location.href = `/rapport/${plate.trim()}`;
     }
   };
 

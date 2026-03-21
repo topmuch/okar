@@ -43,12 +43,15 @@ export async function POST(request: NextRequest) {
       phone,
       whatsappNumber,
       address,
+      city,
       managerName,
       managerPhone,
       businessRegistryNumber,
       agreementDocumentUrl,
       shopPhoto,
       idDocumentUrl,
+      latitude,
+      longitude,
     } = body;
 
     // Validation des champs requis
@@ -124,6 +127,9 @@ export async function POST(request: NextRequest) {
         isCertified: false,
         active: false, // Inactif jusqu'à validation
         temporaryPassword: hashedPassword,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        geoUpdatedAt: latitude && longitude ? new Date() : null,
       },
     });
 

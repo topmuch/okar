@@ -24,6 +24,7 @@ export interface SessionUser {
     phone: string | null;
     address: string | null;
     logo: string | null;
+    isCertified: boolean;
   } | null;
 }
 
@@ -84,6 +85,7 @@ export async function logLoginAttempt(params: {
 
   return db.loginLog.create({
     data: {
+      id: crypto.randomUUID(),
       userId: params.userId || null,
       email: params.email.toLowerCase(),
       success: params.success,
@@ -102,10 +104,12 @@ export async function createSession(userId: string): Promise<Session> {
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   const ipAddress = await getClientIp();
   const userAgent = await getUserAgent();
+  const sessionId = crypto.randomUUID();
 
   // Create session in database with metadata
   const session = await db.session.create({
     data: {
+      id: sessionId,
       userId,
       expiresAt,
       ipAddress,
@@ -144,9 +148,9 @@ export async function getSession(): Promise<SessionUser | null> {
     const session = await db.session.findUnique({
       where: { id: sessionId },
       include: {
-        user: {
+        User: {
           include: {
-            garage: {
+            Garage: {
               select: {
                 id: true,
                 name: true,
@@ -155,6 +159,7 @@ export async function getSession(): Promise<SessionUser | null> {
                 phone: true,
                 address: true,
                 logo: true,
+                isCertified: true,
               },
             },
           },
@@ -196,12 +201,12 @@ export async function getSession(): Promise<SessionUser | null> {
 
     // Return user data
     return {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-      role: session.user.role,
-      garageId: session.user.garageId,
-      garage: session.user.garage,
+      id: session.User.id,
+      email: session.User.email,
+      name: session.User.name,
+      role: session.User.role,
+      garageId: session.User.garageId,
+      garage: session.User.Garage,
     };
   } catch (error) {
     console.error('Error getting session:', error);

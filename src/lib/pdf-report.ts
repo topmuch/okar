@@ -11,7 +11,7 @@
  * - Filigrane de certification
  */
 
-import { prisma from './prisma';
+import prisma from './prisma';
 import { v4 as uuidv4 } from 'uuid';
 
 // Types

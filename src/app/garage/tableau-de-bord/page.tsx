@@ -23,12 +23,55 @@ import {
   History,
   Megaphone,
   Newspaper,
-  ExternalLink
+  ExternalLink,
+  Trophy,
+  Star,
+  Target,
+  Zap,
+  Users,
+  Eye,
+  Sparkles,
+  Calendar,
+  ArrowUpRight,
+  Gift
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 
+// ========================================
+// 🎨 OKAR DESIGN SYSTEM 2.0 - DASHBOARD PRO
+// ========================================
+const COLORS = {
+  // Backgrounds
+  pageBg: '#121214',           // Anthracite profond
+  cardBg: '#1E1E24',           // Gris foncé soft
+  cardBgHover: '#252530',      // Carte éclaircie au hover
+  cardBorder: '#2A2A35',       // Bordure subtile
+  cardBorderHover: '#FF6600',  // Bordure orange au hover
+  
+  // Brand
+  primary: '#FF6600',          // Orange OKAR
+  primaryLight: '#FF8533',     // Orange clair
+  primaryDark: '#E65C00',      // Orange foncé
+  
+  // Premium gradients
+  gradientRevenue: 'from-[#FF6600] via-[#FF7A1A] to-[#FF8533]',
+  gradientPremium: 'from-[#FFD700] via-[#FF8C00] to-[#FF0080]',
+  gradientSuccess: 'from-emerald-600 to-emerald-400',
+  
+  // Text
+  textPrimary: '#FFFFFF',
+  textSecondary: '#B0B0B0',
+  textMuted: '#6B6B75',
+  
+  // Status
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+};
+
 // OKAR Brand
-const OKAR_ORANGE = '#FF6600';
+const OKAR_ORANGE = COLORS.primary;
 
 interface Vehicle {
   id: string;
@@ -73,6 +116,8 @@ interface RevenueStats {
   today: number;
   thisMonth: number;
   pendingValidation: number;
+  clientsCount: number;
+  visitsCount: number;
 }
 
 interface QRStock {
@@ -87,6 +132,8 @@ interface Advertisement {
   description: string | null;
   imageUrl: string;
   linkUrl: string | null;
+  price?: string;
+  badge?: string;
 }
 
 interface BlogPost {
@@ -97,24 +144,7 @@ interface BlogPost {
   coverImage: string | null;
   category: string;
   publishedAt: string;
-}
-
-interface Advertisement {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string;
-  linkUrl: string | null;
-}
-
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string | null;
-  coverImage: string | null;
-  category: string;
-  publishedAt: string;
+  readTime?: number;
 }
 
 // Category labels
@@ -131,6 +161,13 @@ const categoryLabels: Record<string, string> = {
   autre: 'Autre',
 };
 
+// Gamification badges
+const BADGES = [
+  { id: 'certified', label: 'Certifié', icon: Shield, color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+  { id: 'top_garage', label: 'Top Garage', icon: Trophy, color: 'text-amber-400', bg: 'bg-amber-500/20' },
+  { id: 'fast_response', label: 'Réactif', icon: Zap, color: 'text-blue-400', bg: 'bg-blue-500/20' },
+];
+
 export default function GarageDashboardOKAR() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -139,7 +176,13 @@ export default function GarageDashboardOKAR() {
   const [recentRecords, setRecentRecords] = useState<MaintenanceRecord[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, active: 0, inactive: 0 });
   const [maintenanceStats, setMaintenanceStats] = useState<MaintenanceStats>({ total: 0, pending: 0, validated: 0, rejected: 0 });
-  const [revenueStats, setRevenueStats] = useState<RevenueStats>({ today: 0, thisMonth: 0, pendingValidation: 0 });
+  const [revenueStats, setRevenueStats] = useState<RevenueStats>({ 
+    today: 0, 
+    thisMonth: 0, 
+    pendingValidation: 0,
+    clientsCount: 0,
+    visitsCount: 0
+  });
   const [qrStock, setQrStock] = useState<QRStock>({ total: 0, used: 0, remaining: 0 });
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
@@ -149,22 +192,25 @@ export default function GarageDashboardOKAR() {
   const garageId = user?.garageId || '';
   const garageName = user?.garage?.name || 'Mon Garage OKAR';
   const isCertified = user?.garage?.isCertified || false;
+  
+  // Gamification - Reputation score (simulated based on activity)
+  const reputationScore = Math.min(100, Math.round(
+    (maintenanceStats.validated * 5) + 
+    (stats.active * 3) + 
+    (isCertified ? 20 : 0)
+  ));
 
   useEffect(() => {
-    // Wait for auth to load
     if (authLoading) return;
     
-    // If no user, redirect to login
     if (!user) {
       router.push('/garage/connexion');
       return;
     }
     
-    // Fetch data if we have a garage ID
     if (garageId) {
       fetchData();
     } else {
-      // No garage ID but logged in - show empty state
       setLoading(false);
     }
   }, [user, authLoading, garageId, router]);
@@ -212,10 +258,16 @@ export default function GarageDashboardOKAR() {
         .filter((r: MaintenanceRecord) => r.ownerValidation === 'PENDING')
         .reduce((sum: number, r: MaintenanceRecord) => sum + (r.totalCost || 0), 0);
 
+      // Count unique clients
+      const uniqueClients = new Set((maintData.records || []).map((r: MaintenanceRecord) => r.vehicleId)).size;
+      const visitsCount = (maintData.records || []).length;
+
       setRevenueStats({
         today: todayRevenue,
         thisMonth: monthlyRevenue,
-        pendingValidation: pendingRevenue
+        pendingValidation: pendingRevenue,
+        clientsCount: uniqueClients,
+        visitsCount: visitsCount
       });
 
       // Fetch advertisements
@@ -290,8 +342,8 @@ export default function GarageDashboardOKAR() {
     return (
       <div className="flex items-center justify-center h-[80vh]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-zinc-800 border-t-[#FF6600] rounded-full animate-spin mx-auto" />
-          <p className="text-zinc-500 mt-6 text-lg">Chargement OKAR...</p>
+          <div className="w-16 h-16 border-4 border-[#2A2A35] border-t-[#FF6600] rounded-full animate-spin mx-auto" />
+          <p className="text-[#B0B0B0] mt-6 text-lg">Chargement OKAR...</p>
         </div>
       </div>
     );
@@ -303,7 +355,7 @@ export default function GarageDashboardOKAR() {
       <div className="flex items-center justify-center h-[80vh]">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-[#FF6600] animate-spin mx-auto" />
-          <p className="text-zinc-500 mt-4">Redirection vers la connexion...</p>
+          <p className="text-[#B0B0B0] mt-4">Redirection vers la connexion...</p>
         </div>
       </div>
     );
@@ -311,42 +363,93 @@ export default function GarageDashboardOKAR() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header - OKAR Brand */}
+      
+      {/* ======================================== */}
+      {/* 🎯 SECTION 1: EN-TÊTE & BIENVENUE */}
+      {/* ======================================== */}
       <div className="mb-8">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl lg:text-3xl font-black text-white">
-                Bienvenue, <span className="text-[#FF6600]">{garageName.split(' ')[0]}</span>
+                Bonjour, <span className="text-[#FF6600]">{garageName.split(' ')[0]}</span> 👋
               </h1>
-              {isCertified && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FF6600]/10 border border-[#FF6600]/30 rounded-full text-sm font-semibold text-[#FF6600]">
-                  <Shield className="w-4 h-4" />
-                  CERTIFIÉ OKAR
-                </span>
-              )}
+              {/* Badges de statut */}
+              <div className="hidden sm:flex items-center gap-2">
+                {isCertified && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-sm font-semibold text-emerald-400">
+                    <Shield className="w-4 h-4" />
+                    Certifié
+                  </span>
+                )}
+                {reputationScore >= 50 && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full text-sm font-semibold text-amber-400">
+                    <Trophy className="w-4 h-4" />
+                    Top Garage
+                  </span>
+                )}
+              </div>
             </div>
-            <p className="text-zinc-500">
+            <p className="text-[#B0B0B0]">
               L'histoire réelle de votre voiture commence ici.
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-[#B0B0B0]">
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
         </div>
+        
+        {/* Barre de progression réputation */}
+        <div className="mt-4 p-4 rounded-2xl" style={{ backgroundColor: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}` }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FFD700, #FF8C00)' }}>
+                <Star className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-semibold">Niveau de réputation</p>
+                <p className="text-sm text-[#B0B0B0]">Continuez à servir vos clients pour progresser</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-3xl font-black text-[#FF6600]">{reputationScore}</span>
+              <span className="text-[#B0B0B0] text-lg">/100</span>
+            </div>
+          </div>
+          <div className="h-3 bg-[#121214] rounded-full overflow-hidden">
+            <div 
+              className="h-full rounded-full transition-all duration-700"
+              style={{ 
+                width: `${reputationScore}%`,
+                background: reputationScore >= 75 
+                  ? 'linear-gradient(90deg, #FFD700, #FF8C00)' 
+                  : reputationScore >= 50 
+                    ? 'linear-gradient(90deg, #FF6600, #FF8533)'
+                    : 'linear-gradient(90deg, #3B82F6, #60A5FA)'
+              }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Main Action - Scanner OKAR */}
+      {/* ======================================== */}
+      {/* 🎯 SECTION 2: SCANNER PRINCIPAL */}
+      {/* ======================================== */}
       <div className="mb-8">
         <Link
           href="/garage/scanner"
-          className="block w-full bg-gradient-to-r from-[#FF6600] to-[#FF8533] rounded-3xl p-6 lg:p-8 text-white shadow-2xl shadow-orange-500/30 hover:shadow-orange-500/50 transition-all group relative overflow-hidden"
+          className="block w-full rounded-3xl p-6 lg:p-8 text-white shadow-2xl transition-all group relative overflow-hidden"
+          style={{ 
+            background: 'linear-gradient(135deg, #FF6600, #FF8533)',
+            boxShadow: '0 25px 50px -12px rgba(255, 102, 0, 0.35)'
+          }}
         >
           <div className="absolute inset-0 opacity-10">
             <div className="absolute -right-10 -top-10 w-40 h-40 border-4 border-white rounded-full" />
             <div className="absolute -right-5 -bottom-10 w-32 h-32 border-4 border-white rounded-full" />
+            <div className="absolute left-10 top-1/2 w-24 h-24 border-2 border-white rounded-full" />
           </div>
           
           <div className="flex items-center justify-between relative z-10">
@@ -364,38 +467,202 @@ export default function GarageDashboardOKAR() {
         </Link>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      {/* ======================================== */}
+      {/* 🎯 SECTION 3: REVENUS HERO CARD */}
+      {/* ======================================== */}
+      <div className="mb-8">
+        <div 
+          className="rounded-3xl p-6 lg:p-8 relative overflow-hidden"
+          style={{ 
+            background: `linear-gradient(135deg, ${COLORS.cardBg}, #252530)`,
+            border: `1px solid ${COLORS.cardBorder}`
+          }}
+        >
+          {/* Effet de brillance */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF6600]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/5 rounded-full blur-2xl" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FFD700, #FF8C00)' }}>
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Tableau de bord Revenus</h3>
+            </div>
+            
+            {/* Métriques principales */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              {/* CA du mois - Grand format */}
+              <div className="md:col-span-1 p-6 rounded-2xl relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)' }}>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-xl" />
+                <div className="relative z-10">
+                  <p className="text-white/80 text-sm font-medium mb-2">Chiffre d'affaires ce mois</p>
+                  <p className="text-4xl lg:text-5xl font-black text-white">{formatCurrency(revenueStats.thisMonth)}</p>
+                  <div className="flex items-center gap-2 mt-3 text-white/70">
+                    <ArrowUpRight className="w-4 h-4" />
+                    <span className="text-sm">+12% vs mois dernier</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Clients & Visites */}
+              <div className="p-5 rounded-2xl" style={{ backgroundColor: '#121214', border: `1px solid ${COLORS.cardBorder}` }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <span className="text-[#B0B0B0] text-sm">Clients OKAR</span>
+                </div>
+                <p className="text-4xl font-black text-white">{revenueStats.clientsCount}</p>
+                <p className="text-sm text-[#B0B0B0] mt-1">clients uniques servis</p>
+              </div>
+              
+              {/* Visites générées */}
+              <div className="p-5 rounded-2xl" style={{ backgroundColor: '#121214', border: `1px solid ${COLORS.cardBorder}` }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <span className="text-[#B0B0B0] text-sm">Visites générées</span>
+                </div>
+                <p className="text-4xl font-black text-white">{revenueStats.visitsCount}</p>
+                <p className="text-sm text-[#B0B0B0] mt-1">interventions enregistrées</p>
+              </div>
+            </div>
+            
+            {/* Sparkline / tendance simulée */}
+            <div className="flex items-end justify-between h-16 px-2 opacity-60">
+              {[35, 45, 30, 55, 40, 65, 50, 75, 60, 80, 70, 90].map((h, i) => (
+                <div 
+                  key={i} 
+                  className="w-2 rounded-t transition-all"
+                  style={{ 
+                    height: `${h}%`, 
+                    backgroundColor: i === 11 ? '#FF6600' : '#3B3B45'
+                  }} 
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ======================================== */}
+      {/* 🎯 SECTION 4: ACTIONS RAPIDES */}
+      {/* ======================================== */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Link
+          href="/garage/scanner"
+          className="group relative overflow-hidden rounded-2xl p-5 lg:p-6 transition-all active:scale-95"
+          style={{ 
+            backgroundColor: COLORS.cardBg, 
+            border: `2px solid ${COLORS.cardBorder}`,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = COLORS.primary;
+            e.currentTarget.style.backgroundColor = COLORS.cardBgHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = COLORS.cardBorder;
+            e.currentTarget.style.backgroundColor = COLORS.cardBg;
+          }}
+        >
+          <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-[#FF6600]/10 rounded-full blur-xl group-hover:bg-[#FF6600]/20 transition-colors" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform" style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)', boxShadow: '0 10px 30px -5px rgba(255, 102, 0, 0.4)' }}>
+            <Camera className="w-7 h-7 text-white" />
+          </div>
+          <p className="font-bold text-white text-lg">Scanner</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">QR Code véhicule</p>
+        </Link>
+
         <Link
           href="/garage/activer-qr"
-          className="bg-zinc-900 border-2 border-zinc-700 hover:border-[#FF6600] rounded-2xl p-5 lg:p-6 transition-all group active:scale-95"
+          className="group relative overflow-hidden rounded-2xl p-5 lg:p-6 transition-all active:scale-95"
+          style={{ 
+            backgroundColor: COLORS.cardBg, 
+            border: `2px solid ${COLORS.cardBorder}`,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = COLORS.primary;
+            e.currentTarget.style.backgroundColor = COLORS.cardBgHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = COLORS.cardBorder;
+            e.currentTarget.style.backgroundColor = COLORS.cardBg;
+          }}
         >
-          <div className="w-14 h-14 bg-[#FF6600]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <QrCode className="w-7 h-7 text-[#FF6600]" />
+          <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-colors" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform bg-gradient-to-br from-emerald-500 to-emerald-400" style={{ boxShadow: '0 10px 30px -5px rgba(16, 185, 129, 0.4)' }}>
+            <QrCode className="w-7 h-7 text-white" />
           </div>
-          <p className="font-bold text-white text-lg">Activer Pass OKAR</p>
-          <p className="text-sm text-zinc-500 mt-1">Lier un code vierge</p>
+          <p className="font-bold text-white text-lg">Activer Pass</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">Lier un code vierge</p>
         </Link>
 
         <Link
           href="/garage/inscrire"
-          className="bg-zinc-900 border-2 border-zinc-700 hover:border-[#FF6600] rounded-2xl p-5 lg:p-6 transition-all group active:scale-95"
+          className="group relative overflow-hidden rounded-2xl p-5 lg:p-6 transition-all active:scale-95"
+          style={{ 
+            backgroundColor: COLORS.cardBg, 
+            border: `2px solid ${COLORS.cardBorder}`,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = COLORS.primary;
+            e.currentTarget.style.backgroundColor = COLORS.cardBgHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = COLORS.cardBorder;
+            e.currentTarget.style.backgroundColor = COLORS.cardBg;
+          }}
         >
-          <div className="w-14 h-14 bg-[#FF6600]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <UserPlus className="w-7 h-7 text-[#FF6600]" />
+          <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-colors" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform bg-gradient-to-br from-blue-500 to-blue-400" style={{ boxShadow: '0 10px 30px -5px rgba(59, 130, 246, 0.4)' }}>
+            <UserPlus className="w-7 h-7 text-white" />
           </div>
-          <p className="font-bold text-white text-lg">Inscription Client</p>
-          <p className="text-sm text-zinc-500 mt-1">Créer un compte Driver</p>
+          <p className="font-bold text-white text-lg">Inscription</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">Créer compte Driver</p>
+        </Link>
+
+        <Link
+          href="/garage/interventions/nouvelle"
+          className="group relative overflow-hidden rounded-2xl p-5 lg:p-6 transition-all active:scale-95"
+          style={{ 
+            backgroundColor: COLORS.cardBg, 
+            border: `2px solid ${COLORS.cardBorder}`,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = COLORS.primary;
+            e.currentTarget.style.backgroundColor = COLORS.cardBgHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = COLORS.cardBorder;
+            e.currentTarget.style.backgroundColor = COLORS.cardBg;
+          }}
+        >
+          <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-colors" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform bg-gradient-to-br from-purple-500 to-purple-400" style={{ boxShadow: '0 10px 30px -5px rgba(168, 85, 247, 0.4)' }}>
+            <Wrench className="w-7 h-7 text-white" />
+          </div>
+          <p className="font-bold text-white text-lg">Chantier</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">Nouvelle intervention</p>
         </Link>
       </div>
 
-      {/* KPI Cards */}
+      {/* ======================================== */}
+      {/* 🎯 SECTION 5: KPIs CARTES */}
+      {/* ======================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {/* À Valider */}
-        <div className={`rounded-2xl p-5 border-2 transition-all ${maintenanceStats.pending > 0 ? 'bg-amber-500/5 border-amber-500/50' : 'bg-zinc-900 border-zinc-700'}`}>
+        <div 
+          className={`rounded-2xl p-5 border-2 transition-all ${maintenanceStats.pending > 0 ? 'border-amber-500/50' : ''}`}
+          style={{ 
+            backgroundColor: maintenanceStats.pending > 0 ? 'rgba(245, 158, 11, 0.05)' : COLORS.cardBg,
+            borderColor: maintenanceStats.pending > 0 ? undefined : COLORS.cardBorder
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${maintenanceStats.pending > 0 ? 'bg-amber-500/20' : 'bg-zinc-800'}`}>
-              <Clock className={`w-6 h-6 ${maintenanceStats.pending > 0 ? 'text-amber-400' : 'text-zinc-500'}`} />
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${maintenanceStats.pending > 0 ? 'bg-amber-500/20' : ''}`} style={{ backgroundColor: maintenanceStats.pending > 0 ? undefined : '#121214' }}>
+              <Clock className={`w-6 h-6 ${maintenanceStats.pending > 0 ? 'text-amber-400' : 'text-[#6B6B75]'}`} />
             </div>
             {maintenanceStats.pending > 0 && (
               <span className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
@@ -404,43 +671,45 @@ export default function GarageDashboardOKAR() {
           <p className={`text-4xl font-black ${maintenanceStats.pending > 0 ? 'text-amber-400' : 'text-white'}`}>
             {maintenanceStats.pending}
           </p>
-          <p className="text-sm text-zinc-500 mt-1">À valider</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">À valider</p>
         </div>
 
         {/* Chantiers */}
-        <div className="bg-zinc-900 border-2 border-zinc-700 rounded-2xl p-5">
-          <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mb-4">
-            <Wrench className="w-6 h-6 text-zinc-400" />
+        <div className="rounded-2xl p-5 border-2 transition-all" style={{ backgroundColor: COLORS.cardBg, borderColor: COLORS.cardBorder }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: '#121214' }}>
+            <Wrench className="w-6 h-6 text-[#B0B0B0]" />
           </div>
           <p className="text-4xl font-black text-white">{maintenanceStats.total}</p>
-          <p className="text-sm text-zinc-500 mt-1">Chantiers</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">Chantiers</p>
         </div>
 
         {/* Pass OKAR actifs */}
-        <div className="bg-zinc-900 border-2 border-zinc-700 rounded-2xl p-5">
-          <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mb-4">
-            <Car className="w-6 h-6 text-zinc-400" />
+        <div className="rounded-2xl p-5 border-2 transition-all" style={{ backgroundColor: COLORS.cardBg, borderColor: COLORS.cardBorder }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: '#121214' }}>
+            <Car className="w-6 h-6 text-[#B0B0B0]" />
           </div>
           <p className="text-4xl font-black text-white">{stats.active}</p>
-          <p className="text-sm text-zinc-500 mt-1">Pass OKAR actifs</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">Pass OKAR actifs</p>
         </div>
 
-        {/* CA Mois */}
-        <div className="bg-gradient-to-br from-[#FF6600] to-[#FF8533] rounded-2xl p-5 shadow-xl shadow-orange-500/20">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-            <Wallet className="w-6 h-6 text-white" />
+        {/* En attente validation */}
+        <div className="rounded-2xl p-5 border-2 transition-all" style={{ backgroundColor: COLORS.cardBg, borderColor: COLORS.cardBorder }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: '#121214' }}>
+            <Wallet className="w-6 h-6 text-[#B0B0B0]" />
           </div>
-          <p className="text-2xl font-black text-white">{formatCurrency(revenueStats.thisMonth)}</p>
-          <p className="text-sm text-white/70 mt-1">CA ce mois</p>
+          <p className="text-2xl font-black text-amber-400">{formatCurrency(revenueStats.pendingValidation)}</p>
+          <p className="text-sm text-[#B0B0B0] mt-1">En attente</p>
         </div>
       </div>
 
-      {/* Chantiers Récents */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-8">
-        <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+      {/* ======================================== */}
+      {/* 🎯 SECTION 6: CHANTIERS RÉCENTS */}
+      {/* ======================================== */}
+      <div className="rounded-3xl overflow-hidden mb-8" style={{ backgroundColor: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}` }}>
+        <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: COLORS.cardBorder }}>
           <h3 className="text-lg font-bold text-white flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FF6600]/10 rounded-xl flex items-center justify-center">
-              <History className="w-5 h-5 text-[#FF6600]" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)' }}>
+              <History className="w-5 h-5 text-white" />
             </div>
             Mes Chantiers Récents
           </h3>
@@ -449,14 +718,14 @@ export default function GarageDashboardOKAR() {
           </Link>
         </div>
 
-        <div className="divide-y divide-zinc-800">
+        <div className="divide-y" style={{ borderColor: COLORS.cardBorder }}>
           {recentRecords.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="w-20 h-20 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Wrench className="w-10 h-10 text-zinc-600" />
+              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#121214' }}>
+                <Wrench className="w-10 h-10 text-[#6B6B75]" />
               </div>
-              <p className="text-zinc-500 text-lg">Aucune intervention enregistrée</p>
-              <p className="text-zinc-600 text-sm mt-2">Scannez un véhicule pour commencer</p>
+              <p className="text-[#B0B0B0] text-lg">Aucune intervention enregistrée</p>
+              <p className="text-[#6B6B75] text-sm mt-2">Scannez un véhicule pour commencer</p>
             </div>
           ) : (
             recentRecords.map((record) => {
@@ -464,29 +733,29 @@ export default function GarageDashboardOKAR() {
               const vehicleName = `${record.vehicle.make || ''} ${record.vehicle.model || ''}`.trim() || 'Véhicule';
               
               return (
-                <div key={record.id} className="p-4 hover:bg-zinc-800/50 transition-colors cursor-pointer">
+                <div key={record.id} className="p-4 hover:bg-[#252530] transition-colors cursor-pointer">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-zinc-800 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ backgroundColor: '#121214' }}>
                       {record.photos?.[0] ? (
                         <img src={record.photos[0]} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <Car className="w-7 h-7 text-zinc-600" />
+                        <Car className="w-7 h-7 text-[#6B6B75]" />
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-mono text-xs text-[#FF6600] font-semibold">{record.vehicle.reference}</span>
-                        <span className="text-xs text-zinc-600">•</span>
-                        <span className="text-xs text-zinc-500">{formatDate(record.createdAt)}</span>
+                        <span className="text-xs text-[#6B6B75]">•</span>
+                        <span className="text-xs text-[#B0B0B0]">{formatDate(record.createdAt)}</span>
                       </div>
                       <p className="text-white font-semibold truncate">{vehicleName}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm text-zinc-400">{categoryLabels[record.category] || record.category}</span>
+                        <span className="text-sm text-[#B0B0B0]">{categoryLabels[record.category] || record.category}</span>
                         {record.vehicle.licensePlate && (
                           <>
-                            <span className="text-zinc-600">•</span>
-                            <span className="text-sm font-mono text-zinc-500">{record.vehicle.licensePlate}</span>
+                            <span className="text-[#6B6B75]">•</span>
+                            <span className="text-sm font-mono text-[#6B6B75]">{record.vehicle.licensePlate}</span>
                           </>
                         )}
                       </div>
@@ -509,12 +778,14 @@ export default function GarageDashboardOKAR() {
         </div>
       </div>
 
-      {/* Stock QR */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 mb-8">
+      {/* ======================================== */}
+      {/* 🎯 SECTION 7: STOCK QR */}
+      {/* ======================================== */}
+      <div className="rounded-3xl p-5 mb-8" style={{ backgroundColor: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}` }}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-white flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FF6600]/10 rounded-xl flex items-center justify-center">
-              <QrCode className="w-5 h-5 text-[#FF6600]" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)' }}>
+              <QrCode className="w-5 h-5 text-white" />
             </div>
             Stock Pass OKAR
           </h3>
@@ -526,7 +797,7 @@ export default function GarageDashboardOKAR() {
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-zinc-500">{qrStock.remaining} disponibles sur {qrStock.total}</span>
+              <span className="text-sm text-[#B0B0B0]">{qrStock.remaining} disponibles sur {qrStock.total}</span>
               {qrStock.remaining < 10 && qrStock.total > 0 && (
                 <span className="text-xs text-amber-400 font-medium flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
@@ -534,16 +805,20 @@ export default function GarageDashboardOKAR() {
                 </span>
               )}
             </div>
-            <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: '#121214' }}>
               <div 
-                className="h-full bg-gradient-to-r from-[#FF6600] to-[#FF8533] rounded-full transition-all duration-500"
-                style={{ width: qrStock.total > 0 ? `${(qrStock.remaining / qrStock.total) * 100}%` : '0%' }}
+                className="h-full rounded-full transition-all duration-500"
+                style={{ 
+                  width: qrStock.total > 0 ? `${(qrStock.remaining / qrStock.total) * 100}%` : '0%',
+                  background: 'linear-gradient(90deg, #FF6600, #FF8533)'
+                }}
               />
             </div>
           </div>
           <Link
             href="/garage/stock-qr"
-            className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-white font-semibold transition-colors flex items-center gap-2"
+            className="px-5 py-3 rounded-xl text-white font-semibold transition-colors flex items-center gap-2"
+            style={{ backgroundColor: '#121214' }}
           >
             <Plus className="w-4 h-4" />
             Commander
@@ -551,127 +826,176 @@ export default function GarageDashboardOKAR() {
         </div>
       </div>
 
-      {/* Revenue Summary */}
-      <div className="bg-gradient-to-r from-zinc-900 to-zinc-950 border border-zinc-800 rounded-3xl p-6">
+      {/* ======================================== */}
+      {/* 🎯 SECTION 8: PUBLICITÉS - STYLE PREMIUM */}
+      {/* ======================================== */}
+      {advertisements.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #8B5CF6, #A855F7)' }}>
+              <Megaphone className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Offres Partenaires</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {advertisements.slice(0, 3).map((ad, index) => (
+              <a 
+                key={ad.id} 
+                href={ad.linkUrl || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative overflow-hidden rounded-2xl transition-all duration-300"
+                style={{ 
+                  backgroundColor: '#FFFFFF',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                {/* Image avec overlay */}
+                <div className="relative h-48 overflow-hidden">
+                  {ad.imageUrl ? (
+                    <img 
+                      src={ad.imageUrl} 
+                      alt={ad.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF6600, #FF8533)' }}>
+                      <Gift className="w-16 h-16 text-white/30" />
+                    </div>
+                  )}
+                  {/* Badge promo */}
+                  {index === 0 && (
+                    <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #FF0080, #FF4D94)' }}>
+                      🔥 OFFRE DU JOUR
+                    </div>
+                  )}
+                  {/* Overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                </div>
+                
+                {/* Contenu */}
+                <div className="p-5">
+                  <h4 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-[#FF6600] transition-colors">{ad.title}</h4>
+                  {ad.description && (
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">{ad.description}</p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#FF6600]">
+                      Voir l'offre <ExternalLink className="w-4 h-4" />
+                    </span>
+                    {ad.price && (
+                      <span className="text-lg font-black text-gray-900">{ad.price}</span>
+                    )}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ======================================== */}
+      {/* 🎯 SECTION 9: BLOG - STYLE MAGAZINE */}
+      {/* ======================================== */}
+      {blogPosts.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)' }}>
+                <Newspaper className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Actualités OKAR</h3>
+            </div>
+            <Link href="/blog" className="text-sm text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+              Voir tout <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Grille Magazine */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {blogPosts.map((post, index) => (
+              <Link 
+                key={post.id} 
+                href={`/blog/${post.slug}`}
+                className="group rounded-2xl overflow-hidden transition-all duration-300"
+                style={{ 
+                  backgroundColor: COLORS.cardBg, 
+                  border: `1px solid ${COLORS.cardBorder}`
+                }}
+              >
+                {/* Image large */}
+                <div className="relative h-48 overflow-hidden">
+                  {post.coverImage ? (
+                    <img 
+                      src={post.coverImage} 
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#121214' }}>
+                      <Newspaper className="w-12 h-12 text-[#6B6B75]" />
+                    </div>
+                  )}
+                  {/* Category badge */}
+                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: 'rgba(59, 130, 246, 0.9)' }}>
+                    {post.category}
+                  </div>
+                </div>
+                
+                {/* Contenu */}
+                <div className="p-5">
+                  <h4 className="font-bold text-white text-lg mb-2 group-hover:text-[#FF6600] transition-colors line-clamp-2">
+                    {post.title}
+                  </h4>
+                  {post.excerpt && (
+                    <p className="text-sm text-[#B0B0B0] line-clamp-2 mb-3">{post.excerpt}</p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-[#6B6B75]">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {formatDate(post.publishedAt)}
+                    </span>
+                    {post.readTime && (
+                      <span>{post.readTime} min de lecture</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ======================================== */}
+      {/* 🎯 SECTION 10: RÉSUMÉ FINANCIER */}
+      {/* ======================================== */}
+      <div className="rounded-3xl p-6 mb-8" style={{ 
+        background: `linear-gradient(135deg, ${COLORS.cardBg}, #252530)`,
+        border: `1px solid ${COLORS.cardBorder}`
+      }}>
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/20">
             <TrendingUp className="w-5 h-5 text-emerald-400" />
           </div>
           <h3 className="text-lg font-bold text-white">Aperçu Financier</h3>
         </div>
         <div className="grid grid-cols-3 gap-6">
           <div>
-            <p className="text-zinc-500 text-sm mb-1">Aujourd'hui</p>
+            <p className="text-[#B0B0B0] text-sm mb-1">Aujourd'hui</p>
             <p className="text-2xl font-black text-white">{formatCurrency(revenueStats.today)}</p>
           </div>
           <div>
-            <p className="text-zinc-500 text-sm mb-1">Ce mois</p>
+            <p className="text-[#B0B0B0] text-sm mb-1">Ce mois</p>
             <p className="text-2xl font-black text-white">{formatCurrency(revenueStats.thisMonth)}</p>
           </div>
           <div>
-            <p className="text-zinc-500 text-sm mb-1">En attente validation</p>
+            <p className="text-[#B0B0B0] text-sm mb-1">En attente validation</p>
             <p className="text-2xl font-black text-amber-400">{formatCurrency(revenueStats.pendingValidation)}</p>
           </div>
         </div>
       </div>
 
-      {/* Publicités */}
-      {advertisements.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-8">
-          <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
-                <Megaphone className="w-5 h-5 text-purple-400" />
-              </div>
-              Annonces OKAR
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {advertisements.map((ad) => (
-              <div 
-                key={ad.id} 
-                className="bg-zinc-800 rounded-2xl overflow-hidden border border-zinc-700 hover:border-purple-500/50 transition-colors"
-              >
-                {ad.imageUrl && (
-                  <img 
-                    src={ad.imageUrl} 
-                    alt={ad.title}
-                    className="w-full h-32 object-cover"
-                  />
-                )}
-                <div className="p-4">
-                  <h4 className="font-bold text-white mb-2">{ad.title}</h4>
-                  {ad.description && (
-                    <p className="text-sm text-zinc-400 line-clamp-2">{ad.description}</p>
-                  )}
-                  {ad.linkUrl && (
-                    <a 
-                      href={ad.linkUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300 font-medium"
-                    >
-                      En savoir plus <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Blog */}
-      {blogPosts.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-8">
-          <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                <Newspaper className="w-5 h-5 text-blue-400" />
-              </div>
-              Actualités OKAR
-            </h3>
-            <Link href="/blog" className="text-sm text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
-              Voir tout <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="divide-y divide-zinc-800">
-            {blogPosts.map((post) => (
-              <Link 
-                key={post.id} 
-                href={`/blog/${post.slug}`}
-                className="flex items-center gap-4 p-4 hover:bg-zinc-800/50 transition-colors"
-              >
-                {post.coverImage ? (
-                  <img 
-                    src={post.coverImage} 
-                    alt={post.title}
-                    className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-zinc-800 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Newspaper className="w-6 h-6 text-zinc-600" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold truncate">{post.title}</p>
-                  {post.excerpt && (
-                    <p className="text-sm text-zinc-500 line-clamp-1 mt-1">{post.excerpt}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-blue-400">{post.category}</span>
-                    <span className="text-zinc-600">•</span>
-                    <span className="text-xs text-zinc-500">{formatDate(post.publishedAt)}</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-zinc-600" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
