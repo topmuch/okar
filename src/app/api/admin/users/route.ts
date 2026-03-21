@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         
         await sendEmail({
           to: validatedData.email,
-          subject: '🎉 Bienvenue sur QRBag - Votre espace agence',
+          subject: '🎉 Bienvenue sur OKAR - Votre espace agence',
           html: template.html,
           text: template.text,
           type: 'welcome',

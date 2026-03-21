@@ -47,8 +47,8 @@ export async function getEmailSettings(): Promise<EmailConfig | null> {
       // Return default console provider settings
       return {
         provider: 'console',
-        fromEmail: 'noreply@qrbag.com',
-        fromName: 'QRBag',
+        fromEmail: 'noreply@okar.com',
+        fromName: 'OKAR',
         smtpEncryption: 'tls',
       };
     }
@@ -101,8 +101,8 @@ export async function saveEmailSettings(config: Partial<EmailConfig>): Promise<E
       const created = await prisma.emailSettings.create({
         data: {
           provider: config.provider || 'console',
-          fromEmail: config.fromEmail || 'noreply@qrbag.com',
-          fromName: config.fromName || 'QRBag',
+          fromEmail: config.fromEmail || 'noreply@okar.com',
+          fromName: config.fromName || 'OKAR',
           smtpHost: config.smtpHost,
           smtpPort: config.smtpPort,
           smtpUser: config.smtpUser,
@@ -295,12 +295,12 @@ export function getVerificationEmailTemplate(name: string, verificationUrl: stri
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff7f00; margin: 0;">QRBag</h1>
+          <h1 style="color: #ff7f00; margin: 0;">OKAR</h1>
         </div>
         <div style="background: #f9f9f9; border-radius: 10px; padding: 30px;">
           <h2 style="color: #333; margin-top: 0;">Vérification de votre email</h2>
           <p style="color: #666;">Bonjour ${name},</p>
-          <p style="color: #666;">Merci de vous être inscrit sur QRBag. Vérifiez votre adresse email en utilisant le code ci-dessous :</p>
+          <p style="color: #666;">Merci de vous être inscrit sur OKAR. Vérifiez votre adresse email en utilisant le code ci-dessous :</p>
           <div style="text-align: center; margin: 30px 0;">
             <div style="background: #fff; border: 2px solid #ff7f00; border-radius: 10px; padding: 20px; display: inline-block;">
               <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #ff7f00;">${code}</span>
@@ -313,11 +313,11 @@ export function getVerificationEmailTemplate(name: string, verificationUrl: stri
           <p style="color: #999; font-size: 12px; text-align: center;">Ce code expire dans 24 heures. Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>
         </div>
         <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>© QRBag - Tous droits réservés</p>
+          <p>© OKAR - Tous droits réservés</p>
         </div>
       </div>
     `,
-    text: `QRBag - Vérification de votre email\n\nBonjour ${name},\n\nMerci de vous être inscrit sur QRBag.\n\nVotre code de vérification : ${code}\n\nOu utilisez ce lien : ${verificationUrl}\n\nCe code expire dans 24 heures. Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.\n\n© QRBag`,
+    text: `OKAR - Vérification de votre email\n\nBonjour ${name},\n\nMerci de vous être inscrit sur OKAR.\n\nVotre code de vérification : ${code}\n\nOu utilisez ce lien : ${verificationUrl}\n\nCe code expire dans 24 heures. Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.\n\n© OKAR`,
   };
 }
 
@@ -326,7 +326,7 @@ export function getPasswordResetEmailTemplate(name: string, resetUrl: string, co
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff7f00; margin: 0;">QRBag</h1>
+          <h1 style="color: #ff7f00; margin: 0;">OKAR</h1>
         </div>
         <div style="background: #f9f9f9; border-radius: 10px; padding: 30px;">
           <h2 style="color: #333; margin-top: 0;">Réinitialisation de votre mot de passe</h2>
@@ -344,11 +344,11 @@ export function getPasswordResetEmailTemplate(name: string, resetUrl: string, co
           <p style="color: #999; font-size: 12px; text-align: center;">Ce code expire dans 1 heure. Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.</p>
         </div>
         <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>© QRBag - Tous droits réservés</p>
+          <p>© OKAR - Tous droits réservés</p>
         </div>
       </div>
     `,
-    text: `QRBag - Réinitialisation de votre mot de passe\n\nBonjour ${name},\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nVotre code : ${code}\n\nOu utilisez ce lien : ${resetUrl}\n\nCe code expire dans 1 heure. Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.\n\n© QRBag`,
+    text: `OKAR - Réinitialisation de votre mot de passe\n\nBonjour ${name},\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nVotre code : ${code}\n\nOu utilisez ce lien : ${resetUrl}\n\nCe code expire dans 1 heure. Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.\n\n© OKAR`,
   };
 }
 
@@ -358,11 +358,11 @@ export function getTestEmailTemplate(): { html: string; text: string } {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff7f00; margin: 0;">QRBag</h1>
+          <h1 style="color: #ff7f00; margin: 0;">OKAR</h1>
         </div>
         <div style="background: #f9f9f9; border-radius: 10px; padding: 30px;">
           <h2 style="color: #333; margin-top: 0;">Email de test</h2>
-          <p style="color: #666;">Ceci est un email de test envoyé depuis le panneau d'administration QRBag.</p>
+          <p style="color: #666;">Ceci est un email de test envoyé depuis le panneau d'administration OKAR.</p>
           <p style="color: #666;">Si vous recevez cet email, votre configuration email fonctionne correctement !</p>
           <div style="background: #e8f5e9; border-radius: 5px; padding: 15px; margin-top: 20px;">
             <p style="color: #2e7d32; margin: 0; font-weight: bold;">✓ Configuration email valide</p>
@@ -370,11 +370,11 @@ export function getTestEmailTemplate(): { html: string; text: string } {
           </div>
         </div>
         <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>© QRBag - Tous droits réservés</p>
+          <p>© OKAR - Tous droits réservés</p>
         </div>
       </div>
     `,
-    text: `QRBag - Email de test\n\nCeci est un email de test envoyé depuis le panneau d'administration QRBag.\n\nSi vous recevez cet email, votre configuration email fonctionne correctement !\n\n✓ Configuration email valide\nEnvoyé le ${now}\n\n© QRBag`,
+    text: `OKAR - Email de test\n\nCeci est un email de test envoyé depuis le panneau d'administration OKAR.\n\nSi vous recevez cet email, votre configuration email fonctionne correctement !\n\n✓ Configuration email valide\nEnvoyé le ${now}\n\n© OKAR`,
   };
 }
 
@@ -391,15 +391,15 @@ export function getWelcomeAgencyEmailTemplate(
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff7f00; margin: 0;">QRBag</h1>
+          <h1 style="color: #ff7f00; margin: 0;">OKAR</h1>
           <p style="color: #666; margin: 5px 0 0 0;">Protection intelligente des bagages</p>
         </div>
         <div style="background: linear-gradient(135deg, #ff7f00 0%, #ff9933 100%); border-radius: 10px 10px 0 0; padding: 30px; text-align: center;">
-          <h2 style="color: white; margin: 0; font-size: 24px;">🎉 Bienvenue sur QRBag !</h2>
+          <h2 style="color: white; margin: 0; font-size: 24px;">🎉 Bienvenue sur OKAR !</h2>
         </div>
         <div style="background: #f9f9f9; border-radius: 0 0 10px 10px; padding: 30px;">
           <p style="color: #666;">Bonjour ${agencyName},</p>
-          <p style="color: #666;">Votre agence a été créée avec succès sur QRBag. Vous pouvez maintenant accéder à votre espace dédié pour gérer vos bagages et voyageurs.</p>
+          <p style="color: #666;">Votre agence a été créée avec succès sur OKAR. Vous pouvez maintenant accéder à votre espace dédié pour gérer vos bagages et voyageurs.</p>
           
           <div style="background: white; border: 2px solid #ff7f00; border-radius: 10px; padding: 20px; margin: 20px 0;">
             <h3 style="color: #333; margin-top: 0; text-align: center;">🔐 Vos identifiants de connexion</h3>
@@ -425,12 +425,12 @@ export function getWelcomeAgencyEmailTemplate(
           </div>
         </div>
         <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>© QRBag - Tous droits réservés</p>
+          <p>© OKAR - Tous droits réservés</p>
           <p>Protection intelligente des bagages pour voyageurs et pèlerins</p>
         </div>
       </div>
     `,
-    text: `QRBag - Bienvenue sur QRBag !\n\nBonjour ${agencyName},\n\nVotre agence a été créée avec succès sur QRBag.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🔐 Vos identifiants de connexion\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEmail : ${email}\nMot de passe : ${password}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nConnectez-vous ici : ${loginUrl}\n\n⚠️ Important : Pour votre sécurité, changez votre mot de passe lors de votre première connexion.\n\n© QRBag - Tous droits réservés`,
+    text: `OKAR - Bienvenue sur OKAR !\n\nBonjour ${agencyName},\n\nVotre agence a été créée avec succès sur OKAR.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🔐 Vos identifiants de connexion\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nEmail : ${email}\nMot de passe : ${password}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nConnectez-vous ici : ${loginUrl}\n\n⚠️ Important : Pour votre sécurité, changez votre mot de passe lors de votre première connexion.\n\n© OKAR - Tous droits réservés`,
   };
 }
 
@@ -447,14 +447,14 @@ export function getBaggageFoundEmailTemplate(
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff7f00; margin: 0;">QRBag</h1>
+          <h1 style="color: #ff7f00; margin: 0;">OKAR</h1>
         </div>
         <div style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); border-radius: 10px 10px 0 0; padding: 30px; text-align: center;">
           <h2 style="color: white; margin: 0; font-size: 24px;">✅ Bagage retrouvé !</h2>
         </div>
         <div style="background: #f9f9f9; border-radius: 0 0 10px 10px; padding: 30px;">
           <p style="color: #666;">Bonjour ${ownerName},</p>
-          <p style="color: #666;"> Excellente nouvelle ! Votre bagage a été trouvé et signalé via QRBag.</p>
+          <p style="color: #666;"> Excellente nouvelle ! Votre bagage a été trouvé et signalé via OKAR.</p>
           
           <div style="background: white; border: 2px solid #4CAF50; border-radius: 10px; padding: 20px; margin: 20px 0;">
             <h3 style="color: #333; margin-top: 0; text-align: center;">📦 Détails du bagage</h3>
@@ -483,11 +483,11 @@ export function getBaggageFoundEmailTemplate(
           <p style="color: #999; font-size: 12px; text-align: center;">Contactez rapidement la personne qui a trouvé votre bagage pour organiser sa récupération.</p>
         </div>
         <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>© QRBag - Tous droits réservés</p>
+          <p>© OKAR - Tous droits réservés</p>
         </div>
       </div>
     `,
-    text: `QRBag - Bagage retrouvé !\n\nBonjour ${ownerName},\n\nExcellente nouvelle ! Votre bagage a été trouvé.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📦 Détails du bagage\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRéférence : ${baggageReference}\nLieu trouvé : ${foundLocation}\n\n👤 Informations du découvreur\nNom : ${founderName || 'Non renseigné'}\nTéléphone : ${founderPhone}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nVoir les détails : ${baggageUrl}\n\nContactez rapidement la personne qui a trouvé votre bagage pour organiser sa récupération.\n\n© QRBag`,
+    text: `OKAR - Bagage retrouvé !\n\nBonjour ${ownerName},\n\nExcellente nouvelle ! Votre bagage a été trouvé.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📦 Détails du bagage\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRéférence : ${baggageReference}\nLieu trouvé : ${foundLocation}\n\n👤 Informations du découvreur\nNom : ${founderName || 'Non renseigné'}\nTéléphone : ${founderPhone}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nVoir les détails : ${baggageUrl}\n\nContactez rapidement la personne qui a trouvé votre bagage pour organiser sa récupération.\n\n© OKAR`,
   };
 }
 
@@ -513,7 +513,7 @@ export function getSuperAdminMessageEmailTemplate(
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff7f00; margin: 0;">QRBag</h1>
+          <h1 style="color: #ff7f00; margin: 0;">OKAR</h1>
           <p style="color: #666; margin: 5px 0 0 0;">Notification SuperAdmin</p>
         </div>
         <div style="background: linear-gradient(135deg, #2196F3 0%, #42A5F5 100%); border-radius: 10px 10px 0 0; padding: 30px; text-align: center;">
@@ -553,11 +553,11 @@ export function getSuperAdminMessageEmailTemplate(
           </div>
         </div>
         <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>© QRBag - Tous droits réservés</p>
+          <p>© OKAR - Tous droits réservés</p>
         </div>
       </div>
     `,
-    text: `QRBag - Nouveau message reçu\n\nType : ${typeLabels[messageType] || messageType}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nExpéditeur : ${senderName || 'Non renseigné'}\nEmail : ${senderEmail}\n${senderPhone ? `Téléphone : ${senderPhone}\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${subject ? `Sujet : ${subject}\n\n` : ''}Message :\n${content}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nVoir dans l'admin : ${messagesUrl}\n\n© QRBag`,
+    text: `OKAR - Nouveau message reçu\n\nType : ${typeLabels[messageType] || messageType}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nExpéditeur : ${senderName || 'Non renseigné'}\nEmail : ${senderEmail}\n${senderPhone ? `Téléphone : ${senderPhone}\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${subject ? `Sujet : ${subject}\n\n` : ''}Message :\n${content}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nVoir dans l'admin : ${messagesUrl}\n\n© OKAR`,
   };
 }
 
@@ -573,7 +573,7 @@ export function getInvoiceEmailTemplate(
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff7f00; margin: 0;">QRBag</h1>
+          <h1 style="color: #ff7f00; margin: 0;">OKAR</h1>
         </div>
         <div style="background: #f9f9f9; border-radius: 10px; padding: 30px;">
           <h2 style="color: #333; margin-top: 0;">📄 Nouvelle facture</h2>
@@ -593,11 +593,11 @@ export function getInvoiceEmailTemplate(
           </div>
         </div>
         <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>© QRBag - Tous droits réservés</p>
+          <p>© OKAR - Tous droits réservés</p>
         </div>
       </div>
     `,
-    text: `QRBag - Nouvelle facture\n\nBonjour ${agencyName},\n\nUne nouvelle facture a été générée.\n\nFacture : ${invoiceNumber}\nMontant : ${amount}\nÉchéance : ${dueDate}\n\nVoir la facture : ${invoiceUrl}\n\n© QRBag`,
+    text: `OKAR - Nouvelle facture\n\nBonjour ${agencyName},\n\nUne nouvelle facture a été générée.\n\nFacture : ${invoiceNumber}\nMontant : ${amount}\nÉchéance : ${dueDate}\n\nVoir la facture : ${invoiceUrl}\n\n© OKAR`,
   };
 }
 

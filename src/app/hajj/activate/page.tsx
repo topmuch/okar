@@ -84,7 +84,7 @@ function HajjActivateContent() {
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <QrCode className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-white">QRBag</span>
+            <span className="font-bold text-white">OKAR</span>
           </div>
         </div>
       </nav>
@@ -235,8 +235,8 @@ function HajjActivateContent() {
         <div className="mt-8 text-center">
           <p className="text-white/60 text-sm">
             Besoin d&apos;aide ? Contactez votre agence ou{' '}
-            <a href="mailto:contact@qrbag.com" className="text-white underline">
-              contact@qrbag.com
+            <a href="mailto:contact@okar.com" className="text-white underline">
+              contact@okar.com
             </a>
           </p>
         </div>

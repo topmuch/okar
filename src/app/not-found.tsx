@@ -12,7 +12,7 @@ export default function NotFound() {
           <div className="w-12 h-12 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff2a6d]/20">
             <QrCode className="w-7 h-7 text-white" />
           </div>
-          <span className="text-2xl font-bold text-[#ff2a6d]">QRBag</span>
+          <span className="text-2xl font-bold text-[#ff2a6d]">OKAR</span>
         </div>
 
         {/* 404 */}

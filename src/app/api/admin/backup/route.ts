@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     // Generate filename with date
     const date = new Date().toISOString().split('T')[0];
-    const filename = `qrbag-backup-${date}.db`;
+    const filename = `okar-backup-${date}.db`;
 
     // Return file as download
     return new NextResponse(dbBuffer, {

@@ -90,7 +90,7 @@ export default function AdminLayout({
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shadow-lg" style={{ backgroundColor: SIDEBAR_COLOR }}>
                   <QrCode className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-white font-bold text-xl tracking-tight">QRBag</span>
+                <span className="text-white font-bold text-xl tracking-tight">OKAR</span>
                 <span className="text-[10px] px-2 py-0.5 rounded text-white font-bold uppercase tracking-wide" style={{ backgroundColor: SIDEBAR_COLOR }}>Admin</span>
               </Link>
               <button

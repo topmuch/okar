@@ -132,7 +132,7 @@ export default function DemoPage() {
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
                 <span className="bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">
-                  Essayez QRBag
+                  Essayez OKAR
                 </span>
                 <br />
                 <span className="text-white">en 60 secondes</span>

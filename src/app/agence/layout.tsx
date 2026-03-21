@@ -105,7 +105,7 @@ function Sidebar({ isOpen, setIsOpen, unreadMessages, onLogout, userName, agency
               <QrCode className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="text-white font-bold text-xl tracking-tight">QRBag</span>
+              <span className="text-white font-bold text-xl tracking-tight">OKAR</span>
               <span className="block text-xs text-white/60 font-medium">Espace Agence</span>
             </div>
           </Link>
@@ -190,7 +190,7 @@ function Sidebar({ isOpen, setIsOpen, unreadMessages, onLogout, userName, agency
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                 </svg>
-                <span className="font-medium text-sm">📰 Blog QRBag</span>
+                <span className="font-medium text-sm">📰 Blog OKAR</span>
               </Link>
             </li>
             

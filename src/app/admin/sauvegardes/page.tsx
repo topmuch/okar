@@ -72,7 +72,7 @@ export default function BackupsPage() {
         const contentDisposition = response.headers.get('Content-Disposition');
         const filename = contentDisposition
           ? contentDisposition.split('filename="')[1].replace('"', '')
-          : `qrbag-backup-${new Date().toISOString().split('T')[0]}.db`;
+          : `okar-backup-${new Date().toISOString().split('T')[0]}.db`;
 
         a.download = filename;
         document.body.appendChild(a);

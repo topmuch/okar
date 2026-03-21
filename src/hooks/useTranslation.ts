@@ -32,7 +32,7 @@ export function useTranslation(): UseTranslationReturn {
     const detectLanguage = async () => {
       // Check localStorage first for saved preference
       if (typeof localStorage !== 'undefined') {
-        const savedLang = localStorage.getItem('qrbag_lang') as Language | null;
+        const savedLang = localStorage.getItem('okar_lang') as Language | null;
         if (savedLang && ['fr', 'en', 'ar'].includes(savedLang)) {
           setLangState(savedLang);
           return;
@@ -99,7 +99,7 @@ export function useTranslation(): UseTranslationReturn {
   const setLang = useCallback((newLang: Language) => {
     setLangState(newLang);
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('qrbag_lang', newLang);
+      localStorage.setItem('okar_lang', newLang);
     }
   }, []);
 

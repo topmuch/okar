@@ -4,7 +4,7 @@ import { LoginLog, Session } from '@prisma/client';
 
 // Session duration: 7 days
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
-const SESSION_COOKIE_NAME = 'qrbag_session';
+const SESSION_COOKIE_NAME = 'okar_session';
 
 // Inactivity timeout: 24 hours (session expires if no activity)
 const INACTIVITY_TIMEOUT_MS = 24 * 60 * 60 * 1000;

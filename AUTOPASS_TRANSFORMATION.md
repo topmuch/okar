@@ -1,4 +1,4 @@
-# AutoPass Numérique - Transformation QRBag → AutoPass
+# AutoPass Numérique - Transformation OKAR → AutoPass
 
 ## Résumé de la Transformation
 
@@ -9,7 +9,7 @@
 ## PARTIE 1: Schéma Base de Données (COMPLÉTÉ)
 
 ### Renommage des Modèles
-| Ancien (QRBag) | Nouveau (AutoPass) |
+| Ancien (OKAR) | Nouveau (AutoPass) |
 |----------------|-------------------|
 | Baggage | Vehicle |
 | Agency | Garage |

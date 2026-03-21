@@ -103,7 +103,7 @@ function BackupSection() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `qrbag-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `okar-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -252,8 +252,8 @@ export default function ParametresPage() {
   
   const [emailSettings, setEmailSettings] = useState<EmailSettingsData>({
     provider: 'console',
-    fromEmail: 'noreply@qrbag.com',
-    fromName: 'QRBag',
+    fromEmail: 'noreply@okar.com',
+    fromName: 'OKAR',
     smtpHost: null,
     smtpPort: null,
     smtpUser: null,
@@ -437,7 +437,7 @@ export default function ParametresPage() {
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Paramètres</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Configurez votre application QRBag</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Configurez votre application OKAR</p>
       </div>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -832,7 +832,7 @@ export default function ParametresPage() {
                     type="text"
                     value={emailSettings.fromName}
                     onChange={(e) => setEmailSettings({ ...emailSettings, fromName: e.target.value })}
-                    placeholder="QRBag"
+                    placeholder="OKAR"
                     className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:border-[#ff7f00]"
                   />
                 </div>

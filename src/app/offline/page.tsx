@@ -39,7 +39,7 @@ export default function OfflinePage() {
 
         {/* Info */}
         <p className="mt-8 text-[#a0a8b8]/60 text-sm">
-          QRBag fonctionne également hors ligne pour les fonctions de base.
+          OKAR fonctionne également hors ligne pour les fonctions de base.
         </p>
       </div>
     </main>

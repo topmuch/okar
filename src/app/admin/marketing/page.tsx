@@ -57,41 +57,41 @@ const WHATSAPP_TEMPLATES = {
     getMessage: (firstName: string, expirationDate: string) =>
       `Bonjour ${firstName},
 
-Votre protection QRBag expire le ${expirationDate}.
+Votre protection OKAR expire le ${expirationDate}.
 
 Souhaitez-vous renouveler pour 5€ (1 an) ?
 👉 Répondez OUI pour activer le renouvellement automatique.
 
 Merci,
-QRBag – Votre tranquillité, notre mission`
+OKAR – Votre tranquillité, notre mission`
   },
   expiration_passe: {
     name: 'Expiration passé',
     getMessage: (firstName: string, expirationDate: string, code: string) =>
       `Bonjour ${firstName},
 
-Votre QRBag a expiré. Vos bagages ne sont plus protégés.
+Votre OKAR a expiré. Vos bagages ne sont plus protégés.
 
 Renouvelez maintenant pour 5€ et voyagez en toute sécurité :
-👉 https://qrbags.com/renouveler?code=${code}
+👉 https://okars.com/renouveler?code=${code}
 
-QRBag`
+OKAR`
   },
   offre_hajj: {
     name: 'Offre spéciale Hajj 2027',
     getMessage: (firstName: string) =>
       `Salam alaykoum ${firstName},
 
-Vous avez protégé vos bagages avec QRBag en 2026.
+Vous avez protégé vos bagages avec OKAR en 2026.
 
 Pour le Hajj 2027, bénéficiez de -20% :
 ✅ 3 QR codes = 28€ (au lieu de 35€)
 ✅ Logo de votre agence inclus
 
 Réservez avant le 30 avril :
-👉 https://qrbags.com/hajj2027
+👉 https://okars.com/hajj2027
 
-QRBag – Dakar`
+OKAR – Dakar`
   }
 };
 
@@ -208,7 +208,7 @@ export default function MarketingPage() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `qrbag_clients_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `okar_clients_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 

@@ -44,11 +44,11 @@ export async function POST(request: NextRequest) {
 
     // Create default settings if they don't exist
     const defaultSettings = [
-      { key: 'company_name', value: 'QRBag' },
+      { key: 'company_name', value: 'OKAR' },
       { key: 'company_address', value: 'Poissy, France' },
       { key: 'company_phone', value: '+33 7 45 34 93 39' },
-      { key: 'company_email', value: 'contact@qrbag.com' },
-      { key: 'seo_title', value: 'QRBag - Protection intelligente des bagages' },
+      { key: 'company_email', value: 'contact@okar.com' },
+      { key: 'seo_title', value: 'OKAR - Protection intelligente des bagages' },
       { key: 'seo_description', value: 'Protégez vos bagages avec un autocollant QR intelligent. Sans application, sans batterie, sans GPS.' },
       { key: 'languages', value: 'fr,en,ar' },
       { key: 'default_language', value: 'fr' },

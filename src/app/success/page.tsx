@@ -110,9 +110,9 @@ function SuccessContent() {
       ctx.textAlign = 'center';
       ctx.fillText('✓ Activation Réussie', canvas.width / 2, 100);
 
-      // Draw QRBag logo text
+      // Draw OKAR logo text
       ctx.font = 'bold 24px Arial';
-      ctx.fillText('QRBag', canvas.width / 2, 150);
+      ctx.fillText('OKAR', canvas.width / 2, 150);
 
       // Draw QR code area (white background)
       ctx.fillStyle = '#ffffff';
@@ -181,12 +181,12 @@ function SuccessContent() {
         // Footer
         ctx.font = '14px Arial';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.fillText('QRBag - Protégez vos bagages, en toute sérénité', canvas.width / 2, 850);
-        ctx.fillText('www.qrbag.com', canvas.width / 2, 880);
+        ctx.fillText('OKAR - Protégez vos bagages, en toute sérénité', canvas.width / 2, 850);
+        ctx.fillText('www.okar.com', canvas.width / 2, 880);
 
         // Download
         const link = document.createElement('a');
-        link.download = `QRBag-${activationData.reference}.png`;
+        link.download = `OKAR-${activationData.reference}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
 
@@ -220,8 +220,8 @@ function SuccessContent() {
     if (!activationData) return;
 
     const shareData = {
-      title: 'QRBag - Preuve d\'activation',
-      text: `Mon bagage ${activationData.reference} est maintenant protégé par QRBag !`,
+      title: 'OKAR - Preuve d\'activation',
+      text: `Mon bagage ${activationData.reference} est maintenant protégé par OKAR !`,
       url: qrUrl,
     };
 
@@ -434,7 +434,7 @@ function SuccessContent() {
 
         {/* Footer */}
         <div className="text-center mt-6 text-white/50 text-sm">
-          <p>Un problème ? <a href="mailto:contact@qrbag.com" className="underline">contact@qrbag.com</a></p>
+          <p>Un problème ? <a href="mailto:contact@okar.com" className="underline">contact@okar.com</a></p>
         </div>
       </div>
     </main>

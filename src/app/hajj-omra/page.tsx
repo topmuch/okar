@@ -29,7 +29,7 @@ function Navigation() {
             <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff2a6d]/20">
               <QrCode className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-[#ff2a6d]">QRBag</span>
+            <span className="text-xl font-bold text-[#ff2a6d]">OKAR</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -222,7 +222,7 @@ function AdvantagesSection() {
         {/* Title */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Pourquoi choisir <span className="text-[#1e3a2e]">QRBag Hajj ?</span>
+            Pourquoi choisir <span className="text-[#1e3a2e]">OKAR Hajj ?</span>
           </h2>
         </div>
 
@@ -264,7 +264,7 @@ function TestimonialsSection() {
     {
       name: "Mamadou Diallo",
       role: "Pèlerin Hajj 2025",
-      content: "Grâce à QRBag, j'ai retrouvé ma valise perdue à l'aéroport de Djeddah en moins de 2 heures. Une invention géniale !",
+      content: "Grâce à OKAR, j'ai retrouvé ma valise perdue à l'aéroport de Djeddah en moins de 2 heures. Une invention géniale !",
       avatar: "👴🏾"
     },
     {
@@ -320,7 +320,7 @@ function FAQSection() {
   const faqs = [
     {
       q: "Comment obtenir mes QR codes ?",
-      a: "Les QR codes sont fournis par votre agence de voyage partenaire. Demandez-leur s'ils proposent QRBag."
+      a: "Les QR codes sont fournis par votre agence de voyage partenaire. Demandez-leur s'ils proposent OKAR."
     },
     {
       q: "Combien de temps dure la protection ?",
@@ -363,7 +363,7 @@ function CTASection() {
           Prêt à protéger vos bagages<br />pour le Hajj 2026 ?
         </h2>
         <p className="text-[#e0e6f0]/80 max-w-xl mx-auto mb-8 text-lg">
-          Demandez à votre agence de voyage si elle propose QRBag, ou contactez-nous pour plus d'informations.
+          Demandez à votre agence de voyage si elle propose OKAR, ou contactez-nous pour plus d'informations.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -383,7 +383,7 @@ function CTASection() {
         <p className="mt-8 text-[#e0e6f0]/70 text-sm">
           Vous êtes agence ?{' '}
           <Link href="/devenir-partenaire" className="text-[#ffd700] font-medium hover:underline">
-            Devenez partenaire QRBag
+            Devenez partenaire OKAR
           </Link>
         </p>
       </div>
@@ -403,7 +403,7 @@ function Footer() {
               <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center">
                 <QrCode className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">QRBag</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">OKAR</span>
             </div>
             <p className="text-[#a0a8b8] text-sm">
               Protection intelligente des bagages pour voyageurs et pèlerins.
@@ -439,7 +439,7 @@ function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#1e3a2e]" />
-                contact@qrbag.com
+                contact@okar.com
               </li>
               <li className="flex items-center gap-2">
                 <MapPinned className="w-4 h-4 text-[#1e3a2e]" />
@@ -452,17 +452,17 @@ function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-[#1a2238] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[#a0a8b8] text-sm">
-            © {new Date().getFullYear()} QRBag. Tous droits réservés.
+            © {new Date().getFullYear()} OKAR. Tous droits réservés.
           </p>
 
           <div className="flex items-center gap-4">
-            <a href="https://facebook.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#1e3a2e] transition-colors" aria-label="Facebook">
+            <a href="https://facebook.com/okar" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#1e3a2e] transition-colors" aria-label="Facebook">
               <Facebook className="w-5 h-5" aria-hidden="true" />
             </a>
-            <a href="https://instagram.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#1e3a2e] transition-colors" aria-label="Instagram">
+            <a href="https://instagram.com/okar" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#1e3a2e] transition-colors" aria-label="Instagram">
               <Instagram className="w-5 h-5" aria-hidden="true" />
             </a>
-            <a href="https://twitter.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#1e3a2e] transition-colors" aria-label="Twitter">
+            <a href="https://twitter.com/okar" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#1e3a2e] transition-colors" aria-label="Twitter">
               <Twitter className="w-5 h-5" aria-hidden="true" />
             </a>
           </div>

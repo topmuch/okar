@@ -7,7 +7,7 @@
 ## 📁 Structure des Fichiers Créés
 
 ```
-/qrbags/src/app/
+/okars/src/app/
 ├── driver/
 │   ├── layout.tsx                    # Layout avec sidebar + context
 │   ├── tableau-de-bord/

@@ -28,7 +28,7 @@ export function PublicNavigation() {
             <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff2a6d]/20">
               <QrCode className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-[#ff2a6d]">QRBag</span>
+            <span className="text-xl font-bold text-[#ff2a6d]">OKAR</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -105,7 +105,7 @@ export function PublicFooter() {
               <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center">
                 <QrCode className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">QRBag</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">OKAR</span>
             </div>
             <p className="text-[#a0a8b8] text-sm">
               Protection intelligente des bagages pour voyageurs et pèlerins.
@@ -147,7 +147,7 @@ export function PublicFooter() {
         {/* Bottom Bar */}
         <div className="border-t border-[#1a2238] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[#a0a8b8] text-sm">
-            © {new Date().getFullYear()} QRBag. Tous droits réservés.
+            © {new Date().getFullYear()} OKAR. Tous droits réservés.
           </p>
 
           {/* Social Icons */}

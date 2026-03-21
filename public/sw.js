@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'qrbag-v1';
+const CACHE_NAME = 'okar-v1';
 const OFFLINE_URL = '/offline';
 
 // Assets to cache on install
@@ -112,7 +112,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
 // Push notification support
 self.addEventListener('push', (event: PushEvent) => {
   const data = event.data?.json() ?? {};
-  const title = data.title || 'QRBag';
+  const title = data.title || 'OKAR';
   const options = {
     body: data.body || 'Nouvelle notification',
     icon: '/icons/icon-192x192.png',

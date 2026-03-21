@@ -112,7 +112,7 @@ export default function AdminLayout({ children, title, subtitle, unreadMessages 
                 <QrCode className="w-6 h-6 text-white" />
               </div>
               <div>
-                <span className="text-white font-bold text-xl tracking-tight">QRBag</span>
+                <span className="text-white font-bold text-xl tracking-tight">OKAR</span>
                 <span className="block text-xs text-white/60">Administration</span>
               </div>
             </Link>

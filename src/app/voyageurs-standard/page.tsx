@@ -29,7 +29,7 @@ function Navigation() {
             <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff2a6d]/20">
               <QrCode className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-[#ff2a6d]">QRBag</span>
+            <span className="text-xl font-bold text-[#ff2a6d]">OKAR</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -222,7 +222,7 @@ function AdvantagesSection() {
         {/* Title */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Pourquoi choisir <span className="text-[#d35400]">QRBag Voyageurs ?</span>
+            Pourquoi choisir <span className="text-[#d35400]">OKAR Voyageurs ?</span>
           </h2>
         </div>
 
@@ -359,13 +359,13 @@ function TestimonialsSection() {
     {
       name: "Sophie Martin",
       role: "Voyageuse fréquente",
-      content: "Simple, efficace et pas cher. J'ai utilisé QRBag pour tous mes voyages cette année. Plus de stress !",
+      content: "Simple, efficace et pas cher. J'ai utilisé OKAR pour tous mes voyages cette année. Plus de stress !",
       avatar: "👩🏻"
     },
     {
       name: "Thomas Dubois",
       role: "Business traveler",
-      content: "Je voyage souvent pour le travail. Avec QRBag, je suis tranquille. L'activation prend 30 secondes top chrono.",
+      content: "Je voyage souvent pour le travail. Avec OKAR, je suis tranquille. L'activation prend 30 secondes top chrono.",
       avatar: "👨🏻"
     }
   ];
@@ -439,7 +439,7 @@ function CTASection() {
         <p className="mt-8 text-[#e0e6f0]/70 text-sm">
           Vous êtes une agence ?{' '}
           <Link href="/devenir-partenaire" className="text-[#ffd700] font-medium hover:underline">
-            Devenez partenaire QRBag
+            Devenez partenaire OKAR
           </Link>
         </p>
       </div>
@@ -459,7 +459,7 @@ function Footer() {
               <div className="w-10 h-10 bg-gradient-to-br from-[#ff2a6d] to-[#d35400] rounded-lg flex items-center justify-center">
                 <QrCode className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">QRBag</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-[#ff2a6d] to-[#d35400] bg-clip-text text-transparent">OKAR</span>
             </div>
             <p className="text-[#a0a8b8] text-sm">
               Protection intelligente des bagages pour voyageurs et pèlerins.
@@ -495,7 +495,7 @@ function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#d35400]" />
-                contact@qrbag.com
+                contact@okar.com
               </li>
               <li className="flex items-center gap-2">
                 <MapPinned className="w-4 h-4 text-[#d35400]" />
@@ -508,17 +508,17 @@ function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-[#1a2238] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[#a0a8b8] text-sm">
-            © {new Date().getFullYear()} QRBag. Tous droits réservés.
+            © {new Date().getFullYear()} OKAR. Tous droits réservés.
           </p>
 
           <div className="flex items-center gap-4">
-            <a href="https://facebook.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#d35400] transition-colors" aria-label="Facebook">
+            <a href="https://facebook.com/okar" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#d35400] transition-colors" aria-label="Facebook">
               <Facebook className="w-5 h-5" aria-hidden="true" />
             </a>
-            <a href="https://instagram.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#d35400] transition-colors" aria-label="Instagram">
+            <a href="https://instagram.com/okar" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#d35400] transition-colors" aria-label="Instagram">
               <Instagram className="w-5 h-5" aria-hidden="true" />
             </a>
-            <a href="https://twitter.com/qrbag" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#d35400] transition-colors" aria-label="Twitter">
+            <a href="https://twitter.com/okar" target="_blank" rel="noopener noreferrer" className="text-[#a0a8b8] hover:text-[#d35400] transition-colors" aria-label="Twitter">
               <Twitter className="w-5 h-5" aria-hidden="true" />
             </a>
           </div>

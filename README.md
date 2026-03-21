@@ -27,8 +27,8 @@ OKAR est une application web moderne permettant de disposer un carnet dentretien
 #### 1. Fork ou cloner ce repository
 
 ```bash
-git clone https://github.com/VOTRE-USERNAME/qrbag.git
-cd qrbag
+git clone https://github.com/VOTRE-USERNAME/okar.git
+cd okar
 ```
 
 #### 2. Sur Coolify
@@ -72,8 +72,8 @@ ENCRYPTION_KEY=votre-cle-encryption-32chars
 
 ```bash
 # Cloner le repository
-git clone https://github.com/VOTRE-USERNAME/qrbag.git
-cd qrbag
+git clone https://github.com/VOTRE-USERNAME/okar.git
+cd okar
 
 # Installer les dépendances
 bun install
@@ -92,13 +92,13 @@ bun run dev
 
 ### Identifiants de démonstration
 
-- **Admin:** `admin@qrbag.com` / `admin123`
-- **Agence:** `agency@qrbag.com` / `agency123`
+- **Admin:** `admin@okar.com` / `admin123`
+- **Agence:** `agency@okar.com` / `agency123`
 
 ## 📁 Structure du projet
 
 ```
-qrbag/
+okar/
 ├── prisma/           # Schéma et seed de la base de données
 ├── public/           # Assets statiques
 ├── src/
@@ -128,8 +128,8 @@ Ce projet est sous licence privée. Tous droits réservés.
 
 ## 👥 Auteurs
 
-Développé par l'équipe QRBag
+Développé par l'équipe OKAR
 
 ---
 
-**Besoin d'aide ?** Ouvrez une issue sur GitHub ou contactez-nous à contact@qrbag.com
+**Besoin d'aide ?** Ouvrez une issue sur GitHub ou contactez-nous à contact@okar.com
