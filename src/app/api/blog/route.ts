@@ -2,16 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 
-// GET - List published blog posts for agencies
+// GET - List published blog posts
 export async function GET(request: NextRequest) {
   try {
-    const user = await getSession();
-    
-    // Only authenticated users can access
-    if (!user) {
-      return NextResponse.json({ posts: [] });
-    }
-
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');

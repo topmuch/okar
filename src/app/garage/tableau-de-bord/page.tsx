@@ -20,7 +20,10 @@ import {
   AlertCircle,
   ArrowRight,
   Plus,
-  History
+  History,
+  Megaphone,
+  Newspaper,
+  ExternalLink
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -78,6 +81,42 @@ interface QRStock {
   remaining: number;
 }
 
+interface Advertisement {
+  id: string;
+  title: string;
+  description: string | null;
+  imageUrl: string;
+  linkUrl: string | null;
+}
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  coverImage: string | null;
+  category: string;
+  publishedAt: string;
+}
+
+interface Advertisement {
+  id: string;
+  title: string;
+  description: string | null;
+  imageUrl: string;
+  linkUrl: string | null;
+}
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  coverImage: string | null;
+  category: string;
+  publishedAt: string;
+}
+
 // Category labels
 const categoryLabels: Record<string, string> = {
   vidange: 'Vidange',
@@ -102,6 +141,8 @@ export default function GarageDashboardOKAR() {
   const [maintenanceStats, setMaintenanceStats] = useState<MaintenanceStats>({ total: 0, pending: 0, validated: 0, rejected: 0 });
   const [revenueStats, setRevenueStats] = useState<RevenueStats>({ today: 0, thisMonth: 0, pendingValidation: 0 });
   const [qrStock, setQrStock] = useState<QRStock>({ total: 0, used: 0, remaining: 0 });
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Garage info from auth
@@ -148,7 +189,7 @@ export default function GarageDashboardOKAR() {
       const qrRes = await fetch(`/api/qr-lots?garageId=${garageId}`);
       const qrData = await qrRes.json();
       const totalQR = qrData.lots?.reduce((sum: number, lot: { count: number }) => sum + lot.count, 0) || 0;
-      const usedQR = qrData.lots?.reduce((sum: number, lot: { usedCount?: number }) => sum + (lot.usedCount || 0), 0) || 0;
+      const usedQR = qrData.lots?.reduce((sum: number, lot: { usedCount?: number; stats?: { activated: number } }) => sum + (lot.usedCount || lot.stats?.activated || 0), 0) || 0;
       setQrStock({ total: totalQR, used: usedQR, remaining: totalQR - usedQR });
 
       // Calculate revenue
@@ -176,6 +217,24 @@ export default function GarageDashboardOKAR() {
         thisMonth: monthlyRevenue,
         pendingValidation: pendingRevenue
       });
+
+      // Fetch advertisements
+      try {
+        const adsRes = await fetch('/api/advertisements');
+        const adsData = await adsRes.json();
+        setAdvertisements(adsData.advertisements || []);
+      } catch (e) {
+        console.error('Error fetching ads:', e);
+      }
+
+      // Fetch blog posts
+      try {
+        const blogRes = await fetch('/api/blog?limit=3');
+        const blogData = await blogRes.json();
+        setBlogPosts(blogData.posts || []);
+      } catch (e) {
+        console.error('Error fetching blog:', e);
+      }
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -515,6 +574,104 @@ export default function GarageDashboardOKAR() {
           </div>
         </div>
       </div>
+
+      {/* Publicités */}
+      {advertisements.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-8">
+          <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-white flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                <Megaphone className="w-5 h-5 text-purple-400" />
+              </div>
+              Annonces OKAR
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+            {advertisements.map((ad) => (
+              <div 
+                key={ad.id} 
+                className="bg-zinc-800 rounded-2xl overflow-hidden border border-zinc-700 hover:border-purple-500/50 transition-colors"
+              >
+                {ad.imageUrl && (
+                  <img 
+                    src={ad.imageUrl} 
+                    alt={ad.title}
+                    className="w-full h-32 object-cover"
+                  />
+                )}
+                <div className="p-4">
+                  <h4 className="font-bold text-white mb-2">{ad.title}</h4>
+                  {ad.description && (
+                    <p className="text-sm text-zinc-400 line-clamp-2">{ad.description}</p>
+                  )}
+                  {ad.linkUrl && (
+                    <a 
+                      href={ad.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300 font-medium"
+                    >
+                      En savoir plus <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Blog */}
+      {blogPosts.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-8">
+          <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-white flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                <Newspaper className="w-5 h-5 text-blue-400" />
+              </div>
+              Actualités OKAR
+            </h3>
+            <Link href="/blog" className="text-sm text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+              Voir tout <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="divide-y divide-zinc-800">
+            {blogPosts.map((post) => (
+              <Link 
+                key={post.id} 
+                href={`/blog/${post.slug}`}
+                className="flex items-center gap-4 p-4 hover:bg-zinc-800/50 transition-colors"
+              >
+                {post.coverImage ? (
+                  <img 
+                    src={post.coverImage} 
+                    alt={post.title}
+                    className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-zinc-800 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Newspaper className="w-6 h-6 text-zinc-600" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold truncate">{post.title}</p>
+                  {post.excerpt && (
+                    <p className="text-sm text-zinc-500 line-clamp-1 mt-1">{post.excerpt}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-blue-400">{post.category}</span>
+                    <span className="text-zinc-600">•</span>
+                    <span className="text-xs text-zinc-500">{formatDate(post.publishedAt)}</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-zinc-600" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

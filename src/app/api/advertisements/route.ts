@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { cookies } from 'next/headers';
 
-// GET - Get active advertisements for current user/agency
+// GET - Get active advertisements for current user/garage
 export async function GET() {
   try {
     // Check authentication
@@ -35,7 +35,7 @@ export async function GET() {
         { priority: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 10
+      take: 20
     });
 
     // Filter by date and targeting
@@ -50,11 +50,23 @@ export async function GET() {
         return true;
       }
       
-      if (ad.targetScope === 'agency' && ad.agencyId === user.agencyId) {
+      // Agency targeting (legacy)
+      if (ad.targetScope === 'agency' && user.agencyId && ad.agencyId === user.agencyId) {
         return true;
       }
       
+      // Garage targeting
+      if (ad.targetScope === 'garage' && user.garageId && ad.garageId === user.garageId) {
+        return true;
+      }
+
+      // Agents targeting
       if (ad.targetScope === 'agents' && user.role === 'agent') {
+        return true;
+      }
+
+      // Garages targeting (all garages)
+      if (ad.targetScope === 'garages' && user.role === 'garage') {
         return true;
       }
 
