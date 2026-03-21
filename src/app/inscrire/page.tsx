@@ -1,341 +1,433 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import PublicLayout from '@/components/public/PublicLayout';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Luggage, 
-  QrCode, 
-  ArrowLeft, 
-  CheckCircle,
-  Plane,
-  Camera,
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Building2,
+  User,
+  Phone,
+  Mail,
+  MapPin,
   FileText,
-  Sparkles
+  Camera,
+  CheckCircle,
+  Loader2,
+  ArrowLeft,
+  QrCode,
+  MessageCircle,
+  Upload
 } from "lucide-react";
 
 function InscrireContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const qrFromUrl = searchParams.get('qr') || '';
-  
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
-    reference: '',
-    firstName: '',
-    lastName: '',
-    flightNumber: '',
-    destination: '',
-    whatsapp: '',
+    // Informations du garage
+    garageName: '',
+    email: '',
+    phone: '',
+    whatsappNumber: '',
+    address: '',
+    businessRegistryNumber: '', // Numéro d'agrément
+    
+    // Informations du gérant
+    managerName: '',
+    managerPhone: '',
+    managerEmail: '',
+    
+    // Documents
+    shopPhoto: null as File | null,
+    agreementDocument: null as File | null,
+    idDocument: null as File | null,
+    
+    // Notes
+    notes: ''
   });
-
-  // Pre-fill reference from URL
-  useEffect(() => {
-    if (qrFromUrl) {
-      setFormData(prev => ({ ...prev, reference: qrFromUrl.toUpperCase() }));
-    }
-  }, [qrFromUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.garageName.trim()) {
+      alert('Le nom du garage est obligatoire');
+      return;
+    }
+    if (!formData.phone.trim()) {
+      alert('Le téléphone du garage est obligatoire');
+      return;
+    }
+    if (!formData.managerName.trim()) {
+      alert('Le nom du gérant est obligatoire');
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      const response = await fetch('/api/activate', {
+      // Create FormData for file uploads
+      const submitData = new FormData();
+      submitData.append('name', formData.garageName);
+      submitData.append('email', formData.email || '');
+      submitData.append('phone', formData.phone);
+      submitData.append('whatsappNumber', formData.whatsappNumber || '');
+      submitData.append('address', formData.address || '');
+      submitData.append('businessRegistryNumber', formData.businessRegistryNumber || '');
+      submitData.append('managerName', formData.managerName);
+      submitData.append('managerPhone', formData.managerPhone || '');
+      submitData.append('managerEmail', formData.managerEmail || '');
+      submitData.append('notes', formData.notes || '');
+      
+      if (formData.shopPhoto) {
+        submitData.append('shopPhoto', formData.shopPhoto);
+      }
+      if (formData.agreementDocument) {
+        submitData.append('agreementDocument', formData.agreementDocument);
+      }
+      if (formData.idDocument) {
+        submitData.append('idDocument', formData.idDocument);
+      }
+
+      const response = await fetch('/api/admin/garage-applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference: formData.reference.toUpperCase(),
-          travelerFirstName: formData.firstName,
-          travelerLastName: formData.lastName,
-          whatsappOwner: formData.whatsapp,
-          flightNumber: formData.flightNumber,
-          destination: formData.destination,
-        }),
+        body: submitData,
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        // Store activation data for success page
-        sessionStorage.setItem('activationData', JSON.stringify({
-          reference: formData.reference.toUpperCase(),
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          whatsapp: formData.whatsapp,
-          flightNumber: formData.flightNumber,
-          destination: formData.destination,
-          type: 'voyageur',
-          activatedAt: new Date().toISOString(),
-          expiresAt: data.baggage?.expiresAt,
-        }));
-        router.push('/success?type=voyageur');
+        setSubmitted(true);
       } else {
-        const error = await response.json();
-        alert(error.message || 'Erreur lors de l\'activation');
+        alert(data.error || 'Erreur lors de l\'envoi de la demande');
       }
     } catch (error) {
-      console.error('Activation error:', error);
-      alert('Erreur lors de l\'activation');
+      console.error('Submission error:', error);
+      alert('Erreur lors de l\'envoi de la demande');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <main className="min-h-screen bg-gradient-to-b from-[#d35400] to-[#b34700]">
-      {/* Navigation */}
-      <nav className="bg-[#d35400]/95 backdrop-blur-sm border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-white">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Retour</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-              <QrCode className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-white">OKAR</span>
-          </div>
-        </div>
-      </nav>
+  const handleFileChange = (field: 'shopPhoto' | 'agreementDocument' | 'idDocument', file: File | null) => {
+    setFormData(prev => ({ ...prev, [field]: file }));
+  };
 
-      <div className="max-w-3xl mx-auto px-4 py-12">
-        {/* Welcome Banner if QR from URL */}
-        {qrFromUrl && (
-          <div className="mb-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 text-center animate-fade-in">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-[#fbbf24]/20 rounded-full mb-4">
-              <Sparkles className="w-7 h-7 text-[#fbbf24]" />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">
-              Bienvenue ! ✨
-            </h2>
-            <p className="text-white/70">
-              Activez ce bagage pour protéger vos effets personnels
-            </p>
-            <Badge className="mt-3 bg-[#f59e0b]/20 text-[#fbbf24]">
-              🧳 Voyageur
-            </Badge>
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#ff7f00] to-[#e65c00] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center">
+          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-emerald-500" />
           </div>
-        )}
-
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-full mb-6">
-            <Luggage className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Activation Bagage Voyageur
+          <h1 className="text-2xl font-bold text-slate-800 mb-4">
+            Demande envoyée avec succès !
           </h1>
-          <p className="text-white/70 text-lg">
-            Protégez vos bagages pour votre voyage
+          <p className="text-slate-600 mb-6">
+            Votre demande d'adhésion a été envoyée à notre équipe. 
+            Nous vous contacterons dans les plus brefs délais pour finaliser votre inscription.
           </p>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue={qrFromUrl ? "manual" : "manual"} className="mb-8">
-          <TabsList className="grid w-full grid-cols-2 bg-white/10">
-            <TabsTrigger value="manual" className="data-[state=active]:bg-white data-[state=active]:text-[#d35400]">
-              <FileText className="w-4 h-4 mr-2" />
-              Remplir manuellement
-            </TabsTrigger>
-            <TabsTrigger value="scan" className="data-[state=active]:bg-white data-[state=active]:text-[#d35400]">
-              <Camera className="w-4 h-4 mr-2" />
-              Scanner billet
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="scan" className="mt-6">
-            <Card className="bg-white/10 backdrop-blur-sm border-white/20">
-              <CardContent className="pt-6 text-center">
-                <div className="w-24 h-24 mx-auto bg-white/10 rounded-full flex items-center justify-center mb-4">
-                  <Camera className="w-12 h-12 text-white/60" />
-                </div>
-                <h3 className="text-white font-semibold mb-2">
-                  Scanner votre billet
-                </h3>
-                <p className="text-white/60 text-sm mb-6">
-                  Si votre billet contient un QR code, scannez-le pour remplir automatiquement les informations
-                </p>
-                <Button className="bg-white text-[#d35400] hover:bg-white/90">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Ouvrir la caméra
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="manual">
-            {/* Form Card */}
-            <Card className="bg-white/10 backdrop-blur-sm border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Plane className="w-5 h-5" />
-                  Informations du voyageur
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* QR Reference */}
-                  <div className="space-y-2">
-                    <Label htmlFor="reference" className="text-white">
-                      Code de référence QR *
-                    </Label>
-                    <Input
-                      id="reference"
-                      placeholder="VOL26-XXXXXX"
-                      value={formData.reference}
-                      onChange={(e) => setFormData({ ...formData, reference: e.target.value.toUpperCase() })}
-                      className={`bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white font-mono text-lg ${qrFromUrl ? 'border-[#fbbf24]/50 bg-[#fbbf24]/5' : ''}`}
-                      required
-                      readOnly={!!qrFromUrl}
-                    />
-                    <p className="text-white/50 text-sm">
-                      {qrFromUrl 
-                        ? '✓ Code QR détecté automatiquement' 
-                        : 'Entrez le code inscrit sur votre autocollant QR'}
-                    </p>
-                  </div>
-
-                  {/* Name Fields */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-white">
-                        Prénom *
-                      </Label>
-                      <Input
-                        id="firstName"
-                        placeholder="Marie"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-white">
-                        Nom *
-                      </Label>
-                      <Input
-                        id="lastName"
-                        placeholder="Dupont"
-                        value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Flight Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="flightNumber" className="text-white">
-                        Numéro de vol
-                      </Label>
-                      <Input
-                        id="flightNumber"
-                        placeholder="AF1234"
-                        value={formData.flightNumber}
-                        onChange={(e) => setFormData({ ...formData, flightNumber: e.target.value.toUpperCase() })}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="destination" className="text-white">
-                        Destination
-                      </Label>
-                      <Input
-                        id="destination"
-                        placeholder="Tokyo"
-                        value={formData.destination}
-                        onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                      />
-                    </div>
-                  </div>
-
-                  {/* WhatsApp */}
-                  <div className="space-y-2">
-                    <Label htmlFor="whatsapp" className="text-white">
-                      Numéro WhatsApp *
-                    </Label>
-                    <Input
-                      id="whatsapp"
-                      type="tel"
-                      placeholder="+33 6 12 34 56 78"
-                      value={formData.whatsapp}
-                      onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                      required
-                    />
-                    <p className="text-white/50 text-sm">
-                      Ce numéro recevra les notifications si vos bagages sont trouvés
-                    </p>
-                  </div>
-
-                  {/* Info Box */}
-                  <div className="bg-white/10 rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-white">
-                      <CheckCircle className="w-4 h-4" />
-                      <span className="text-sm font-medium">Protection activée</span>
-                    </div>
-                    <p className="text-white/60 text-sm">
-                      Sticker : 5 jours | Étiquette : 1 an
-                    </p>
-                  </div>
-
-                  {/* Submit Button */}
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-white text-[#d35400] hover:bg-white/90 h-12 text-lg font-semibold"
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-[#d35400]/30 border-t-[#d35400] rounded-full animate-spin" />
-                        Activation en cours...
-                      </span>
-                    ) : (
-                      'Activer mon bagage'
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Help Section */}
-        <div className="mt-8 text-center">
-          <p className="text-white/60 text-sm">
-            Pas encore de code QR ?{' '}
-            <Link href="/#pricing" className="text-white underline">
-              Commander un autocollant
-            </Link>
-          </p>
+          <div className="bg-slate-50 rounded-xl p-4 mb-6">
+            <p className="text-sm text-slate-500">
+              📧 Vous recevrez une notification par email/SMS dès que votre dossier sera traité.
+            </p>
+          </div>
+          <Link href="/">
+            <Button className="bg-[#ff7f00] hover:bg-[#e65c00] text-white w-full">
+              Retour à l'accueil
+            </Button>
+          </Link>
         </div>
       </div>
-    </main>
+    );
+  }
+
+  return (
+    <>
+      {/* Hero section */}
+      <section className="text-center py-12 bg-gradient-to-r from-[#ff7f00] to-[#e65c00]">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
+              <Building2 className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white">
+              Devenir Partenaire OKAR
+            </h1>
+          </div>
+          <p className="text-white/90 max-w-2xl mx-auto text-lg leading-relaxed">
+            Rejoignez le réseau des garages certifiés OKAR et offrez à vos clients un suivi numérique complet de leurs véhicules.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4 mt-6">
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-white" />
+              <span className="text-white text-sm">Visibilité accrue</span>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-white" />
+              <span className="text-white text-sm">Certification officielle</span>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-white" />
+              <span className="text-white text-sm">Fidélisation client</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Formulaire */}
+      <section className="py-12 px-4 bg-slate-50">
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Informations du garage */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                <Building2 className="w-6 h-6 text-[#ff7f00]" />
+                Informations du garage
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="garageName">Nom du garage *</Label>
+                  <Input
+                    id="garageName"
+                    value={formData.garageName}
+                    onChange={(e) => setFormData({ ...formData, garageName: e.target.value })}
+                    placeholder="Ex: Garage Auto Plus"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="phone">Téléphone *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+221 77 123 45 67"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="whatsappNumber">WhatsApp</Label>
+                  <Input
+                    id="whatsappNumber"
+                    type="tel"
+                    value={formData.whatsappNumber}
+                    onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                    placeholder="+221 77 123 45 67"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="contact@garage-auto.sn"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="businessRegistryNumber">N° Agrément / RCCM</Label>
+                  <Input
+                    id="businessRegistryNumber"
+                    value={formData.businessRegistryNumber}
+                    onChange={(e) => setFormData({ ...formData, businessRegistryNumber: e.target.value })}
+                    placeholder="SN-DKR-XXXXX"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label htmlFor="address">Adresse</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Dakar, Sénégal"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Informations du gérant */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                <User className="w-6 h-6 text-[#ff7f00]" />
+                Informations du gérant
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="managerName">Nom complet *</Label>
+                  <Input
+                    id="managerName"
+                    value={formData.managerName}
+                    onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
+                    placeholder="Mamadou Diop"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="managerPhone">Téléphone</Label>
+                  <Input
+                    id="managerPhone"
+                    type="tel"
+                    value={formData.managerPhone}
+                    onChange={(e) => setFormData({ ...formData, managerPhone: e.target.value })}
+                    placeholder="+221 77 123 45 67"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label htmlFor="managerEmail">Email</Label>
+                  <Input
+                    id="managerEmail"
+                    type="email"
+                    value={formData.managerEmail}
+                    onChange={(e) => setFormData({ ...formData, managerEmail: e.target.value })}
+                    placeholder="gerant@email.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Documents */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                <FileText className="w-6 h-6 text-[#ff7f00]" />
+                Documents justificatifs
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Photo façade */}
+                <div>
+                  <Label className="block mb-2">Photo façade</Label>
+                  <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-[#ff7f00] transition-colors">
+                    {formData.shopPhoto ? (
+                      <div className="text-center">
+                        <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
+                        <span className="text-xs text-slate-600">{formData.shopPhoto.name}</span>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Camera className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                        <span className="text-xs text-slate-500">Télécharger</span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileChange('shopPhoto', e.target.files?.[0] || null)}
+                    />
+                  </label>
+                </div>
+                
+                {/* Agrément */}
+                <div>
+                  <Label className="block mb-2">Photo agrément</Label>
+                  <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-[#ff7f00] transition-colors">
+                    {formData.agreementDocument ? (
+                      <div className="text-center">
+                        <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
+                        <span className="text-xs text-slate-600">{formData.agreementDocument.name}</span>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <FileText className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                        <span className="text-xs text-slate-500">Télécharger</span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileChange('agreementDocument', e.target.files?.[0] || null)}
+                    />
+                  </label>
+                </div>
+                
+                {/* Pièce d'identité */}
+                <div>
+                  <Label className="block mb-2">Pièce d'identité</Label>
+                  <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-[#ff7f00] transition-colors">
+                    {formData.idDocument ? (
+                      <div className="text-center">
+                        <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
+                        <span className="text-xs text-slate-600">{formData.idDocument.name}</span>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                        <span className="text-xs text-slate-500">Télécharger</span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileChange('idDocument', e.target.files?.[0] || null)}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <Label htmlFor="notes">Informations complémentaires</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Ajoutez des informations supplémentaires sur votre garage..."
+                rows={3}
+              />
+            </div>
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-[#ff7f00] to-[#e65c00] hover:from-[#e65c00] hover:to-[#cc5200] text-white py-6 text-lg font-semibold rounded-xl shadow-lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  Envoyer ma demande d'adhésion
+                </>
+              )}
+            </Button>
+
+            <p className="text-center text-sm text-slate-500">
+              En soumettant ce formulaire, vous acceptez d'être contacté par notre équipe.
+            </p>
+          </form>
+        </div>
+      </section>
+    </>
   );
 }
 
 export default function InscrirePage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen bg-gradient-to-b from-[#d35400] to-[#b34700] flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="animate-spin w-12 h-12 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4"></div>
-          <p>Chargement...</p>
-        </div>
-      </main>
-    }>
+    <PublicLayout>
       <InscrireContent />
-    </Suspense>
+    </PublicLayout>
   );
 }

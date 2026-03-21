@@ -2,15 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 
+// Generate a unique slug from name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 50) + '-' + Math.random().toString(36).substring(2, 8);
+}
+
 // Validation schema
 const garageSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  slug: z.string().min(1, 'Slug is required'),
+  slug: z.string().min(1, 'Slug is required').optional(),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
   businessLicense: z.string().optional(),
   subscriptionPlan: z.enum(['basic', 'premium', 'enterprise']).optional(),
+  managerName: z.string().optional(),
+  managerPhone: z.string().optional(),
+  whatsappNumber: z.string().optional(),
+  validationStatus: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+  isCertified: z.boolean().optional(),
 });
 
 // GET - List all garages
@@ -52,14 +66,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = garageSchema.parse(body);
 
+    // Generate slug if not provided
+    const slug = validatedData.slug || generateSlug(validatedData.name);
+
     // Check if slug already exists
     const existing = await db.garage.findUnique({
-      where: { slug: validatedData.slug }
+      where: { slug }
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: 'Slug already exists' },
+        { error: 'Un garage avec ce slug existe déjà' },
         { status: 400 }
       );
     }
@@ -67,12 +84,17 @@ export async function POST(request: NextRequest) {
     const garage = await db.garage.create({
       data: {
         name: validatedData.name,
-        slug: validatedData.slug,
+        slug,
         email: validatedData.email || null,
         phone: validatedData.phone || null,
         address: validatedData.address || null,
         businessLicense: validatedData.businessLicense || null,
         subscriptionPlan: validatedData.subscriptionPlan || 'basic',
+        managerName: validatedData.managerName || null,
+        managerPhone: validatedData.managerPhone || null,
+        whatsappNumber: validatedData.whatsappNumber || null,
+        validationStatus: validatedData.validationStatus || 'APPROVED',
+        isCertified: validatedData.isCertified ?? true,
       }
     });
 
@@ -83,13 +105,13 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Erreur de validation', details: error.errors },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Erreur serveur' },
       { status: 500 }
     );
   }

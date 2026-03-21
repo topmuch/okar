@@ -7,6 +7,38 @@ import path from 'path';
 
 const execAsync = promisify(exec);
 
+// Get the database path from environment or use default
+function getDatabasePath(): string {
+  const dbUrl = process.env.DATABASE_URL || '';
+  
+  // If it's a file path (SQLite)
+  if (dbUrl.startsWith('file:')) {
+    return dbUrl.replace('file:', '');
+  }
+  
+  // If it's a relative path
+  if (dbUrl.startsWith('./') || dbUrl.startsWith('../')) {
+    return path.join(process.cwd(), dbUrl);
+  }
+  
+  // Default paths to check
+  const defaultPaths = [
+    '/app/data/custom.db',
+    path.join(process.cwd(), 'db', 'custom.db'),
+    path.join(process.cwd(), 'prisma', 'dev.db'),
+    path.join(process.cwd(), 'dev.db'),
+  ];
+  
+  for (const p of defaultPaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+  
+  // Return most likely path
+  return '/app/data/custom.db';
+}
+
 // GET - Download database backup
 export async function GET(request: NextRequest) {
   try {
@@ -16,11 +48,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    const dbPath = '/app/data/custom.db';
+    const dbPath = getDatabasePath();
 
     // Check if database exists
     if (!fs.existsSync(dbPath)) {
-      return NextResponse.json({ error: 'Base de données non trouvée' }, { status: 404 });
+      return NextResponse.json({ error: 'Base de données non trouvée: ' + dbPath }, { status: 404 });
     }
 
     // Read database file
@@ -58,8 +90,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    const dbPath = '/app/data/custom.db';
-    const backupDir = '/app/data/backups';
+    const dbPath = getDatabasePath();
+    const backupDir = path.join(path.dirname(dbPath), 'backups');
 
     // Get database stats
     let dbStats = null;
@@ -69,6 +101,7 @@ export async function POST(request: NextRequest) {
         size: stats.size,
         sizeMB: (stats.size / 1024 / 1024).toFixed(2),
         modified: stats.mtime,
+        path: dbPath,
       };
     }
 
@@ -110,9 +143,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    const dbPath = '/app/data/custom.db';
-    const backupDir = '/app/data/backups';
-    const tempPath = '/app/data/restore_temp.db';
+    const dbPath = getDatabasePath();
+    const backupDir = path.join(path.dirname(dbPath), 'backups');
+    const tempPath = path.join(path.dirname(dbPath), 'restore_temp.db');
 
     // Get form data with the uploaded file
     const formData = await request.formData();

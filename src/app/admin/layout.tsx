@@ -162,7 +162,7 @@ function Sidebar({
       `}>
         {/* Logo */}
         <div className="p-6 border-b border-white/10">
-          <Link href="/admin/utilisateurs" className="flex items-center gap-3">
+          <Link href="/admin/tableau-de-bord" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center shadow-lg">
               <QrCode className="w-6 h-6 text-white" />
             </div>

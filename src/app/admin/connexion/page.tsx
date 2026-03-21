@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
   // Redirect if already logged in as superadmin
   useEffect(() => {
     if (!authLoading && user && isSuperAdmin) {
-      router.replace('/admin/utilisateurs');
+      router.replace('/admin/tableau-de-bord');
     }
   }, [user, authLoading, isSuperAdmin, router]);
 
@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
         login(data.user);
         
         // Redirect to dashboard
-        router.push('/admin/utilisateurs');
+        router.push('/admin/tableau-de-bord');
       } else {
         setError(data.error || 'Identifiants incorrects');
       }

@@ -1473,3 +1473,64 @@ body * {
     transform: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🚀 PERFORMANCE DESIGN ANIMATIONS - Optimized for 60 FPS
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* === MESH GRADIENT - Very subtle, GPU accelerated === */
+@keyframes meshGradient {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-2%, -1%);
+  }
+}
+
+/* === SUBTLE BREATHE - Car image, 1.0 to 1.02 scale === */
+@keyframes subtleBreathe {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.015) translateY(-8px);
+  }
+}
+
+.animate-subtle-breathe {
+  animation: subtleBreathe 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* === FADE IN UP - One-time entrance animation === */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+  will-change: opacity, transform;
+}
+
+/* === MOBILE PERFORMANCE === */
+@media (max-width: 768px) {
+  /* Reduce animation intensity on mobile */
+  .animate-subtle-breathe {
+    animation: none;
+  }
+  
+  /* Simpler shadows for mobile GPU */
+  .glass-light-card,
+  .glass-card {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}

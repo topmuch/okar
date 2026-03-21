@@ -17,7 +17,8 @@ import {
   Search,
   RefreshCw,
   Plus,
-  Filter
+  Filter,
+  Car
 } from "lucide-react";
 
 // Types

@@ -15,7 +15,9 @@ import {
   RefreshCw,
   Ban,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 // Types
@@ -76,6 +79,19 @@ export default function GaragesManagementPage() {
   const [suspensionReason, setSuspensionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [suspendActionLoading, setSuspendActionLoading] = useState<string | null>(null);
+
+  // Add garage modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [newGarage, setNewGarage] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    managerName: '',
+    managerPhone: '',
+    whatsappNumber: ''
+  });
 
   useEffect(() => {
     fetchGarages();
@@ -190,6 +206,50 @@ export default function GaragesManagementPage() {
     }
   };
 
+  // Add new garage
+  const handleAddGarage = async () => {
+    if (!newGarage.name.trim()) {
+      toast.error('Le nom du garage est obligatoire');
+      return;
+    }
+
+    setAddLoading(true);
+    try {
+      const res = await fetch('/api/admin/garages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newGarage,
+          validationStatus: 'APPROVED', // Directly approved when created by admin
+          isCertified: true
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erreur lors de la création');
+      }
+
+      toast.success('Garage créé avec succès !');
+      setShowAddModal(false);
+      setNewGarage({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        managerName: '',
+        managerPhone: '',
+        whatsappNumber: ''
+      });
+      fetchGarages();
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la création');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   const filteredGarages = garages.filter(garage => {
     const matchesSearch = garage.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       garage.slug.toLowerCase().includes(searchQuery.toLowerCase());
@@ -228,10 +288,19 @@ export default function GaragesManagementPage() {
             {suspendedCount > 0 && ` • ${suspendedCount} suspendu(s)`}
           </p>
         </div>
-        <Button variant="outline" onClick={fetchGarages} className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Actualiser
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchGarages} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Actualiser
+          </Button>
+          <Button 
+            onClick={() => setShowAddModal(true)} 
+            className="gap-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter un garage
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -494,6 +563,111 @@ export default function GaragesManagementPage() {
               disabled={actionLoading || !suspensionReason.trim()}
             >
               {actionLoading ? 'Traitement...' : 'Confirmer la suspension'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Garage Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-orange-500" />
+              Ajouter un nouveau garage
+            </DialogTitle>
+            <DialogDescription>
+              Créez un nouveau garage partenaire. Il sera automatiquement certifié.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <div>
+              <Label htmlFor="name">Nom du garage *</Label>
+              <Input
+                id="name"
+                value={newGarage.name}
+                onChange={(e) => setNewGarage({ ...newGarage, name: e.target.value })}
+                placeholder="Ex: Garage Auto Plus"
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newGarage.email}
+                onChange={(e) => setNewGarage({ ...newGarage, email: e.target.value })}
+                placeholder="contact@garage-auto.sn"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Téléphone</Label>
+              <Input
+                id="phone"
+                value={newGarage.phone}
+                onChange={(e) => setNewGarage({ ...newGarage, phone: e.target.value })}
+                placeholder="+221 77 123 45 67"
+              />
+            </div>
+            <div>
+              <Label htmlFor="whatsappNumber">WhatsApp</Label>
+              <Input
+                id="whatsappNumber"
+                value={newGarage.whatsappNumber}
+                onChange={(e) => setNewGarage({ ...newGarage, whatsappNumber: e.target.value })}
+                placeholder="+221 77 123 45 67"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="address">Adresse</Label>
+              <Input
+                id="address"
+                value={newGarage.address}
+                onChange={(e) => setNewGarage({ ...newGarage, address: e.target.value })}
+                placeholder="Dakar, Sénégal"
+              />
+            </div>
+            <div>
+              <Label htmlFor="managerName">Nom du gérant</Label>
+              <Input
+                id="managerName"
+                value={newGarage.managerName}
+                onChange={(e) => setNewGarage({ ...newGarage, managerName: e.target.value })}
+                placeholder="Mamadou Diop"
+              />
+            </div>
+            <div>
+              <Label htmlFor="managerPhone">Téléphone du gérant</Label>
+              <Input
+                id="managerPhone"
+                value={newGarage.managerPhone}
+                onChange={(e) => setNewGarage({ ...newGarage, managerPhone: e.target.value })}
+                placeholder="+221 77 123 45 67"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleAddGarage}
+              disabled={addLoading || !newGarage.name.trim()}
+              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600"
+            >
+              {addLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer le garage
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

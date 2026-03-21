@@ -20,12 +20,14 @@ interface BackupInfo {
     size: number;
     sizeMB: string;
     modified: string;
+    path: string;
   } | null;
   backups: {
     name: string;
     size: string;
     date: string;
   }[];
+  backupDir: string;
 }
 
 export default function BackupsPage() {
@@ -201,7 +203,7 @@ export default function BackupsPage() {
                 Base de données SQLite
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm">
-                Fichier: /app/data/custom.db
+                Fichier: {info?.database?.path || info?.backupDir?.replace('/backups', '') || '/app/data/custom.db'}
               </p>
             </div>
           </div>
