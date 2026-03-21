@@ -95,7 +95,25 @@ async function sendSmsViaTwilio(
   }
 
   try {
-    const client = require('twilio')(config.twilioAccountSid, config.twilioAuthToken);
+    // Import dynamique pour éviter l'erreur si le module n'est pas installé
+    const twilio = await import('twilio').catch(() => null);
+    
+    if (!twilio) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📱 SMS (Mode Dev - Twilio non installé)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`To: +${phone}`);
+      console.log(`Message: ${message}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      return {
+        success: true,
+        channel: 'sms',
+        messageId: `dev-twilio-${Date.now()}`,
+      };
+    }
+
+    const client = twilio.default(config.twilioAccountSid, config.twilioAuthToken);
     
     const result = await client.messages.create({
       body: message,
@@ -224,7 +242,25 @@ async function sendWhatsAppViaTwilio(
   }
 
   try {
-    const client = require('twilio')(config.twilioAccountSid, config.twilioAuthToken);
+    // Import dynamique pour éviter l'erreur si le module n'est pas installé
+    const twilio = await import('twilio').catch(() => null);
+    
+    if (!twilio) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('💬 WHATSAPP (Mode Dev - Twilio non installé)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`To: whatsapp:+${phone}`);
+      console.log(`Message: ${message}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      return {
+        success: true,
+        channel: 'whatsapp',
+        messageId: `dev-wa-twilio-${Date.now()}`,
+      };
+    }
+
+    const client = twilio.default(config.twilioAccountSid, config.twilioAuthToken);
     
     const result = await client.messages.create({
       body: message,

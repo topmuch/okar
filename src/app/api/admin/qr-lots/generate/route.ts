@@ -176,6 +176,16 @@ export async function POST(request: NextRequest) {
 // ========================================
 // API: LISTE DES LOTS
 // ========================================
+
+/**
+ * Convertit une valeur en nombre (gère les BigInt SQLite)
+ */
+function toNumber(value: any): number {
+  if (typeof value === 'bigint') return Number(value);
+  if (typeof value === 'number') return value;
+  return 0;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -198,7 +208,7 @@ export async function GET(request: NextRequest) {
     const query = `
       SELECT
         l.id, l.prefix, l.count, l.status, l.notes,
-        l.assignedToId, l.assignedAt, l.createdAt,
+        l.assignedToId as garageId, l.assignedAt, l.createdAt,
         g.name as garageName,
         (SELECT COUNT(*) FROM QRCodeStock qs WHERE qs.lotId = l.id) as generatedCount,
         (SELECT COUNT(*) FROM QRCodeStock qs WHERE qs.lotId = l.id AND qs.status = 'ACTIVE') as activatedCount,
@@ -213,12 +223,30 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      lots: lots.map(lot => ({
-        ...lot,
-        utilizationRate: lot.count > 0 
-          ? Math.round((lot.activatedCount / lot.count) * 100) 
-          : 0
-      }))
+      lots: lots.map(lot => {
+        const count = toNumber(lot.count);
+        const activatedCount = toNumber(lot.activatedCount);
+        const stockCount = toNumber(lot.stockCount);
+        const generatedCount = toNumber(lot.generatedCount);
+
+        return {
+          id: lot.id,
+          prefix: lot.prefix,
+          count: count,
+          status: lot.status,
+          notes: lot.notes,
+          garageId: lot.garageId,
+          garageName: lot.garageName,
+          assignedAt: lot.assignedAt,
+          createdAt: lot.createdAt,
+          generatedCount: generatedCount,
+          activatedCount: activatedCount,
+          stockCount: stockCount,
+          utilizationRate: count > 0 
+            ? Math.round((activatedCount / count) * 100) 
+            : 0
+        };
+      })
     });
 
   } catch (error) {
