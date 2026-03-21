@@ -53,7 +53,17 @@ export default function StockOKARPage() {
       setLoading(true);
       const res = await fetch(`/api/qr-lots?garageId=${garageId}`);
       const data = await res.json();
-      setLots(data.lots || []);
+      // Map API response to expected format
+      const mappedLots = (data.lots || []).map((lot: any) => ({
+        id: lot.id,
+        prefix: lot.prefix,
+        count: lot.count,
+        usedCount: lot.stats?.activated || lot.activatedCount || 0,
+        status: lot.status,
+        createdAt: lot.createdAt,
+        assignedAt: lot.assignedAt
+      }));
+      setLots(mappedLots);
     } catch (err) {
       console.error('Error fetching lots:', err);
     } finally {

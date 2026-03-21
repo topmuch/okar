@@ -52,15 +52,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, garageId, subject, content, senderName, senderEmail, senderPhone } = body;
+    const { type, garageId, subject, content, senderName, senderEmail, senderPhone, recipientGarageId } = body;
 
     const id = generateCuid();
     const now = new Date().toISOString();
 
     await db.$executeRaw`
-      INSERT INTO Message (id, type, status, garageId, subject, content, senderName, senderEmail, senderPhone, createdAt)
+      INSERT INTO Message (id, type, status, garageId, recipientGarageId, subject, content, senderName, senderEmail, senderPhone, createdAt)
       VALUES (
-        ${id}, ${type}, 'non_lu', ${garageId || null},
+        ${id}, ${type}, 'non_lu', ${garageId || null}, ${recipientGarageId || null},
         ${subject || null}, ${content},
         ${senderName || null}, ${senderEmail || null}, ${senderPhone || null}, ${now}
       )
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const notificationId = generateCuid();
     await db.$executeRaw`
       INSERT INTO Notification (id, type, message, createdAt)
-      VALUES (${notificationId}, ${type}, 'Nouveau message d''un garage', ${now})
+      VALUES (${notificationId}, ${type}, 'Nouveau message reçu', ${now})
     `;
 
     return NextResponse.json({ 
@@ -81,6 +81,60 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Create message error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PUT - Update message status
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, status } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID requis' }, { status: 400 });
+    }
+
+    const now = new Date().toISOString();
+
+    await db.$executeRaw`
+      UPDATE Message 
+      SET status = ${status}, updatedAt = ${now}
+      WHERE id = ${id}
+    `;
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Message mis à jour'
+    });
+
+  } catch (error) {
+    console.error('Update message error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// DELETE - Delete a message
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID requis' }, { status: 400 });
+    }
+
+    await db.$executeRaw`
+      DELETE FROM Message WHERE id = ${id}
+    `;
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Message supprimé'
+    });
+
+  } catch (error) {
+    console.error('Delete message error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

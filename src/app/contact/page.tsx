@@ -35,7 +35,8 @@ function ContactContent() {
           type: 'contact',
           senderName: formData.name,
           senderEmail: formData.email,
-          content: { subject: formData.subject, message: formData.message },
+          subject: formData.subject || 'Nouveau message de contact',
+          content: JSON.stringify({ subject: formData.subject, message: formData.message }),
         }),
       });
       setSubmitted(true);
