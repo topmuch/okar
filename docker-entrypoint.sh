@@ -21,29 +21,26 @@ echo "📦 Database URL: $DATABASE_URL"
 mkdir -p /app/data
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Start Application First (migrations can fail, app should still start)
+# Database migrations (with local Prisma 6.x)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [ -f "/app/node_modules/.bin/prisma" ]; then
+  echo "🔄 Running Prisma migrations..."
+  /app/node_modules/.bin/prisma migrate deploy --schema=/app/prisma/schema.prisma 2>/dev/null || {
+    echo "⚠️ Migration skipped or failed, continuing..."
+  }
+else
+  echo "⚠️ Prisma CLI not found, skipping migrations"
+fi
+
+echo "✅ Database ready!"
+echo "========================================"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Start Application (execute CMD from Dockerfile)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 echo "🌟 Starting Next.js server on port 3000..."
-echo "========================================"
 
-# Start the server in background
-node server.js &
-
-# Wait for server to be ready
-sleep 5
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Database migrations (after server starts, non-blocking)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# Try to run migrations with local Prisma (version 6.x)
-if [ -f "/app/node_modules/.bin/prisma" ]; then
-  echo "🔄 Running Prisma migrations with local version..."
-  /app/node_modules/.bin/prisma migrate deploy --schema=/app/prisma/schema.prisma 2>/dev/null || {
-    echo "⚠️ Migration failed, database might already be up to date"
-  }
-fi
-
-# Keep the server running
-wait
+# Execute the CMD passed from Dockerfile
+exec "$@"
