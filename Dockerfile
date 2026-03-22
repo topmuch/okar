@@ -15,8 +15,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --include=dev
+# Install dependencies with legacy peer deps to resolve conflicts
+RUN npm ci --legacy-peer-deps
 
 # Generate Prisma Client
 RUN npx prisma generate
