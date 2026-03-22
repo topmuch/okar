@@ -8,7 +8,8 @@ export async function GET(request: NextRequest) {
     const showAll = searchParams.get('all') === 'true';
 
     // Utiliser une requête raw pour faire la jointure correctement
-    // car le champ qrStatus du véhicule n'est pas toujours synchronisé avec QRCodeStock
+    // Afficher les véhicules qui ont un QR code ACTIF dans QRCodeStock
+    // OU qui ont un qrStatus = 'ACTIVE' dans Vehicle (pour compatibilité)
     const vehicles = await db.$queryRaw<any[]>`
       SELECT 
         v.id, v.reference, v.make, v.model, v.year, v.color, v.licensePlate, v.vin,
@@ -25,7 +26,11 @@ export async function GET(request: NextRequest) {
       LEFT JOIN User o ON v.ownerId = o.id
       LEFT JOIN User p ON v.proprietorId = p.id
       LEFT JOIN Garage g ON v.garageId = g.id
-      WHERE ${showAll ? '1=1' : "qs.status = 'ACTIVE'"}
+      WHERE ${
+        showAll 
+          ? '1=1' 
+          : "(qs.status = 'ACTIVE' OR (qs.status IS NULL AND v.qrStatus = 'ACTIVE'))"
+      }
       ORDER BY v.createdAt DESC
       LIMIT 500
     `;
