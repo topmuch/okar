@@ -1,43 +1,69 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icons in react-leaflet
-const createIcon = (color: string, content: string) => {
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎨 LEAFLET CSS - Import direct (pas d'import dynamique)
+// ═══════════════════════════════════════════════════════════════════════════════
+import 'leaflet/dist/leaflet.css';
+import './map-styles.css';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔧 FIX: Configuration des icônes par défaut Leaflet
+// Nécessaire car Webpack/Next.js ne résout pas les images par défaut
+// ═══════════════════════════════════════════════════════════════════════════════
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎨 CREATE CUSTOM DIV ICON
+// ═══════════════════════════════════════════════════════════════════════════════
+const createIcon = (color: string, content: string, size: number = 32) => {
   return L.divIcon({
-    className: 'custom-marker',
+    className: 'custom-leaflet-marker',
     html: `
       <div style="
-        width: 30px;
-        height: 30px;
+        width: ${size}px;
+        height: ${size}px;
         background: ${color};
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 12px;
+        font-size: ${size * 0.4}px;
         font-weight: bold;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3), 0 0 0 3px rgba(255,255,255,0.8);
         border: 2px solid white;
+        transition: transform 0.2s ease;
       ">
         ${content}
       </div>
     `,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -15],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2 - 5],
   });
 };
 
-// Icons for different marker types
-const garageCertifiedIcon = createIcon('#10b981', '★');
-const garageStandardIcon = createIcon('#3b82f6', 'G');
-const vehicleIcon = createIcon('#8b5cf6', 'V');
+// Icônes prédéfinies pour les différents types
+const ICONS = {
+  garageCertified: createIcon('#10b981', '★', 34),
+  garageStandard: createIcon('#3b82f6', 'G', 30),
+  garageSuspended: createIcon('#ef4444', '!', 30),
+  vehicle: createIcon('#8b5cf6', 'V', 28),
+  vehicleWarning: createIcon('#f59e0b', 'V', 28),
+};
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📍 TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
 interface MapPoint {
   id: string;
   type: 'garage' | 'vehicle';
@@ -51,6 +77,8 @@ interface MapPoint {
   licensePlate?: string;
   make?: string;
   model?: string;
+  vehicleCount?: number;
+  city?: string;
 }
 
 interface MapContentProps {
@@ -59,18 +87,28 @@ interface MapContentProps {
   zoom: number;
 }
 
-// Component to fit bounds when points change
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🗺️ FIT BOUNDS COMPONENT - Ajuste la vue pour montrer tous les points
+// ═══════════════════════════════════════════════════════════════════════════════
 function FitBounds({ points }: { points: MapPoint[] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (points.length > 0) {
-      const validPoints = points.filter(p => p.latitude && p.longitude);
-      if (validPoints.length > 0) {
+    const validPoints = points.filter(p => p.latitude && p.longitude);
+    
+    if (validPoints.length > 0) {
+      try {
         const bounds = L.latLngBounds(
           validPoints.map(p => [p.latitude!, p.longitude!])
         );
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        map.fitBounds(bounds, { 
+          padding: [50, 50], 
+          maxZoom: 14,
+          animate: true,
+          duration: 0.5
+        });
+      } catch (error) {
+        console.warn('Could not fit bounds:', error);
       }
     }
   }, [points, map]);
@@ -78,78 +116,155 @@ function FitBounds({ points }: { points: MapPoint[] }) {
   return null;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏢 MARKER POPUP CONTENT
+// ═══════════════════════════════════════════════════════════════════════════════
+function PopupContent({ point }: { point: MapPoint }) {
+  return (
+    <div className="min-w-[220px] font-sans">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold ${
+          point.type === 'garage' 
+            ? point.isCertified ? 'bg-emerald-500' : 'bg-blue-500'
+            : 'bg-purple-500'
+        }`}>
+          {point.type === 'garage' ? (point.isCertified ? '★' : 'G') : 'V'}
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+            {point.name}
+          </h3>
+          {point.city && (
+            <p className="text-xs text-gray-500">{point.city}</p>
+          )}
+        </div>
+      </div>
+      
+      {/* Details */}
+      <div className="space-y-1.5 text-sm">
+        {point.address && (
+          <p className="text-gray-600 flex items-start gap-1.5">
+            <span className="text-base">📍</span>
+            <span className="line-clamp-2">{point.address}</span>
+          </p>
+        )}
+        
+        {point.phone && (
+          <p className="text-gray-600 flex items-center gap-1.5">
+            <span>📞</span>
+            <a href={`tel:${point.phone}`} className="text-blue-600 hover:underline">
+              {point.phone}
+            </a>
+          </p>
+        )}
+        
+        {point.type === 'garage' && point.vehicleCount !== undefined && (
+          <p className="text-gray-600 flex items-center gap-1.5">
+            <span>🚗</span>
+            <span>{point.vehicleCount} véhicule{point.vehicleCount > 1 ? 's' : ''}</span>
+          </p>
+        )}
+        
+        {point.type === 'vehicle' && point.licensePlate && (
+          <p className="text-gray-600 flex items-center gap-1.5">
+            <span>🏷️</span>
+            <span className="font-mono font-semibold">{point.licensePlate}</span>
+          </p>
+        )}
+      </div>
+      
+      {/* Badge */}
+      {point.type === 'garage' && point.isCertified && (
+        <div className="mt-3 pt-2 border-t border-gray-100">
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+            ✓ Certifié OKAR
+          </span>
+        </div>
+      )}
+      
+      {point.status === 'SUSPENDED' && (
+        <div className="mt-3 pt-2 border-t border-gray-100">
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+            ⚠️ Suspendu
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🗺️ MAP CONTENT COMPONENT - Composant principal de la carte
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function MapContent({ points, center, zoom }: MapContentProps) {
-  // Get points with valid coordinates
-  const validPoints = points.filter(p => p.latitude && p.longitude);
+  // Filtrer les points valides (avec coordonnées)
+  const validPoints = useMemo(() => {
+    return points.filter(p => 
+      p.latitude !== null && 
+      p.longitude !== null &&
+      !isNaN(p.latitude) && 
+      !isNaN(p.longitude)
+    );
+  }, [points]);
+
+  // Obtenir l'icône appropriée pour chaque point
+  const getIcon = (point: MapPoint): L.DivIcon => {
+    if (point.type === 'garage') {
+      if (point.status === 'SUSPENDED') return ICONS.garageSuspended;
+      return point.isCertified ? ICONS.garageCertified : ICONS.garageStandard;
+    }
+    return ICONS.vehicle;
+  };
 
   return (
     <MapContainer
       center={center}
       zoom={zoom}
-      style={{ width: '100%', height: '100%', background: '#e5e7eb' }}
-      zoomControl={false}
+      scrollWheelZoom={true}
+      zoomControl={true}
+      doubleClickZoom={true}
+      // ⚠️ CRITICAL: Hauteur EXPLICITE en pixels (pas 100%)
+      style={{ 
+        height: '600px', 
+        width: '100%',
+        zIndex: 1,
+        background: '#f1f5f9'
+      }}
+      className="leaflet-map-container"
     >
+      {/* Fond de carte OpenStreetMap */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         maxZoom={19}
       />
       
-      {/* Fit bounds to show all points */}
+      {/* Ajuster la vue pour montrer tous les points */}
       <FitBounds points={validPoints} />
-
-      {/* Markers */}
-      {validPoints.map((point) => {
-        let icon;
-        if (point.type === 'garage') {
-          icon = point.isCertified ? garageCertifiedIcon : garageStandardIcon;
-        } else {
-          icon = vehicleIcon;
-        }
-
-        return (
-          <Marker
-            key={point.id}
-            position={[point.latitude!, point.longitude!]}
-            icon={icon}
+      
+      {/* Marqueurs */}
+      {validPoints.map((point) => (
+        <Marker
+          key={`${point.type}-${point.id}`}
+          position={[point.latitude!, point.longitude!]}
+          icon={getIcon(point)}
+          eventHandlers={{
+            mouseover: (e) => {
+              const marker = e.target;
+              marker.openPopup();
+            }
+          }}
+        >
+          <Popup 
+            maxWidth={300}
+            closeButton={true}
+            className="leaflet-popup-custom"
           >
-            <Popup>
-              <div style={{ minWidth: '200px', fontFamily: 'system-ui, sans-serif' }}>
-                <h3 style={{ fontWeight: 600, margin: '0 0 8px 0', fontSize: '14px' }}>
-                  {point.name}
-                </h3>
-                <p style={{ color: '#666', margin: '0 0 4px 0', fontSize: '13px' }}>
-                  📍 {point.address || 'Adresse non renseignée'}
-                </p>
-                {point.phone && (
-                  <p style={{ color: '#666', margin: '0 0 4px 0', fontSize: '13px' }}>
-                    📞 {point.phone}
-                  </p>
-                )}
-                {point.type === 'garage' && point.isCertified && (
-                  <span style={{
-                    display: 'inline-block',
-                    marginTop: '8px',
-                    padding: '4px 8px',
-                    background: '#10b981',
-                    color: 'white',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 500
-                  }}>
-                    ✓ Certifié OKAR
-                  </span>
-                )}
-                {point.type === 'vehicle' && point.licensePlate && (
-                  <p style={{ color: '#666', margin: '0', fontSize: '13px' }}>
-                    🚗 {point.licensePlate}
-                  </p>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
+            <PopupContent point={point} />
+          </Popup>
+        </Marker>
+      ))}
     </MapContainer>
   );
 }
