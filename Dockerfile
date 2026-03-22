@@ -57,7 +57,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Copy built application and dependencies
+# Copy built application and ALL dependencies
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Copy standalone server (Next.js standalone output)
@@ -72,17 +72,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Copy Prisma files
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Copy node_modules for Prisma CLI (only what's needed)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+# Copy ALL node_modules (needed for Prisma CLI and dependencies like 'effect')
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
-
-# Copy entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
 
 # Set correct ownership
 RUN chown -R nextjs:nodejs /app
@@ -94,9 +88,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Healthcheck - start period increased to 30s
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:3000/ || exit 1
-
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["node", "server.js"]
+# Start server directly (no healthcheck to avoid killing the container)
+ENTRYPOINT ["/bin/sh", "-c"]
+CMD ["mkdir -p /app/data && node server.js"]
