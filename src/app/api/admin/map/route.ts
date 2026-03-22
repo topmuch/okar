@@ -113,7 +113,8 @@ export async function GET(request: NextRequest) {
             accountStatus: true,
             validationStatus: true,
             createdAt: true,
-            vehicles: {
+            // ✅ CORRECTION: Utiliser 'Vehicle' (nom Prisma correct)
+            Vehicle: {
               select: { id: true }
             },
             GarageProfile: {
@@ -126,11 +127,14 @@ export async function GET(request: NextRequest) {
           take: 500
         });
 
+        console.log('[MAP API] Found', garages.length, 'garages');
+
         garages.forEach(g => {
           const city = extractCityFromAddress(g.address);
           let lat = g.latitude;
           let lng = g.longitude;
 
+          // Si pas de coordonnées mais une adresse, déduire de l'adresse
           if ((!lat || !lng) && g.address) {
             const derivedCoords = getCoordsFromLocation(g.address, city);
             if (derivedCoords) {
@@ -151,7 +155,8 @@ export async function GET(request: NextRequest) {
             isCertified: g.isCertified,
             status: g.accountStatus,
             validationStatus: g.validationStatus,
-            vehicleCount: g.vehicles?.length || 0,
+            // ✅ CORRECTION: Utiliser Vehicle.length
+            vehicleCount: g.Vehicle?.length || 0,
             subscriptionTier: g.GarageProfile?.subscriptionTier || 'FREE'
           });
         });
@@ -194,11 +199,14 @@ export async function GET(request: NextRequest) {
           take: 500
         });
 
+        console.log('[MAP API] Found', vehicles.length, 'vehicles');
+
         vehicles.forEach(v => {
           let lat: number | null = null;
           let lng: number | null = null;
           let city: string | null = null;
 
+          // Utiliser les coordonnées du garage si disponible
           if (v.garage?.latitude && v.garage?.longitude) {
             lat = v.garage.latitude + (Math.random() - 0.5) * 0.005;
             lng = v.garage.longitude + (Math.random() - 0.5) * 0.005;
@@ -247,6 +255,7 @@ export async function GET(request: NextRequest) {
     };
 
     console.log('[MAP API] Success:', stats);
+    console.log('[MAP API] Points with location:', points.filter(p => p.latitude && p.longitude).length);
 
     return NextResponse.json({
       points,

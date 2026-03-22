@@ -1,28 +1,88 @@
-# QRBag - Optimized Dockerfile for Coolify
-FROM node:20-alpine
+# ═══════════════════════════════════════════════════════════════════════════════
+# OKAR - Dockerfile for Coolify Deployment
+# Next.js 15 + Prisma + SQLite
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# Install required packages in one layer
-RUN apk add --no-cache git libc6-compat sqlite && \
-    npm install -g bun
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1: Dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
-# Clone the repository
-RUN git clone --depth 1 https://github.com/topmuch/qrbags.git .
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
 
-# Install dependencies and build in one step
+# Install dependencies
+RUN npm ci --include=dev
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2: Builder
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL=file:/app/data/qrbag.db
+ENV NODE_ENV=production
 
-RUN bun install && \
-    npx prisma generate && \
-    bun run build && \
-    mkdir -p /app/data
+# Build the application
+RUN npm run build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 3: Runner (Production)
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy necessary files
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Create data directory for SQLite database
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+
+# Copy and setup entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Set correct ownership
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
 
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV DATABASE_URL=file:/app/data/qrbag.db
 
-CMD sh -c "mkdir -p /app/data && npx prisma db push --skip-generate 2>/dev/null || true && node .next/standalone/server.js"
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["node", "server.js"]
