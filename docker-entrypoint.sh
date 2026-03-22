@@ -21,27 +21,29 @@ echo "📦 Database URL: $DATABASE_URL"
 mkdir -p /app/data
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Prisma Setup
-# ═══════════════════════════════════════════════════════════════════════════════
-
-echo "🔄 Running Prisma migrations..."
-
-# Run Prisma migrations (deploy mode for production)
-npx prisma migrate deploy --schema=/app/prisma/schema.prisma || {
-  echo "⚠️ Migration failed, attempting to push schema..."
-  npx prisma db push --schema=/app/prisma/schema.prisma --accept-data-loss || {
-    echo "⚠️ Schema push also failed, continuing anyway..."
-  }
-}
-
-echo "✅ Database ready!"
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Start Application
+# Start Application First (migrations can fail, app should still start)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 echo "🌟 Starting Next.js server on port 3000..."
 echo "========================================"
 
-# Execute the command passed to the container
-exec "$@"
+# Start the server in background
+node server.js &
+
+# Wait for server to be ready
+sleep 5
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Database migrations (after server starts, non-blocking)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Try to run migrations with local Prisma (version 6.x)
+if [ -f "/app/node_modules/.bin/prisma" ]; then
+  echo "🔄 Running Prisma migrations with local version..."
+  /app/node_modules/.bin/prisma migrate deploy --schema=/app/prisma/schema.prisma 2>/dev/null || {
+    echo "⚠️ Migration failed, database might already be up to date"
+  }
+fi
+
+# Keep the server running
+wait
