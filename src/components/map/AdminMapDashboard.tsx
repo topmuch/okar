@@ -11,7 +11,9 @@ import {
   Navigation,
   Filter,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,11 +57,12 @@ const DEFAULT_ZOOM = 7;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔄 DYNAMIC IMPORT - Carte chargée côté client uniquement (SSR: false)
+// ⚠️ CRITICAL: Leaflet ne fonctionne pas en SSR
 // ═══════════════════════════════════════════════════════════════════════════════
 const MapComponent = dynamic(
   () => import('./MapContent'),
   {
-    ssr: false,
+    ssr: false,  // ⚠️ CRITICAL: Désactive le Server-Side Rendering
     loading: () => (
       <div 
         className="w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-xl"
@@ -115,6 +118,7 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const [mapTheme, setMapTheme] = useState<'light' | 'dark'>('light');
 
   const [filters, setFilters] = useState({
     showGarages: true,
@@ -126,6 +130,21 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
   // ⚠️ CRITICAL: S'assurer qu'on est côté client avant d'afficher la carte
   useEffect(() => {
     setIsClient(true);
+    
+    // 🌙 Détecter le thème sombre du système
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark') ||
+                     window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setMapTheme(isDark ? 'dark' : 'light');
+    };
+    
+    checkDarkMode();
+    
+    // Écouter les changements de thème
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', checkDarkMode);
+    
+    return () => mediaQuery.removeEventListener('change', checkDarkMode);
   }, []);
 
   // Charger les données de la carte
@@ -134,6 +153,7 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
     setError(null);
     
     try {
+      console.log('[Map] Fetching map data...');
       const res = await fetch('/api/admin/map?detailed=true');
       
       if (!res.ok) {
@@ -146,6 +166,7 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
         throw new Error(data.error);
       }
       
+      console.log('[Map] Received', data.points?.length || 0, 'points');
       setPoints(data.points || []);
       
       if (data.stats) {
@@ -199,6 +220,11 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
     suspendedCount: points.filter(p => p.status === 'SUSPENDED').length,
   };
 
+  // Toggle thème de la carte
+  const toggleMapTheme = () => {
+    setMapTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
   return (
     <div className={`max-w-7xl mx-auto ${className || ''}`}>
       {/* En-tête */}
@@ -208,18 +234,34 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
             Carte Interactive
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Visualisez les garages et véhicules géolocalisés sur OpenStreetMap
+            Visualisez les garages et véhicules géolocalisés avec CartoDB
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={fetchMapData} 
-          className="gap-2"
-          disabled={loading}
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
+        <div className="flex gap-2">
+          {/* Toggle thème */}
+          <Button 
+            variant="outline" 
+            onClick={toggleMapTheme}
+            className="gap-2"
+            title={mapTheme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
+          >
+            {mapTheme === 'light' ? (
+              <Moon className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4" />
+            )}
+            {mapTheme === 'light' ? 'Sombre' : 'Clair'}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={fetchMapData} 
+            className="gap-2"
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       {/* Statistiques */}
@@ -333,11 +375,12 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
               </div>
             ) : (
               <>
-                {/* Carte Leaflet */}
+                {/* Carte Leaflet avec thème */}
                 <MapComponent 
                   points={filteredPoints}
                   center={SENEGAL_CENTER}
                   zoom={DEFAULT_ZOOM}
+                  theme={mapTheme}
                 />
                 
                 {/* Overlay de chargement */}
@@ -358,6 +401,16 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
                     </Badge>
                   </div>
                 )}
+
+                {/* Indicateur de thème */}
+                <div className="absolute top-4 right-4 z-[1000]">
+                  <Badge 
+                    variant="secondary" 
+                    className={`shadow-md ${mapTheme === 'dark' ? 'bg-slate-800/90 text-white' : 'bg-white/90 text-slate-700'}`}
+                  >
+                    {mapTheme === 'dark' ? '🌙 Dark Matter' : '☀️ Positron Light'}
+                  </Badge>
+                </div>
               </>
             )}
           </div>
@@ -387,6 +440,15 @@ export default function AdminMapDashboard({ className }: AdminMapDashboardProps)
             <span>Véhicule</span>
           </div>
         </div>
+      </div>
+
+      {/* Note technique */}
+      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+        <p className="text-sm text-blue-700 dark:text-blue-300">
+          <strong>💡 Info technique:</strong> Cette carte utilise les tuiles <strong>CartoDB Positron</strong> pour un affichage 
+          optimal et rapide. Les sous-domaines (a/b/c/d) parallélisent le chargement des tuiles pour des performances maximales.
+          Le thème "Dark Matter" s'adapte automatiquement au mode sombre de votre interface.
+        </p>
       </div>
     </div>
   );

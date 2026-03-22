@@ -5,13 +5,13 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎨 LEAFLET CSS - Import direct
+// 🎨 LEAFLET CSS - Import CRITICAL pour le rendu
 // ═══════════════════════════════════════════════════════════════════════════════
 import 'leaflet/dist/leaflet.css';
 import './map-styles.css';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🔧 FIX: Configuration des icônes par défaut Leaflet
+// 🔧 FIX: Configuration des icônes par défaut Leaflet (CDN fiable)
 // ═══════════════════════════════════════════════════════════════════════════════
 if (typeof window !== 'undefined') {
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -21,6 +21,42 @@ if (typeof window !== 'undefined') {
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
   });
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🗺️ CARTODB TILE CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+// 
+// 💡 POURQUOI CARTODB ?
+// ─────────────────────
+// ✅ Stabilité : 99.9% uptime, CDN mondial optimisé
+// ✅ Rapidité : Serveurs edge worldwide, tuiles pré-rendues
+// ✅ Design épuré : Parfait pour interface "Luxe Pro"
+// ✅ Gratuit : Aucune API key requise pour usage standard
+// ✅ Sous-domaines : Parallélisation du chargement (a/b/c/d)
+//
+// 🌙 DARK MODE : Utiliser 'dark_all' au lieu de 'light_all'
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TILE_CONFIG = {
+  // 🌟 POSITRON LIGHT - Design épuré, idéal pour interface professionnelle
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: ['a', 'b', 'c', 'd'] as string[],
+  },
+  // 🌙 DARK MATTER - Pour thème sombre
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: ['a', 'b', 'c', 'd'] as string[],
+  },
+  // 🎨 VOYAGER - Style coloré et moderne
+  voyager: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: ['a', 'b', 'c', 'd'] as string[],
+  },
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📍 TYPES
@@ -46,6 +82,7 @@ interface MapContentProps {
   points: MapPoint[];
   center: [number, number];
   zoom: number;
+  theme?: 'light' | 'dark' | 'voyager';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -80,7 +117,7 @@ const createIcon = (color: string, content: string, size: number = 32) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🗺️ FIT BOUNDS COMPONENT
+// 🗺️ FIT BOUNDS COMPONENT - Ajuste la vue aux marqueurs
 // ═══════════════════════════════════════════════════════════════════════════════
 function FitBounds({ points }: { points: MapPoint[] }) {
   const map = useMap();
@@ -162,6 +199,20 @@ function PopupContent({ point }: { point: MapPoint }) {
             <span className="font-mono font-semibold">{point.licensePlate}</span>
           </p>
         )}
+
+        {/* Statut du garage */}
+        {point.type === 'garage' && point.status && (
+          <p className="text-gray-600 flex items-center gap-1.5">
+            <span>📊</span>
+            <span className={`font-medium ${
+              point.status === 'ACTIVE' ? 'text-emerald-600' : 
+              point.status === 'SUSPENDED' ? 'text-red-600' : 'text-amber-600'
+            }`}>
+              {point.status === 'ACTIVE' ? 'Actif' : 
+               point.status === 'SUSPENDED' ? 'Suspendu' : point.status}
+            </span>
+          </p>
+        )}
       </div>
       
       {point.type === 'garage' && point.isCertified && (
@@ -176,10 +227,18 @@ function PopupContent({ point }: { point: MapPoint }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🗺️ MAP CONTENT COMPONENT
+// 🗺️ MAP CONTENT COMPONENT - Composant principal
 // ═══════════════════════════════════════════════════════════════════════════════
-export default function MapContent({ points, center, zoom }: MapContentProps) {
+export default function MapContent({ 
+  points, 
+  center, 
+  zoom, 
+  theme = 'light' 
+}: MapContentProps) {
   const [isReady, setIsReady] = useState(false);
+
+  // Configuration des tuiles selon le thème
+  const tileConfig = TILE_CONFIG[theme];
 
   // Icônes créées côté client seulement
   const icons = useMemo(() => {
@@ -192,7 +251,7 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
     };
   }, []);
 
-  // Points valides
+  // Points valides avec géolocalisation
   const validPoints = useMemo(() => {
     return points.filter(p => 
       p.latitude !== null && 
@@ -220,7 +279,9 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
     return icons.vehicle;
   };
 
-  // Ne pas rendre tant que les icônes ne sont pas prêtes
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔄 LOADING STATE
+  // ═══════════════════════════════════════════════════════════════════
   if (!isReady || !icons) {
     return (
       <div 
@@ -235,6 +296,9 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🗺️ RENDER MAP
+  // ═══════════════════════════════════════════════════════════════════
   return (
     <MapContainer
       center={center}
@@ -243,21 +307,27 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
       zoomControl={true}
       doubleClickZoom={true}
       style={{ 
-        height: '600px', 
-        width: '100%',
+        height: '600px',       // ⚠️ CRITICAL: Hauteur explicite
+        width: '100%',         // ⚠️ CRITICAL: Largeur 100%
         zIndex: 1,
-        background: '#f1f5f9'
+        background: theme === 'dark' ? '#1a1a2e' : '#f8fafc'
       }}
       className="leaflet-map-container"
     >
+      {/* 🌍 TILELAYER CARTODB avec sous-domaines optimisés */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        url={tileConfig.url}
+        attribution={tileConfig.attribution}
+        subdomains={tileConfig.subdomains}  // ⚡ Performance: parallélise le chargement
         maxZoom={19}
+        minZoom={3}
+        detectRetina={true}    // ✨ Meilleure résolution sur écrans Retina
       />
       
+      {/* 🎯 Auto-ajustement aux marqueurs */}
       <FitBounds points={validPoints} />
       
+      {/* 📍 MARQUEURS */}
       {validPoints.map((point) => {
         const icon = getIcon(point);
         if (!icon) return null;
@@ -268,7 +338,11 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
             position={[point.latitude!, point.longitude!]}
             icon={icon}
           >
-            <Popup maxWidth={300} closeButton={true}>
+            <Popup 
+              maxWidth={300} 
+              closeButton={true}
+              className="okar-popup"
+            >
               <PopupContent point={point} />
             </Popup>
           </Marker>
