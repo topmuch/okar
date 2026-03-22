@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    if (!garage[0].isCertified) {
+    // SQLite returns 1 or 0 for boolean
+    const isCertified = garage[0].isCertified === 1 || garage[0].isCertified === true;
+    
+    if (!isCertified) {
       return NextResponse.json({ 
         success: false,
         error: 'Seuls les garages certifiés AutoPass peuvent activer des QR codes' 

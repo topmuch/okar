@@ -349,9 +349,10 @@ export default function AdminRootLayout({
     if (loading) return;
 
     // Skip redirect for login page
-    if (pathname === '/admin/connexion') return;
+    if (pathname === '/admin/connexion' || pathname === '/admin/login') return;
 
     if (!user) {
+      // Use replace to avoid adding to history
       router.replace('/admin/connexion');
       return;
     }
@@ -369,7 +370,7 @@ export default function AdminRootLayout({
   };
 
   // Don't wrap login page with sidebar
-  if (pathname === '/admin/connexion') {
+  if (pathname === '/admin/connexion' || pathname === '/admin/login') {
     return <>{children}</>;
   }
 

@@ -6,45 +6,30 @@ import {
   Car,
   Search,
   Eye,
-  Shield,
   AlertTriangle,
-  CheckCircle,
-  XCircle,
-  QrCode,
   Calendar,
   RefreshCw,
-  Download,
-  Filter,
-  MapPin,
-  Phone,
   User,
   FileText,
-  Ban,
-  ChevronRight,
-  ExternalLink,
-  History,
-  Star
+  Star,
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
 
 // Types
 interface Vehicle {
@@ -81,6 +66,12 @@ interface Vehicle {
     name: string;
     slug: string;
   } | null;
+  qrCode: {
+    id: string;
+    codeUnique: string;
+    shortCode: string;
+    status: string;
+  } | null;
   _count: {
     maintenanceRecords: number;
   };
@@ -101,12 +92,16 @@ export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterQrStatus, setFilterQrStatus] = useState<string>('all');
   
-  // Modal
+  // Modal détail
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // Modal révocation QR
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [vehicleToRevoke, setVehicleToRevoke] = useState<Vehicle | null>(null);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revoking, setRevoking] = useState(false);
 
   useEffect(() => {
     fetchVehicles();
@@ -126,44 +121,61 @@ export default function AdminVehiclesPage() {
     }
   };
 
+  const handleRevokeQr = async () => {
+    if (!vehicleToRevoke) return;
+    if (revokeReason.length < 5) {
+      toast.error('La raison doit contenir au moins 5 caractères');
+      return;
+    }
+
+    setRevoking(true);
+    try {
+      const res = await fetch('/api/admin/qrcode/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicleId: vehicleToRevoke.id,
+          reason: revokeReason
+        })
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success('QR code révoqué avec succès');
+        setShowRevokeModal(false);
+        setVehicleToRevoke(null);
+        setRevokeReason('');
+        fetchVehicles(); // Rafraîchir la liste
+      } else {
+        toast.error(data.error || 'Erreur lors de la révocation');
+      }
+    } catch (error) {
+      console.error('Error revoking QR:', error);
+      toast.error('Erreur lors de la révocation du QR code');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  const openRevokeModal = (vehicle: Vehicle) => {
+    setVehicleToRevoke(vehicle);
+    setRevokeReason('');
+    setShowRevokeModal(true);
+  };
+
   const filteredVehicles = vehicles.filter(vehicle => {
     const searchLower = searchQuery.toLowerCase();
-    const matchesSearch =
+    return (
       vehicle.reference.toLowerCase().includes(searchLower) ||
       vehicle.licensePlate?.toLowerCase().includes(searchLower) ||
       vehicle.make?.toLowerCase().includes(searchLower) ||
       vehicle.model?.toLowerCase().includes(searchLower) ||
       vehicle.vin?.toLowerCase().includes(searchLower) ||
       vehicle.owner?.phone?.includes(searchQuery) ||
-      vehicle.proprietor?.phone?.includes(searchQuery);
-
-    const matchesStatus = filterStatus === 'all' || vehicle.status === filterStatus;
-    const matchesQrStatus = filterQrStatus === 'all' || vehicle.qrStatus === filterQrStatus;
-
-    return matchesSearch && matchesStatus && matchesQrStatus;
+      vehicle.proprietor?.phone?.includes(searchQuery)
+    );
   });
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      pending_activation: { label: 'En attente', className: 'bg-amber-500' },
-      active: { label: 'Actif', className: 'bg-emerald-500' },
-      expired: { label: 'Expiré', className: 'bg-red-500' },
-      suspended: { label: 'Suspendu', className: 'bg-red-600' },
-    };
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-500' };
-    return <Badge className={config.className}>{config.label}</Badge>;
-  };
-
-  const getQrStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      INACTIVE: { label: 'Inactif', className: 'bg-gray-500' },
-      ACTIVE: { label: 'Actif', className: 'bg-emerald-500' },
-      LOST: { label: 'Perdu', className: 'bg-red-500' },
-      REVOKED: { label: 'Révoqué', className: 'bg-red-600' },
-    };
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-500' };
-    return <Badge variant="outline" className={config.className}>{config.label}</Badge>;
-  };
 
   const getBadgeIcon = (badge: string | null) => {
     if (!badge) return null;
@@ -190,7 +202,7 @@ export default function AdminVehiclesPage() {
 
   // Stats
   const totalVehicles = vehicles.length;
-  const activeVehicles = vehicles.filter(v => v.status === 'active').length;
+  const totalInterventions = vehicles.reduce((acc, v) => acc + (v._count?.maintenanceRecords || 0), 0);
   const expiringVt = vehicles.filter(v => isExpiringSoon(v.vtEndDate)).length;
   const expiringInsurance = vehicles.filter(v => isExpiringSoon(v.insuranceEndDate)).length;
 
@@ -200,10 +212,10 @@ export default function AdminVehiclesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
-            Gestion des Véhicules
+            Véhicules Activés
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            {totalVehicles} véhicules • {activeVehicles} actifs
+            {totalVehicles} véhicules avec QR code activé
           </p>
         </div>
         <div className="flex gap-2">
@@ -234,11 +246,11 @@ export default function AdminVehiclesPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-white" />
+                <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{activeVehicles}</p>
-                <p className="text-sm text-emerald-600 dark:text-emerald-400">Actifs</p>
+                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{totalInterventions}</p>
+                <p className="text-sm text-emerald-600 dark:text-emerald-400">Interventions</p>
               </div>
             </div>
           </CardContent>
@@ -284,29 +296,6 @@ export default function AdminVehiclesPage() {
             className="pl-10"
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous statuts</SelectItem>
-            <SelectItem value="active">Actif</SelectItem>
-            <SelectItem value="pending_activation">En attente</SelectItem>
-            <SelectItem value="expired">Expiré</SelectItem>
-            <SelectItem value="suspended">Suspendu</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterQrStatus} onValueChange={setFilterQrStatus}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="QR Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous QR</SelectItem>
-            <SelectItem value="ACTIVE">QR Actif</SelectItem>
-            <SelectItem value="INACTIVE">QR Inactif</SelectItem>
-            <SelectItem value="LOST">QR Perdu</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Vehicles Table */}
@@ -341,7 +330,7 @@ export default function AdminVehiclesPage() {
                   <th className="text-left p-4 text-sm font-medium text-slate-500">Véhicule</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-500">Propriétaire</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-500">Garage</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-500">Statut</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-500">QR Code</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-500">Score</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-500">Exp. VT</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-500">Actions</th>
@@ -389,10 +378,22 @@ export default function AdminVehiclesPage() {
                       )}
                     </td>
                     <td className="p-4">
-                      <div className="flex flex-col gap-1">
-                        {getStatusBadge(vehicle.status)}
-                        {getQrStatusBadge(vehicle.qrStatus)}
-                      </div>
+                      {vehicle.qrCode ? (
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-emerald-500">Actif</Badge>
+                          <a 
+                            href={`/v/${vehicle.qrCode.shortCode}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            {vehicle.qrCode.shortCode}
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400">-</span>
+                      )}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
@@ -414,18 +415,28 @@ export default function AdminVehiclesPage() {
                       )}
                     </td>
                     <td className="p-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedVehicle(vehicle);
-                          setShowDetailModal(true);
-                        }}
-                        className="gap-1"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Détails
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedVehicle(vehicle);
+                            setShowDetailModal(true);
+                          }}
+                          className="gap-1"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Détails
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openRevokeModal(vehicle)}
+                          className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -533,6 +544,73 @@ export default function AdminVehiclesPage() {
               </TabsContent>
             </Tabs>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Révocation QR */}
+      <Dialog open={showRevokeModal} onOpenChange={setShowRevokeModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Révoquer le QR Code
+            </DialogTitle>
+            <DialogDescription>
+              Cette action va désactiver le QR code du véhicule.
+            </DialogDescription>
+          </DialogHeader>
+
+          {vehicleToRevoke && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                <p className="font-medium">
+                  {vehicleToRevoke.make} {vehicleToRevoke.model} {vehicleToRevoke.year || ''}
+                </p>
+                <p className="text-sm text-slate-500">
+                  {vehicleToRevoke.licensePlate || vehicleToRevoke.reference}
+                </p>
+                {vehicleToRevoke.qrCode && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    QR: {vehicleToRevoke.qrCode.shortCode}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Raison de la révocation *
+                </label>
+                <Textarea
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                  placeholder="Indiquez la raison de la révocation..."
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRevokeModal(false);
+                setVehicleToRevoke(null);
+                setRevokeReason('');
+              }}
+              disabled={revoking}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRevokeQr}
+              disabled={revoking || revokeReason.length < 5}
+            >
+              {revoking ? 'Révocation...' : 'Révoquer le QR'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

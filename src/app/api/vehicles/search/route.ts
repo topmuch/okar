@@ -76,14 +76,14 @@ export async function GET(request: NextRequest) {
         status: { not: 'deleted' },
       },
       include: {
-        garage: {
+        Garage: {
           select: {
             name: true,
             isCertified: true,
             logo: true,
           },
         },
-        maintenanceRecords: {
+        MaintenanceRecord: {
           where: {
             OR: [
               { status: 'VALIDATED' },
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
           orderBy: { interventionDate: 'desc' },
           take: 50,
         },
-        ownershipHistory: {
+        OwnershipHistory: {
           select: { id: true },
         },
       },
@@ -116,8 +116,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculer les données de teasing
-    const totalInterventions = vehicle.maintenanceRecords.length;
-    const validatedInterventions = vehicle.maintenanceRecords.filter(
+    const totalInterventions = vehicle.MaintenanceRecord?.length || 0;
+    const validatedInterventions = (vehicle.MaintenanceRecord || []).filter(
       r => r.ownerValidation === 'VALIDATED' && r.isLocked
     ).length;
 
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Dernier kilométrage connu
-    const lastMileageRecord = vehicle.maintenanceRecords.find(r => r.mileage);
+    const lastMileageRecord = (vehicle.MaintenanceRecord || []).find(r => r.mileage);
     const lastMileage = lastMileageRecord?.mileage || vehicle.currentMileage || 0;
 
     // Construire la réponse
@@ -205,14 +205,14 @@ export async function GET(request: NextRequest) {
         totalInterventions,
         validatedInterventions,
         lastMileage,
-        ownerCount: vehicle.ownershipHistory.length || 1,
+        ownerCount: vehicle.OwnershipHistory?.length || 1,
         hasAlerts: alertsList.length > 0,
         alertsList,
       },
-      garage: vehicle.garage ? {
-        name: vehicle.garage.name,
-        isCertified: vehicle.garage.isCertified,
-        logo: vehicle.garage.logo,
+      garage: vehicle.Garage ? {
+        name: vehicle.Garage.name,
+        isCertified: vehicle.Garage.isCertified,
+        logo: vehicle.Garage.logo,
       } : null,
     };
 

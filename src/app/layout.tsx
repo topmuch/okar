@@ -1,19 +1,32 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Syne } from "next/font/google";
+import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegistration } from "@/components/pwa-registration";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎨 LUXE ÉDITORIAL - Premium Typography
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Inter - Sans-serif géométrique pour le corps
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
 
-const syne = Syne({
-  variable: "--font-syne",
+// Playfair Display - Serif élégant pour les titres
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// JetBrains Mono - Monospace pour les données techniques
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
   display: "swap",
 });
@@ -155,7 +168,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${inter.variable} ${syne.variable} antialiased bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white`}
+        className={`${inter.variable} ${playfair.variable} ${jetbrains.variable} antialiased bg-[#FDFBF7] text-[#0F172A]`}
       >
         <ThemeProvider>
           <AuthProvider>

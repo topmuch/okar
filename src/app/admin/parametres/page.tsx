@@ -27,6 +27,7 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  MessageCircle,
 } from "lucide-react";
 
 interface SettingsData {
@@ -56,6 +57,14 @@ interface EmailSettingsData {
   smtpUser: string | null;
   smtpPassword: string | null;
   smtpEncryption: string;
+}
+
+interface PaymentSettingsData {
+  whatsapp_number: string;
+  whatsapp_message: string;
+  orange_money_number: string;
+  wave_number: string;
+  free_money_number: string;
 }
 
 const EMAIL_PROVIDERS = [
@@ -261,6 +270,14 @@ export default function ParametresPage() {
     smtpEncryption: 'tls',
   });
   
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettingsData>({
+    whatsapp_number: '+221 77 000 00 00',
+    whatsapp_message: 'Bonjour, je souhaite effectuer un paiement de {montant} FCFA pour {type}. Voici les détails:\n\nRéférence: {reference}\nMontant: {montant} FCFA\n\nMerci de confirmer le paiement.',
+    orange_money_number: '',
+    wave_number: '',
+    free_money_number: '',
+  });
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -276,7 +293,7 @@ export default function ParametresPage() {
 
   // Update active tab when URL param changes
   useEffect(() => {
-    if (tabParam && ['company', 'seo', 'localization', 'email', 'backup'].includes(tabParam)) {
+    if (tabParam && ['company', 'seo', 'localization', 'email', 'payment', 'backup'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -284,6 +301,7 @@ export default function ParametresPage() {
   useEffect(() => {
     fetchSettings();
     fetchEmailSettings();
+    fetchPaymentSettings();
   }, []);
 
   const fetchSettings = async () => {
@@ -308,6 +326,24 @@ export default function ParametresPage() {
       }
     } catch (error) {
       console.error('Error fetching email settings:', error);
+    }
+  };
+
+  const fetchPaymentSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/settings');
+      const data = await response.json();
+      if (data.settings) {
+        setPaymentSettings({
+          whatsapp_number: data.settings.whatsapp_number || '+221 77 000 00 00',
+          whatsapp_message: data.settings.whatsapp_message || 'Bonjour, je souhaite effectuer un paiement de {montant} FCFA pour {type}. Voici les détails:\n\nRéférence: {reference}\nMontant: {montant} FCFA\n\nMerci de confirmer le paiement.',
+          orange_money_number: data.settings.orange_money_number || '',
+          wave_number: data.settings.wave_number || '',
+          free_money_number: data.settings.free_money_number || '',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payment settings:', error);
     }
   };
 
@@ -386,6 +422,26 @@ export default function ParametresPage() {
     }
   };
 
+  const handleSavePaymentSettings = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: paymentSettings }),
+      });
+      
+      if (response.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving payment settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -429,6 +485,7 @@ export default function ParametresPage() {
     { id: 'seo', label: 'SEO', icon: Search },
     { id: 'localization', label: 'Localisation', icon: Globe },
     { id: 'email', label: 'Email', icon: Mail },
+    { id: 'payment', label: 'Paiement', icon: DollarSign },
     { id: 'backup', label: 'Sauvegarde', icon: Database },
   ];
 
@@ -1020,6 +1077,132 @@ export default function ParametresPage() {
           </div>
         )}
 
+        {/* Payment Tab */}
+        {!loading && activeTab === 'payment' && (
+          <div className="space-y-6">
+            {/* WhatsApp Settings */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-[#ff7f00]" />
+                Configuration WhatsApp pour les paiements
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                Lorsqu&apos;un client choisit un mode de paiement, il sera redirigé vers WhatsApp avec un message pré-enregistré.
+              </p>
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                    <Phone className="w-4 h-4 inline mr-1" />
+                    Numéro WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    value={paymentSettings.whatsapp_number}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, whatsapp_number: e.target.value })}
+                    placeholder="+221 77 000 00 00"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:border-[#ff7f00]"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Format international: +221 77 123 45 67
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                    Message pré-enregistré
+                  </label>
+                  <textarea
+                    value={paymentSettings.whatsapp_message}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, whatsapp_message: e.target.value })}
+                    rows={6}
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:border-[#ff7f00] resize-none"
+                  />
+                  <p className="text-xs text-slate-400 mt-2">
+                    Variables disponibles: {'{montant}'} = montant, {'{type}'} = type de service, {'{reference}'} = référence
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Numbers */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-[#ff7f00]" />
+                Numéros de paiement mobile
+              </h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                    Orange Money
+                  </label>
+                  <input
+                    type="tel"
+                    value={paymentSettings.orange_money_number}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, orange_money_number: e.target.value })}
+                    placeholder="77 123 45 67"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:border-[#ff7f00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                    Wave
+                  </label>
+                  <input
+                    type="tel"
+                    value={paymentSettings.wave_number}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, wave_number: e.target.value })}
+                    placeholder="77 123 45 67"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:border-[#ff7f00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                    Free Money
+                  </label>
+                  <input
+                    type="tel"
+                    value={paymentSettings.free_money_number}
+                    onChange={(e) => setPaymentSettings({ ...paymentSettings, free_money_number: e.target.value })}
+                    placeholder="77 123 45 67"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:border-[#ff7f00]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button for Payment Settings */}
+            <div className="flex justify-end">
+              <button
+                onClick={handleSavePaymentSettings}
+                disabled={saving}
+                className={`
+                  flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all
+                  ${saved
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-[#ff7f00] text-white hover:bg-[#e67300]'
+                  }
+                `}
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : saved ? (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    Enregistré !
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Enregistrer les paramètres de paiement
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Backup Tab */}
         {!loading && activeTab === 'backup' && (
           <div className="space-y-6">
@@ -1028,7 +1211,7 @@ export default function ParametresPage() {
         )}
 
         {/* Save Button */}
-        {!loading && activeTab !== 'backup' && activeTab !== 'email' && (
+        {!loading && activeTab !== 'backup' && activeTab !== 'email' && activeTab !== 'payment' && (
           <div className="fixed bottom-6 right-6 z-50">
             <button
               onClick={handleSave}

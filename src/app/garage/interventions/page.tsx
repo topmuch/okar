@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Wrench,
   Clock,
@@ -17,7 +18,9 @@ import {
   Loader2,
   AlertCircle,
   FileText,
-  Image as ImageIcon
+  Image as ImageIcon,
+  X,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -79,11 +82,13 @@ const categoryColors: Record<string, string> = {
 
 export default function ChantiersOKARPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, validated: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'validated' | 'rejected'>('all');
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const garageId = user?.garageId || '';
 
@@ -92,6 +97,16 @@ export default function ChantiersOKARPage() {
       fetchRecords();
     }
   }, [garageId]);
+
+  // Check for success param from redirect
+  useEffect(() => {
+    if (searchParams.get('success') === '1') {
+      setShowSuccessToast(true);
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => setShowSuccessToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   const fetchRecords = async () => {
     try {
@@ -199,6 +214,20 @@ export default function ChantiersOKARPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Success Toast */}
+      {showSuccessToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-lg flex items-center gap-3 animate-bounce">
+          <Sparkles className="w-6 h-6" />
+          <span className="font-semibold">Intervention enregistrée avec succès !</span>
+          <button 
+            onClick={() => setShowSuccessToast(false)}
+            className="ml-2 hover:bg-emerald-600 p-1 rounded-full transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -40,9 +40,7 @@ export default function GarageVehiclesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-
-  // Garage ID (would come from auth)
-  const garageId = 'demo-garage-id';
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
   useEffect(() => {
     fetchVehicles();
@@ -54,7 +52,7 @@ export default function GarageVehiclesPage() {
 
   const fetchVehicles = async () => {
     try {
-      const response = await fetch(`/api/vehicles?garageId=${garageId}`);
+      const response = await fetch('/api/garage/vehicles');
       const data = await response.json();
       setVehicles(data.vehicles || []);
     } catch (error) {
@@ -248,13 +246,20 @@ export default function GarageVehiclesPage() {
                     </span>
                     
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedVehicle(vehicle)}
+                        className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                        title="Voir détails"
+                      >
+                        <Eye className="w-5 h-5 text-blue-500" />
+                      </button>
                       <Link
-                        href={`/scan/${vehicle.reference}`}
+                        href={`/v/${vehicle.reference}`}
                         target="_blank"
                         className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                        title="Voir fiche publique"
+                        title="Voir fiche publique QR"
                       >
-                        <Eye className="w-5 h-5 text-slate-400 hover:text-orange-500" />
+                        <QrCode className="w-5 h-5 text-slate-400 hover:text-orange-500" />
                       </Link>
                       {vehicle.qrStatus === 'ACTIVE' && (
                         <Link
@@ -278,6 +283,115 @@ export default function GarageVehiclesPage() {
       {filteredVehicles.length > 0 && (
         <div className="mt-6 text-center text-sm text-slate-500">
           {filteredVehicles.length} véhicule(s) affiché(s) sur {vehicles.length}
+        </div>
+      )}
+
+      {/* Vehicle Detail Modal */}
+      {selectedVehicle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-orange-100 dark:bg-orange-500/10 rounded-xl flex items-center justify-center">
+                    <Car className="w-7 h-7 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="font-mono text-orange-500 font-medium">{selectedVehicle.reference}</p>
+                    <p className="text-xl font-bold text-slate-800 dark:text-white">
+                      {selectedVehicle.make || selectedVehicle.model
+                        ? `${selectedVehicle.make || ''} ${selectedVehicle.model || ''}`.trim()
+                        : 'Véhicule non renseigné'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedVehicle(null)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                >
+                  <span className="sr-only">Fermer</span>
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedVehicle.licensePlate && (
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Immatriculation</p>
+                    <p className="font-mono font-bold text-slate-800 dark:text-white">{selectedVehicle.licensePlate}</p>
+                  </div>
+                )}
+                {selectedVehicle.year && (
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Année</p>
+                    <p className="font-bold text-slate-800 dark:text-white">{selectedVehicle.year}</p>
+                  </div>
+                )}
+                {selectedVehicle.color && (
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Couleur</p>
+                    <p className="font-bold text-slate-800 dark:text-white">{selectedVehicle.color}</p>
+                  </div>
+                )}
+                {selectedVehicle.mileage !== null && (
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Kilométrage</p>
+                    <p className="font-bold text-slate-800 dark:text-white">{selectedVehicle.mileage.toLocaleString()} km</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Owner */}
+              {selectedVehicle.ownerName && (
+                <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Propriétaire</p>
+                  <p className="font-bold text-slate-800 dark:text-white">{selectedVehicle.ownerName}</p>
+                  {selectedVehicle.ownerPhone && (
+                    <a 
+                      href={`tel:${selectedVehicle.ownerPhone}`}
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      📞 {selectedVehicle.ownerPhone}
+                    </a>
+                  )}
+                </div>
+              )}
+              
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusConfig(selectedVehicle.qrStatus).className}`}>
+                  {getStatusConfig(selectedVehicle.qrStatus).label}
+                </span>
+                {selectedVehicle.maintenanceCount > 0 && (
+                  <span className="text-sm text-slate-500">
+                    {selectedVehicle.maintenanceCount} intervention(s)
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex gap-3">
+              <Link
+                href={`/v/${selectedVehicle.reference}`}
+                target="_blank"
+                className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium text-center transition-colors"
+              >
+                Voir le passeport QR
+              </Link>
+              <Link
+                href={`/garage/interventions/nouvelle?vehicleId=${selectedVehicle.id}`}
+                className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium text-center transition-colors"
+              >
+                Nouvelle intervention
+              </Link>
+            </div>
+          </div>
         </div>
       )}
     </div>

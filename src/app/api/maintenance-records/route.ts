@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateCuid } from '@/lib/qr';
 import { triggerScoreCalculation } from '@/lib/score';
+import { getSession } from '@/lib/session';
 
 // GET - List maintenance records
 export async function GET(request: NextRequest) {
@@ -124,9 +125,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       vehicleId,
-      garageId,
+      garageId: bodyGarageId,
       mechanicName,
       category,
+      categories, // Array of categories
       description,
       mileage,
       partsList,
@@ -143,11 +145,33 @@ export async function POST(request: NextRequest) {
       isVerified = false,
     } = body;
 
+    // Get session for authentication
+    const session = await getSession();
+    
+    // For OKAR records, require authentication and use session garageId
+    let garageId = bodyGarageId;
+    
+    if (source === 'OKAR') {
+      if (!session || !session.garageId) {
+        return NextResponse.json({ 
+          error: 'Session non valide. Veuillez vous reconnecter.' 
+        }, { status: 401 });
+      }
+      garageId = session.garageId;
+    }
+
     const id = generateCuid();
     const now = new Date().toISOString();
 
+    // Handle categories - store primary in category, others in subCategory as JSON
+    const primaryCategory = category || (categories && categories.length > 0 ? categories[0] : 'autre');
+    const additionalCategories = categories && categories.length > 1 
+      ? JSON.stringify(categories.slice(1)) 
+      : null;
+
     // Check if this is a paper history record (no garage required)
     const isPaperHistory = source === 'PRE_OKAR_PAPER';
+    let isCertifiedGarage = false;
 
     // For OKAR records, verify garage is certified
     if (!isPaperHistory && garageId) {
@@ -155,7 +179,16 @@ export async function POST(request: NextRequest) {
         SELECT isCertified FROM Garage WHERE id = ${garageId} LIMIT 1
       `;
 
-      if (!garages || garages.length === 0 || !garages[0].isCertified) {
+      if (!garages || garages.length === 0) {
+        return NextResponse.json({ 
+          error: 'Garage non trouvé' 
+        }, { status: 404 });
+      }
+
+      // SQLite returns 1 or 0 for boolean
+      isCertifiedGarage = garages[0].isCertified === 1 || garages[0].isCertified === true;
+      
+      if (!isCertifiedGarage) {
         return NextResponse.json({ 
           error: 'Seuls les garages certifiés peuvent créer des rapports d\'entretien' 
         }, { status: 403 });
@@ -163,25 +196,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine status based on source
-    // OKAR records need owner validation, paper history records are archived
-    const recordStatus = isPaperHistory ? 'ARCHIVED' : 'SUBMITTED';
-    const ownerValidation = isPaperHistory ? 'PENDING' : 'PENDING';
+    // OKAR records from certified garages are auto-validated and locked
+    const recordStatus = isPaperHistory ? 'ARCHIVED' : 'COMPLETED';
+    // Auto-validate and lock for certified garages
+    const ownerValidation = isCertifiedGarage ? 'VALIDATED' : 'PENDING';
+    const isLocked = isCertifiedGarage ? true : false;
 
     // Create record with source info
     await db.$executeRawUnsafe(`
       INSERT INTO MaintenanceRecord (
-        id, vehicleId, garageId, mechanicName, category, description,
+        id, vehicleId, garageId, mechanicName, category, subCategory, description,
         mileage, partsList, partsCost, laborCost, totalCost,
         invoicePhoto, invoiceNumber, mechanicSignature,
-        ownerValidation, status, interventionDate, createdAt, updatedAt,
+        ownerValidation, status, isLocked, interventionDate, createdAt, updatedAt,
         source, paperDocumentUrl, isVerified
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, 
       id, 
       vehicleId, 
       garageId || null, 
       mechanicName || null,
-      category, 
+      primaryCategory, 
+      additionalCategories, 
       description || null, 
       mileage || null,
       partsList || null, 
@@ -193,6 +229,7 @@ export async function POST(request: NextRequest) {
       mechanicSignature || null,
       ownerValidation, 
       recordStatus, 
+      isLocked ? 1 : 0, 
       interventionDate || now, 
       now,
       now,
@@ -204,7 +241,7 @@ export async function POST(request: NextRequest) {
     // Update vehicle mileage
     if (mileage) {
       await db.$executeRaw`
-        UPDATE Vehicle SET mileage = ${mileage}, updatedAt = ${now}
+        UPDATE Vehicle SET currentMileage = ${mileage}, updatedAt = ${now}
         WHERE id = ${vehicleId}
       `;
     }
@@ -218,10 +255,10 @@ export async function POST(request: NextRequest) {
       if (vehicles && vehicles.length > 0 && vehicles[0].ownerId) {
         const notificationId = generateCuid();
         await db.$executeRaw`
-          INSERT INTO Notification (id, type, userId, vehicleId, message, createdAt)
+          INSERT INTO Notification (id, type, userId, vehicleId, message, createdAt, updatedAt)
           VALUES (
             ${notificationId}, 'validation_required', ${vehicles[0].ownerId},
-            ${vehicleId}, 'Un nouveau rapport d''entretien est en attente de validation', ${now}
+            ${vehicleId}, 'Un nouveau rapport d''entretien est en attente de validation', ${now}, ${now}
           )
         `;
       }
@@ -245,6 +282,7 @@ export async function POST(request: NextRequest) {
         : 'Rapport d\'entretien créé avec succès',
       source,
       isPaperHistory,
+      categories: categories || [primaryCategory],
     });
 
   } catch (error) {

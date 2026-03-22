@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSession } from '@/lib/session';
 
 // Vehicle row type for raw query results
 interface VehicleRow {
@@ -10,7 +11,7 @@ interface VehicleRow {
   model: string | null;
   year: number | null;
   color: string | null;
-  mileage: number | null;
+  currentMileage: number | null;
   engineType: string | null;
   licensePlate: string | null;
   qrStatus: string;
@@ -27,22 +28,26 @@ interface VehicleRow {
 // GET - List all vehicles for a garage
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const garageId = searchParams.get('garageId');
-    const status = searchParams.get('status');
-    const qrStatus = searchParams.get('qrStatus');
-    const search = searchParams.get('search');
-
-    if (!garageId) {
+    // Get session for authentication
+    const session = await getSession();
+    
+    if (!session || !session.garageId) {
       return NextResponse.json(
         {
-          error: 'Garage ID is required',
+          error: 'Non autorisé',
           vehicles: [],
           stats: { total: 0, active: 0, inactive: 0, blocked: 0 }
         },
-        { status: 400 }
+        { status: 401 }
       );
     }
+
+    const garageId = session.garageId;
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const qrStatus = searchParams.get('qrStatus');
+    const search = searchParams.get('search');
 
     // Build the query dynamically based on filters
     let whereClause = 'WHERE garageId = ?';
@@ -66,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     const query = `
       SELECT
-        id, reference, vin, make, model, year, color, mileage, engineType,
+        id, reference, vin, make, model, year, color, currentMileage, engineType,
         licensePlate, qrStatus, status, ownerId, ownerName, ownerPhone,
         garageId, lotId, activatedAt, createdAt
       FROM Vehicle
@@ -75,6 +80,37 @@ export async function GET(request: NextRequest) {
     `;
 
     const vehicles = await db.$queryRawUnsafe<VehicleRow[]>(query, ...params);
+
+    // Get maintenance counts for each vehicle (all records for garage view)
+    const vehicleIds = vehicles.map(v => v.id);
+    const maintenanceCounts: { vehicleId: string; count: bigint }[] = vehicleIds.length > 0 
+      ? await db.$queryRawUnsafe(
+          `SELECT vehicleId, COUNT(*) as count 
+           FROM MaintenanceRecord 
+           WHERE vehicleId IN (${vehicleIds.map(() => '?').join(',')})
+           GROUP BY vehicleId`,
+          ...vehicleIds
+        )
+      : [];
+
+    const countMap = new Map(maintenanceCounts.map(m => [m.vehicleId, Number(m.count)]));
+
+    // Transform to match frontend interface
+    const transformedVehicles = vehicles.map(v => ({
+      id: v.id,
+      reference: v.reference,
+      make: v.make,
+      model: v.model,
+      year: v.year,
+      color: v.color,
+      licensePlate: v.licensePlate,
+      mileage: v.currentMileage,
+      qrStatus: v.qrStatus,
+      ownerName: v.ownerName,
+      ownerPhone: v.ownerPhone,
+      activatedAt: v.activatedAt,
+      maintenanceCount: countMap.get(v.id) || 0,
+    }));
 
     // Calculate stats
     const stats = {
@@ -85,7 +121,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({
-      vehicles,
+      vehicles: transformedVehicles,
       stats
     });
 

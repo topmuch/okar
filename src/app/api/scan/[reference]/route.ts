@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 // ========================================
-// API: SCAN D'UN QR CODE (Format Reference)
-// Compatible avec /scan/[reference] page
+// API: SCAN D'UN QR CODE
 // ========================================
 
 export async function GET(
@@ -12,177 +11,239 @@ export async function GET(
 ) {
   try {
     const { reference } = await params;
-    
-    // Get current user if authenticated
-    let currentUser: { id: string; role: string; garageId?: string } | null = null;
-    const authHeader = request.headers.get('cookie');
-    if (authHeader) {
-      try {
-        const sessionRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/me`, {
-          headers: { cookie: authHeader }
-        });
-        if (sessionRes.ok) {
-          const sessionData = await sessionRes.json();
-          currentUser = sessionData.user;
+
+    // 1. Chercher le QR code par shortCode OU codeUnique
+    let qrCode = await db.qRCodeStock.findUnique({
+      where: { shortCode: reference },
+      include: {
+        QRCodeLot: {
+          select: { prefix: true }
+        },
+        Vehicle: {
+          include: {
+            Garage: {
+              select: { name: true, isCertified: true, logo: true }
+            }
+          }
+        },
+        Garage: {
+          select: { name: true }
         }
-      } catch (e) {
-        // Ignore auth errors for public access
       }
-    }
-    
-    const isGarage = currentUser?.role === 'garage';
-    const isOwner = currentUser?.id !== undefined;
+    });
 
-    // 1. CHERCHER LE QR CODE PAR SHORTCODE
-    const qrCode = await db.$queryRawUnsafe<any[]>(
-      `SELECT qs.*, v.id as vehicleId, v.reference, v.make, v.model,
-              v.year, v.color, v.licensePlate, v.ownerId, v.garageId, v.qrStatus,
-              v.mileage, v.activatedAt, v.okarScore, v.okarBadge,
-              u.name as ownerName, u.phone as ownerPhone
-       FROM QRCodeStock qs
-       LEFT JOIN Vehicle v ON qs.linkedVehicleId = v.id
-       LEFT JOIN User u ON v.ownerId = u.id
-       WHERE qs.shortCode = ?`,
-      reference
-    );
-
-    // 2. SI NON TROUVÉ, CHERCHER PAR RÉFÉRENCE VÉHICULE
-    let qr = qrCode?.[0];
-    let vehicleData: any = null;
-
-    if (!qr) {
-      // Chercher directement par référence véhicule
-      const vehicle = await db.$queryRawUnsafe<any[]>(
-        `SELECT v.*, u.name as ownerName, u.phone as ownerPhone
-         FROM Vehicle v
-         LEFT JOIN User u ON v.ownerId = u.id
-         WHERE v.reference = ?`,
-        reference
-      );
-
-      if (vehicle && vehicle.length > 0) {
-        vehicleData = vehicle[0];
-      } else {
-        return NextResponse.json({
-          status: 'not_found',
-          message: 'Ce code QR n\'existe pas dans le système'
-        });
-      }
-    } else {
-      vehicleData = qr;
-    }
-
-    // 3. VÉRIFIER LE STATUT DU QR CODE
-    if (qr && (qr.status === 'STOCK' || qr.status === 'ASSIGNED')) {
-      return NextResponse.json({
-        status: 'inactive',
-        message: 'Ce QR Code n\'est pas encore activé',
-        info: {
-          lotId: qr.lotId,
-          assignedGarageId: qr.assignedGarageId,
+    // Si pas trouvé par shortCode, essayer par codeUnique
+    if (!qrCode) {
+      qrCode = await db.qRCodeStock.findUnique({
+        where: { codeUnique: reference },
+        include: {
+          QRCodeLot: {
+            select: { prefix: true }
+          },
+          Vehicle: {
+            include: {
+              Garage: {
+                select: { name: true, isCertified: true, logo: true }
+              }
+            }
+          },
+          Garage: {
+            select: { name: true }
+          }
         }
       });
     }
 
-    if (qr && qr.status === 'REVOKED') {
+    // 2. Si non trouvé, chercher par référence véhicule
+    if (!qrCode) {
+      const vehicle = await db.vehicle.findUnique({
+        where: { reference },
+        include: {
+          Garage: {
+            select: { name: true, isCertified: true, logo: true }
+          }
+        }
+      });
+
+      if (!vehicle) {
+        return NextResponse.json({
+          success: false,
+          status: 'not_found',
+          qrStatus: 'NOT_FOUND',
+          message: 'Ce code QR n\'existe pas dans le système'
+        });
+      }
+
+      return buildVehicleResponse(vehicle, vehicle.Garage);
+    }
+
+    // 3. Vérifier le statut du QR code
+    if (qrCode.status === 'STOCK' || qrCode.status === 'ASSIGNED') {
       return NextResponse.json({
+        success: true,
+        status: 'inactive',
+        qrStatus: 'INACTIVE',
+        message: 'Ce QR Code n\'est pas encore activé',
+        vehicle: {
+          id: null,
+          reference: qrCode.shortCode,
+          make: null,
+          model: null,
+          licensePlate: null,
+          year: null,
+          mileage: null,
+          owner: null
+        },
+        info: {
+          lotId: qrCode.lotId,
+          lotPrefix: qrCode.QRCodeLot?.prefix,
+          assignedGarageId: qrCode.assignedGarageId,
+          assignedGarageName: qrCode.Garage?.name
+        }
+      });
+    }
+
+    if (qrCode.status === 'REVOKED') {
+      return NextResponse.json({
+        success: false,
         status: 'revoked',
+        qrStatus: 'BLOCKED',
         message: 'Ce QR Code a été révoqué'
       });
     }
 
-    // 4. RÉCUPÉRER LES INFOS COMPLÈTES DU VÉHICULE
-    const vehicleId = vehicleData?.vehicleId || vehicleData?.id;
-
-    if (!vehicleId) {
+    // 4. Vérifier qu'on a un véhicule
+    if (!qrCode.Vehicle) {
       return NextResponse.json({
+        success: true,
         status: 'inactive',
-        message: 'Aucun véhicule associé à ce QR Code'
+        qrStatus: 'INACTIVE',
+        message: 'Aucun véhicule associé à ce QR Code',
+        vehicle: {
+          id: null,
+          reference: qrCode.shortCode,
+          make: null,
+          model: null,
+          licensePlate: null,
+          year: null,
+          mileage: null,
+          owner: null
+        }
       });
     }
 
-    // Récupérer le garage
-    const garage = await db.$queryRawUnsafe<any[]>(
-      `SELECT id, name, isCertified FROM Garage WHERE id = ?`,
-      vehicleData.garageId
-    );
-
-    // Récupérer l'historique des interventions
-    const maintenanceRecords = await db.$queryRawUnsafe<any[]>(
-      `SELECT mr.id, mr.category, mr.description, mr.mileage, mr.totalCost,
-              mr.interventionDate, mr.ownerValidation, mr.source, mr.isVerified,
-              g.name as garageName
-       FROM MaintenanceRecord mr
-       LEFT JOIN Garage g ON mr.garageId = g.id
-       WHERE mr.vehicleId = ?
-       ORDER BY mr.interventionDate DESC`,
-      vehicleId
-    );
-
-    // 5. RETOURNER LES DONNÉES
-    // For garage, include owner contact info
-    // For owner, include all records including pending
-    // For public, only validated records
-    
-    const shouldShowOwnerContact = isGarage;
-    const shouldShowAllRecords = isGarage || (isOwner && vehicleData.ownerId === currentUser?.id);
-    
-    const records = maintenanceRecords || [];
-    const displayRecords = shouldShowAllRecords 
-      ? records 
-      : records.filter((r: any) => r.ownerValidation === 'VALIDATED' || r.source === 'PRE_OKAR_PAPER');
-    
-    // Separate OKAR certified records and paper history records
-    const okarRecords = displayRecords.filter((r: any) => r.source !== 'PRE_OKAR_PAPER');
-    const paperRecords = displayRecords.filter((r: any) => r.source === 'PRE_OKAR_PAPER');
-    
-    return NextResponse.json({
-      status: 'active',
-      vehicle: {
-        id: vehicleId,
-        reference: vehicleData.reference,
-        make: vehicleData.make,
-        model: vehicleData.model,
-        year: vehicleData.year,
-        color: vehicleData.color,
-        licensePlate: vehicleData.licensePlate,
-        qrStatus: vehicleData.qrStatus,
-        ownerId: vehicleData.ownerId,
-        ownerName: vehicleData.ownerName,
-        // Only show phone/email for garage users
-        ownerPhone: shouldShowOwnerContact ? vehicleData.ownerPhone : null,
-        ownerEmail: shouldShowOwnerContact ? vehicleData.ownerEmail : null,
-        garageName: garage?.[0]?.name,
-        garageCertified: garage?.[0]?.isCertified === 1,
-        mileage: vehicleData.mileage,
-        activatedAt: vehicleData.activatedAt,
-        vtEndDate: vehicleData.vtEndDate,
-        insuranceEndDate: vehicleData.insuranceEndDate,
-        insuranceCompany: vehicleData.insuranceCompany,
-        currentMileage: vehicleData.mileage,
-        mainPhoto: vehicleData.mainPhoto,
-        nextMaintenanceDueKm: vehicleData.nextMaintenanceDueKm,
-        nextMaintenanceType: vehicleData.nextMaintenanceType,
-        forSale: vehicleData.forSale === 1,
-        salePrice: vehicleData.salePrice,
-        saleContact: vehicleData.saleContact,
-        // OKAR Score
-        okarScore: vehicleData.okarScore || 0,
-        okarBadge: vehicleData.okarBadge || 'BRONZE',
-      },
-      maintenanceRecords: displayRecords,
-      okarRecords,
-      paperRecords,
-      ownershipHistory: [],
-      // Current user context
-      currentUser: currentUser ? { id: currentUser.id, role: currentUser.role } : null,
-    });
+    return buildVehicleResponse(qrCode.Vehicle, qrCode.Vehicle.Garage);
 
   } catch (error) {
     console.error('Scan error:', error);
     return NextResponse.json({
+      success: false,
       status: 'error',
-      message: 'Erreur serveur'
+      qrStatus: 'NOT_FOUND',
+      message: 'Erreur serveur',
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+}
+
+async function buildVehicleResponse(vehicle: any, garage: any) {
+  // Récupérer les interventions
+  const maintenanceRecords = await db.maintenanceRecord.findMany({
+    where: { vehicleId: vehicle.id },
+    orderBy: { interventionDate: 'desc' },
+    take: 50,
+    include: {
+      Garage: {
+        select: { name: true, logo: true, isCertified: true }
+      }
+    }
+  });
+
+  // Filtrer pour affichage public: VALIDATED, PRE_OKAR_PAPER, ou PENDING (nouveau)
+  const publicRecords = maintenanceRecords.filter((r) => 
+    r.ownerValidation === 'VALIDATED' || 
+    r.ownerValidation === 'PENDING' ||
+    r.source === 'PRE_OKAR_PAPER'
+  );
+
+  return NextResponse.json({
+    success: true,
+    status: 'active',
+    qrStatus: 'ACTIVE',
+    vehicle: {
+      id: vehicle.id,
+      reference: vehicle.reference,
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      color: vehicle.color,
+      licensePlate: vehicle.licensePlate,
+      qrStatus: vehicle.qrStatus,
+      ownerId: vehicle.ownerId,
+      ownerName: vehicle.ownerName,
+      ownerPhone: vehicle.ownerPhone,
+      ownerEmail: vehicle.ownerEmail,
+      garageName: garage?.name,
+      garageLogo: garage?.logo,
+      garageCertified: garage?.isCertified || false,
+      mileage: vehicle.currentMileage,
+      currentMileage: vehicle.currentMileage,
+      activatedAt: vehicle.activatedAt,
+      vtStartDate: vehicle.vtStartDate,
+      vtEndDate: vehicle.vtEndDate,
+      vtCenter: vehicle.vtCenter,
+      insuranceStartDate: vehicle.insuranceStartDate,
+      insuranceEndDate: vehicle.insuranceEndDate,
+      insuranceCompany: vehicle.insuranceCompany,
+      insurancePolicyNum: vehicle.insurancePolicyNum,
+      mainPhoto: vehicle.mainPhoto,
+      engineType: vehicle.engineType,
+      vin: vehicle.vin,
+      photos: [],
+      nextMaintenanceDueKm: vehicle.nextMaintenanceDueKm,
+      nextMaintenanceDueDate: vehicle.nextMaintenanceDueDate,
+      nextMaintenanceType: vehicle.nextMaintenanceType,
+      okarScore: vehicle.okarScore || 0,
+      okarBadge: vehicle.okarBadge || 'BRONZE',
+    },
+    maintenanceRecords: publicRecords.map((r) => {
+      // Parse additional categories from subCategory
+      let allCategories = [r.category];
+      if (r.subCategory) {
+        try {
+          const additional = JSON.parse(r.subCategory);
+          if (Array.isArray(additional)) {
+            allCategories = [r.category, ...additional];
+          }
+        } catch {
+          // subCategory might be a simple string, not JSON
+          if (r.subCategory && r.subCategory !== r.category) {
+            allCategories = [r.category, r.subCategory];
+          }
+        }
+      }
+      
+      return {
+        id: r.id,
+        category: r.category,
+        categories: allCategories,
+        subCategory: r.subCategory,
+        description: r.description,
+        mileage: r.mileage,
+        totalCost: r.totalCost,
+        interventionDate: r.interventionDate,
+        ownerValidation: r.ownerValidation,
+        source: r.source,
+        isVerified: r.isVerified,
+        isLocked: r.isLocked === 1 || r.isLocked === true,
+        garageName: r.Garage?.name,
+        garageLogo: r.Garage?.logo,
+        garageCertified: r.Garage?.isCertified === 1 || r.Garage?.isCertified === true,
+      };
+    }),
+    okarRecords: publicRecords.filter((r) => r.source !== 'PRE_OKAR_PAPER'),
+    paperRecords: publicRecords.filter((r) => r.source === 'PRE_OKAR_PAPER'),
+    ownershipHistory: [],
+    currentUser: null,
+  });
 }

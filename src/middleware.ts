@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 // Session cookie name
 const SESSION_COOKIE_NAME = 'okar_session';
 
-// Public routes that don't require authentication
+// Public routes that don't require authentication (exact matches or prefixes)
 const PUBLIC_ROUTES = [
   '/admin/connexion',
   '/admin/login',
@@ -14,8 +14,12 @@ const PUBLIC_ROUTES = [
   '/login',
   '/register',
   '/devenir-partenaire',
+  '/inscrire',
+  '/forgot-password',
+  '/reset-password',
   '/v/',  // QR scan pages
-  '/scan',
+  '/scan/',
+  '/activate/',  // QR activation pages
   '/api/auth',
   '/api/init-demo',
   '/api/upload',
@@ -24,7 +28,14 @@ const PUBLIC_ROUTES = [
   '/api/register',
   '/api/garage/check-status',
   '/api/garage/resubmit',
+  '/api/activate',
 ];
+
+// Routes that should always pass through (no redirect loop possible)
+const ALLOWED_PATHS = new Set([
+  '/admin/connexion',
+  '/admin/login',
+]);
 
 // API routes that require special handling (return 401 instead of redirect)
 const API_ROUTES = [
@@ -39,33 +50,47 @@ const API_ROUTES = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   
-  // 1. Check if it's a public route - always allow
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
-    return NextResponse.next();
-  }
-
-  // 2. Check for static files and Next.js internals
+  // 1. Check if it's a static file or Next.js internals - always allow
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname.startsWith('/uploads') ||
+    pathname.startsWith('/icons') ||
+    pathname.startsWith('/images') ||
     pathname.includes('.') // Files with extensions
   ) {
     return NextResponse.next();
   }
 
-  // 3. Check if user has a session cookie
+  // 2. Check if it's an allowed path (exact match) - always allow without session check
+  if (ALLOWED_PATHS.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  // 3. Check if it's a public route - always allow
+  const isPublicRoute = PUBLIC_ROUTES.some(route => {
+    // Exact match for login pages
+    if (pathname === route) return true;
+    // Prefix match for API routes and scan pages
+    if (route.endsWith('/')) return pathname.startsWith(route);
+    return pathname.startsWith(route + '/') || pathname === route;
+  });
+  
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // 4. Check for session cookie
   const sessionCookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  // 4. Determine if it's an API route or page route
+  // 5. Determine route type
   const isApiRoute = API_ROUTES.some(route => pathname.startsWith(route));
   const isAdminRoute = pathname.startsWith('/admin');
   const isGarageRoute = pathname.startsWith('/garage') && !pathname.startsWith('/garage/connexion') && !pathname.startsWith('/garage/correction');
 
-  // 5. If no session cookie, deny access
+  // 6. If no session cookie, deny access
   if (!sessionCookie) {
     if (isApiRoute) {
-      // Return JSON error for API routes
       return NextResponse.json(
         { error: 'Non authentifié', code: 'UNAUTHORIZED' },
         { status: 401 }
@@ -73,25 +98,19 @@ export async function middleware(req: NextRequest) {
     }
     
     if (isAdminRoute) {
-      // Redirect to admin login
       const loginUrl = new URL('/admin/connexion', req.url);
-      loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
     
     if (isGarageRoute) {
-      // Redirect to garage login
       const loginUrl = new URL('/garage/connexion', req.url);
-      loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
     
-    // For other routes, allow but let client handle
     return NextResponse.next();
   }
 
-  // 6. Session cookie exists - allow request to proceed
-  // Full session validation happens in API handlers via getSession()
+  // 7. Session cookie exists - allow request
   return NextResponse.next();
 }
 

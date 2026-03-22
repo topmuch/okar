@@ -193,19 +193,21 @@ export default function QRCodeCard({ qrCode, onViewDetails, onPrint, onSuspend }
                 </Button>
               </div>
 
-              {/* Lien d'activation */}
+              {/* Lien QR Code - Affiche le lien de scan si activé, sinon le lien d'activation */}
               <div className="mb-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Lien d'activation:</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  {qrCode.status === 'ACTIVE' ? 'Lien du QR Code:' : 'Lien d\'activation:'}
+                </p>
                 <div className="flex items-center gap-2">
                   <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded truncate max-w-[180px]">
-                    {activateUrl}
+                    {qrCode.status === 'ACTIVE' ? scanUrl : activateUrl}
                   </code>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
-                    onClick={() => window.open(activateUrl, '_blank')}
-                    title="Ouvrir le lien d'activation"
+                    onClick={() => window.open(qrCode.status === 'ACTIVE' ? scanUrl : activateUrl, '_blank')}
+                    title={qrCode.status === 'ACTIVE' ? 'Ouvrir le passeport véhicule' : 'Ouvrir le lien d\'activation'}
                   >
                     <ExternalLink className="w-3 h-3" />
                   </Button>
@@ -213,7 +215,7 @@ export default function QRCodeCard({ qrCode, onViewDetails, onPrint, onSuspend }
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
-                    onClick={() => copyToClipboard(activateUrl, 'url')}
+                    onClick={() => copyToClipboard(qrCode.status === 'ACTIVE' ? scanUrl : activateUrl, 'url')}
                     title="Copier le lien"
                   >
                     {copied === 'url' ? (

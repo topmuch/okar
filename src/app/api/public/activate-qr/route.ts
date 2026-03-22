@@ -8,13 +8,14 @@ import { randomBytes } from 'crypto';
 // SCHÉMA DE VALIDATION
 // ========================================
 const activateQRSchema = z.object({
-  shortCode: z.string().min(8),
+  shortCode: z.string().min(4, "Code QR requis"),
   vehicle: z.object({
     make: z.string().min(1, "Marque requise"),
     model: z.string().min(1, "Modèle requis"),
     year: z.number().int().optional().nullable(),
     color: z.string().optional().nullable(),
     licensePlate: z.string().min(1, "Immatriculation requise"),
+    mainPhoto: z.string().optional().nullable(),
   }),
   owner: z.object({
     name: z.string().min(1, "Nom requis"),
@@ -22,6 +23,14 @@ const activateQRSchema = z.object({
     email: z.string().email().optional().nullable(),
   }),
   mileage: z.number().int().min(0).optional().nullable(),
+  // Visite technique
+  vtStartDate: z.string().optional().nullable(),
+  vtEndDate: z.string().optional().nullable(),
+  // Assurance
+  insuranceStartDate: z.string().optional().nullable(),
+  insuranceEndDate: z.string().optional().nullable(),
+  insuranceCompany: z.string().optional().nullable(),
+  insurancePolicyNum: z.string().optional().nullable(),
 });
 
 // ========================================
@@ -53,33 +62,41 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = activateQRSchema.parse(body);
-    const { shortCode, vehicle, owner, mileage } = validatedData;
-    const now = new Date().toISOString();
+    const {
+      shortCode,
+      vehicle,
+      owner,
+      mileage,
+      vtStartDate,
+      vtEndDate,
+      insuranceStartDate,
+      insuranceEndDate,
+      insuranceCompany,
+      insurancePolicyNum
+    } = validatedData;
+    const now = new Date();
 
-    // 1. TROUVER LE QR CODE
-    const qrCodeRecord = await db.$queryRawUnsafe<any[]>(
-      `SELECT qs.* FROM QRCodeStock qs WHERE qs.shortCode = ?`,
-      shortCode
-    );
+    // 1. TROUVER LE QR CODE avec Prisma
+    const qrCodeRecord = await db.qRCodeStock.findUnique({
+      where: { shortCode }
+    });
 
-    if (!qrCodeRecord || qrCodeRecord.length === 0) {
+    if (!qrCodeRecord) {
       return NextResponse.json({
         success: false,
         error: 'QR Code non trouvé'
       }, { status: 404 });
     }
 
-    const qr = qrCodeRecord[0];
-
     // 2. VÉRIFIER LE STATUT
-    if (qr.status === 'ACTIVE') {
+    if (qrCodeRecord.status === 'ACTIVE') {
       return NextResponse.json({
         success: false,
         error: 'Ce QR Code est déjà activé'
       }, { status: 400 });
     }
 
-    if (qr.status === 'REVOKED') {
+    if (qrCodeRecord.status === 'REVOKED') {
       return NextResponse.json({
         success: false,
         error: 'Ce QR Code a été révoqué'
@@ -87,7 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. VÉRIFIER QU'IL N'EST PAS ASSIGNÉ À UN GARAGE
-    if (qr.assignedGarageId) {
+    if (qrCodeRecord.assignedGarageId) {
       return NextResponse.json({
         success: false,
         error: 'Ce QR Code est assigné à un garage. Veuillez vous rendre chez le partenaire pour l\'activation.'
@@ -95,99 +112,105 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. CRÉER OU TROUVER L'UTILISATEUR
-    let userId;
-    let tempPassword = null;
+    let userId: string;
+    let tempPassword: string | null = null;
 
     // Chercher par téléphone
-    const existingUser = await db.$queryRawUnsafe<any[]>(
-      'SELECT id FROM User WHERE phone = ?',
-      owner.phone
-    );
+    const existingUser = await db.user.findFirst({
+      where: { phone: owner.phone }
+    });
 
-    if (existingUser && existingUser.length > 0) {
-      userId = existingUser[0].id;
+    if (existingUser) {
+      userId = existingUser.id;
     } else {
-      // Créer nouvel utilisateur
+      // Créer nouvel utilisateur avec Prisma
       userId = `user-${randomBytes(8).toString('hex')}`;
       tempPassword = generateTempPassword();
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-      await db.$executeRawUnsafe(
-        `INSERT INTO User (id, email, name, phone, password, role, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, 'driver', ?, ?)`,
-        userId,
-        owner.email || `${owner.phone.replace(/\D/g, '')}@okar.temp`,
-        owner.name,
-        owner.phone,
-        hashedPassword,
-        now,
-        now
-      );
+      await db.user.create({
+        data: {
+          id: userId,
+          email: owner.email || `${owner.phone.replace(/\D/g, '')}@okar.temp`,
+          name: owner.name,
+          phone: owner.phone,
+          password: hashedPassword,
+          role: 'driver',
+          emailVerified: false,
+          updatedAt: now,
+        }
+      });
     }
 
-    // 5. TROUVER UN GARAGE CERTIFIÉ PAR DÉFAUT (pour les interventions futures)
-    const defaultGarage = await db.$queryRawUnsafe<any[]>(
-      `SELECT id FROM Garage WHERE isCertified = 1 AND active = 1 LIMIT 1`
-    );
-    const garageId = defaultGarage?.[0]?.id || null;
+    // 5. TROUVER UN GARAGE CERTIFIÉ PAR DÉFAUT
+    const defaultGarage = await db.garage.findFirst({
+      where: { isCertified: true, active: true }
+    });
+    const garageId = defaultGarage?.id || null;
 
-    // 6. CRÉER LE VÉHICULE
+    // 6. CRÉER LE VÉHICULE avec Prisma
     const vehicleId = `veh-${randomBytes(8).toString('hex')}`;
     const vehicleReference = generateVehicleReference();
 
-    await db.$executeRawUnsafe(
-      `INSERT INTO Vehicle (
-        id, reference, make, model, year, color, licensePlate,
-        mileage, ownerId, ownerName, ownerPhone, garageId, lotId,
-        qrStatus, status, activatedAt, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', 'active', ?, ?, ?)`,
-      vehicleId,
-      vehicleReference,
-      vehicle.make,
-      vehicle.model,
-      vehicle.year || null,
-      vehicle.color || null,
-      vehicle.licensePlate.toUpperCase(),
-      mileage || 0,
-      userId,
-      owner.name,
-      owner.phone,
-      garageId,
-      qr.lotId,
-      now,
-      now,
-      now
-    );
+    await db.vehicle.create({
+      data: {
+        id: vehicleId,
+        reference: vehicleReference,
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year || null,
+        color: vehicle.color || null,
+        licensePlate: vehicle.licensePlate.toUpperCase(),
+        currentMileage: mileage || 0,
+        mainPhoto: vehicle.mainPhoto || null,
+        ownerId: userId,
+        ownerName: owner.name,
+        ownerPhone: owner.phone,
+        garageId,
+        lotId: qrCodeRecord.lotId,
+        qrStatus: 'ACTIVE',
+        status: 'active',
+        activatedAt: now,
+        // Visite technique
+        vtStartDate: vtStartDate ? new Date(vtStartDate) : null,
+        vtEndDate: vtEndDate ? new Date(vtEndDate) : null,
+        // Assurance
+        insuranceStartDate: insuranceStartDate ? new Date(insuranceStartDate) : null,
+        insuranceEndDate: insuranceEndDate ? new Date(insuranceEndDate) : null,
+        insuranceCompany: insuranceCompany || null,
+        insurancePolicyNum: insurancePolicyNum || null,
+        okarScore: 0,
+        okarBadge: 'BRONZE',
+        updatedAt: now,
+      }
+    });
 
     // 7. METTRE À JOUR LE QR CODE
-    await db.$executeRawUnsafe(
-      `UPDATE QRCodeStock
-       SET status = 'ACTIVE',
-           linkedVehicleId = ?,
-           activationDate = ?,
-           updatedAt = ?
-       WHERE id = ?`,
-      vehicleId,
-      now,
-      now,
-      qr.id
-    );
+    await db.qRCodeStock.update({
+      where: { id: qrCodeRecord.id },
+      data: {
+        status: 'ACTIVE',
+        linkedVehicleId: vehicleId,
+        activationDate: now,
+        updatedAt: now,
+      }
+    });
 
     // 8. CRÉER L'INTERVENTION D'ACTIVATION
     if (garageId) {
-      await db.$executeRawUnsafe(
-        `INSERT INTO MaintenanceRecord (
-          id, vehicleId, garageId, category, description,
-          status, ownerValidation, interventionDate, createdAt, updatedAt
-        ) VALUES (?, ?, ?, 'activation', ?, 'COMPLETED', 'VALIDATED', ?, ?, ?)`,
-        `mr-${randomBytes(8).toString('hex')}`,
-        vehicleId,
-        garageId,
-        `Activation du passeport OKAR par le propriétaire - ${vehicle.make} ${vehicle.model}`,
-        now,
-        now,
-        now
-      );
+      await db.maintenanceRecord.create({
+        data: {
+          id: `mr-${randomBytes(8).toString('hex')}`,
+          vehicleId,
+          garageId,
+          category: 'activation',
+          description: `Activation du passeport OKAR par le propriétaire - ${vehicle.make} ${vehicle.model}`,
+          status: 'COMPLETED',
+          ownerValidation: 'VALIDATED',
+          interventionDate: now,
+          updatedAt: now,
+        }
+      });
     }
 
     // 9. RÉPONSE
@@ -200,6 +223,7 @@ export async function POST(request: NextRequest) {
         make: vehicle.make,
         model: vehicle.model,
         licensePlate: vehicle.licensePlate,
+        mainPhoto: vehicle.mainPhoto,
       },
       owner: {
         id: userId,
@@ -208,8 +232,8 @@ export async function POST(request: NextRequest) {
         tempPassword,
       },
       qrCode: {
-        shortCode: qr.shortCode,
-        scanUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://okar.sn'}/v/${qr.shortCode}`,
+        shortCode: qrCodeRecord.shortCode,
+        scanUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://okar.sn'}/v/${qrCodeRecord.shortCode}`,
       },
     });
 
@@ -220,7 +244,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Erreur de validation',
-        details: error.errors
+        details: error.issues
       }, { status: 400 });
     }
 

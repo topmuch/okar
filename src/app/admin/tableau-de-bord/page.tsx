@@ -221,13 +221,16 @@ function ActivationsChart({ data }: { data: DailyActivation[] }) {
 
 // Activity Item Component
 function ActivityItem({ activity }: { activity: RecentActivity }) {
-  const statusConfig = {
+  const statusConfig: Record<string, { bg: string; icon: React.ReactNode }> = {
     success: { bg: 'bg-emerald-100 dark:bg-emerald-500/10', icon: <CheckCircle className="w-4 h-4 text-emerald-500" /> },
     warning: { bg: 'bg-amber-100 dark:bg-amber-500/10', icon: <Clock className="w-4 h-4 text-amber-500" /> },
-    info: { bg: 'bg-blue-100 dark:bg-blue-500/10', icon: <Package className="w-4 h-4 text-blue-500" /> }
+    info: { bg: 'bg-blue-100 dark:bg-blue-500/10', icon: <Package className="w-4 h-4 text-blue-500" /> },
+    error: { bg: 'bg-red-100 dark:bg-red-500/10', icon: <Package className="w-4 h-4 text-red-500" /> },
+    pending: { bg: 'bg-slate-100 dark:bg-slate-500/10', icon: <Clock className="w-4 h-4 text-slate-500" /> },
+    default: { bg: 'bg-slate-100 dark:bg-slate-500/10', icon: <Package className="w-4 h-4 text-slate-500" /> }
   };
 
-  const config = statusConfig[activity.status];
+  const config = statusConfig[activity.status] || statusConfig.default;
 
   return (
     <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group">

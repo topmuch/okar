@@ -24,10 +24,18 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     const offset = (page - 1) * limit;
+    const category = searchParams.get('category'); // 'garage' or 'particulier'
 
     // Build WHERE clause
     const whereConditions: string[] = ['1=1'];
     const params: (string | number)[] = [];
+
+    // Filter by category (garage vs particulier)
+    if (category === 'garage') {
+      whereConditions.push('q.assignedGarageId IS NOT NULL');
+    } else if (category === 'particulier') {
+      whereConditions.push('q.assignedGarageId IS NULL');
+    }
 
     if (status && status !== 'all') {
       whereConditions.push('q.status = ?');

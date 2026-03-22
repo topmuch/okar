@@ -1488,6 +1488,378 @@ body * {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🌟 POP LUXE - WAHOO EFFECTS (CSS ONLY, 60FPS)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* === ANIMATED MESH GRADIENT BACKGROUND - 15s CSS only === */
+@keyframes meshGradientMove {
+  0%, 100% {
+    background-position: 0% 0%, 100% 100%, 50% 50%, 0% 100%;
+  }
+  25% {
+    background-position: 100% 0%, 0% 100%, 0% 50%, 100% 50%;
+  }
+  50% {
+    background-position: 100% 100%, 0% 0%, 100% 50%, 50% 0%;
+  }
+  75% {
+    background-position: 0% 100%, 100% 0%, 50% 100%, 0% 50%;
+  }
+}
+
+.mesh-gradient-animated {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(79, 70, 229, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 50% 80%, rgba(253, 224, 71, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 10% 70%, rgba(255, 107, 107, 0.08) 0%, transparent 50%);
+  background-color: #F8FAFC;
+  animation: meshGradientMove 15s ease-in-out infinite;
+  will-change: background-position;
+}
+
+/* === HERO TITLE GRADIENT === */
+.text-gradient-pop {
+  background: linear-gradient(135deg, #0f172a 0%, #4F46E5 50%, #FF6B6B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* === SEARCH BAR GLOW EFFECT === */
+.search-glow {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 10px 40px -5px rgba(79, 70, 229, 0.15),
+    0 0 0 1px rgba(79, 70, 229, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.search-glow:focus-within {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 20px 60px -5px rgba(79, 70, 229, 0.25),
+    0 0 0 3px rgba(79, 70, 229, 0.2),
+    0 0 0 1px rgba(79, 70, 229, 0.1);
+}
+
+/* === GLASSMORPHISM CARD === */
+.glass-card-pop {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+}
+
+.glass-card-pop:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.1);
+}
+
+/* === BUTTON CORAL - ACTION COLOR === */
+.btn-coral {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.btn-coral:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+}
+
+.btn-coral:active {
+  transform: scale(0.98);
+}
+
+/* === BUTTON YELLOW - ACCENT COLOR === */
+.btn-yellow-pop {
+  background: #FDE047;
+  color: #0f172a;
+  transition: all 0.2s ease;
+}
+
+.btn-yellow-pop:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 30px rgba(253, 224, 71, 0.5);
+}
+
+/* === FLOATING CARD ANIMATION === */
+@keyframes floatUp {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float-card {
+  animation: floatUp 4s ease-in-out infinite;
+}
+
+/* === FADE IN CASCADE === */
+@keyframes fadeInCascade {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-cascade-1 { animation: fadeInCascade 0.6s ease-out 0.1s forwards; opacity: 0; }
+.animate-cascade-2 { animation: fadeInCascade 0.6s ease-out 0.2s forwards; opacity: 0; }
+.animate-cascade-3 { animation: fadeInCascade 0.6s ease-out 0.3s forwards; opacity: 0; }
+
+/* === SCROLL INDICATOR === */
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(8px); opacity: 0.5; }
+}
+
+.animate-scroll-indicator {
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+/* === MESH GRADIENT ANIMATED CLASS === */
+@keyframes meshGradientMove {
+  0%, 100% {
+    background-position: 0% 0%, 100% 0%, 50% 100%, 0% 50%;
+  }
+  25% {
+    background-position: 50% 0%, 50% 50%, 0% 100%, 100% 0%;
+  }
+  50% {
+    background-position: 100% 50%, 0% 100%, 100% 0%, 50% 50%;
+  }
+  75% {
+    background-position: 50% 100%, 100% 0%, 0% 50%, 100% 100%;
+  }
+}
+
+.mesh-gradient-animated {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(79, 70, 229, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(236, 72, 153, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 50% 80%, rgba(253, 224, 71, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 10% 70%, rgba(255, 107, 107, 0.06) 0%, transparent 50%);
+  background-size: 200% 200%;
+  animation: meshGradientMove 20s ease-in-out infinite;
+  will-change: background-position;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🌟 LUXE ÉDITORIAL - SOPHISTICATED WAHOO EFFECTS
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* === MESH GRADIENT LUXE - Ink in Water Effect === */
+.mesh-gradient-luxe {
+  background:
+    radial-gradient(ellipse 100% 80% at 20% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 80% 30%, rgba(15, 23, 42, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 60% 80%, rgba(251, 86, 7, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 50% at 10% 60%, rgba(212, 175, 55, 0.03) 0%, transparent 50%);
+  background-color: #FDFBF7;
+  animation: meshGradientMove 25s ease-in-out infinite;
+}
+
+/* === FADE UP ANIMATION - Elegant entrance === */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+/* === BORDER GLOW ANIMATION - Rotating light === */
+@keyframes borderGlow {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.animate-border-glow {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.3) 25%,
+    transparent 50%,
+    rgba(212, 175, 55, 0.3) 75%,
+    transparent 100%
+  );
+  background-size: 200% 200%;
+  animation: borderGlow 3s ease-in-out infinite;
+}
+
+/* === SLOW BOUNCE === */
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(8px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 2.5s ease-in-out infinite;
+}
+
+/* === SCROLL DOT === */
+@keyframes scrollDot {
+  0%, 100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.3;
+    transform: translateY(6px);
+  }
+}
+
+.animate-scroll-dot {
+  animation: scrollDot 2s ease-in-out infinite;
+}
+
+/* === PARALLAX CARDS - 3D hover === */
+.perspective-\[1000px\] {
+  perspective: 1000px;
+}
+
+/* === SERIF TYPOGRAPHY FALLBACK === */
+.font-serif {
+  font-family: 'Playfair Display', 'Fraunces', Georgia, 'Times New Roman', serif;
+}
+
+/* === MONO TYPOGRAPHY FOR DATA === */
+.font-mono {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+/* === GOLD TEXT GRADIENT === */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #D4AF37 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* === GLASSMORPHISM CARD LUXE === */
+.glass-card-luxe {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  box-shadow: 
+    0 4px 24px rgba(15, 23, 42, 0.04),
+    0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-luxe:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(212, 175, 55, 0.3);
+  box-shadow: 
+    0 12px 48px rgba(15, 23, 42, 0.08),
+    0 4px 12px rgba(212, 175, 55, 0.1);
+  transform: translateY(-4px);
+}
+
+/* === IRIDESCENT SHIMMER === */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.iris-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(212, 175, 55, 0.1) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* === FLOATING ANIMATION === */
+@keyframes floatLuxe {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+.animate-float-luxe {
+  animation: floatLuxe 6s ease-in-out infinite;
+}
+
+/* === 3D CARD ROTATION === */
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.rotate-y-2 {
+  transform: rotateY(2deg);
+}
+
+.-rotate-y-1 {
+  transform: rotateY(-1deg);
+}
+
+/* === REDUCED MOTION === */
+@media (prefers-reduced-motion: reduce) {
+  .mesh-gradient-luxe,
+  .animate-border-glow,
+  .animate-bounce-slow,
+  .animate-scroll-dot,
+  .iris-shimmer,
+  .animate-float-luxe {
+    animation: none;
+  }
+  
+  .animate-fade-up {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* === RESPONSIVE TYPOGRAPHY === */
+@media (max-width: 640px) {
+  .glass-card-luxe:hover {
+    transform: none;
+  }
+}
+
 /* === SUBTLE BREATHE - Car image, 1.0 to 1.02 scale === */
 @keyframes subtleBreathe {
   0%, 100% {

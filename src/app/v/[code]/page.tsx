@@ -54,8 +54,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-// Dynamic QR Code import
-const QRCode = dynamic(() => import('qrcode.react'), { ssr: false });
+// Dynamic QR Code import - using QRCodeSVG from qrcode.react
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const QRCode = dynamic<any>(() => import('qrcode.react').then((mod) => mod.QRCodeSVG), { ssr: false });
 
 // ============================================
 // TYPES
@@ -92,7 +93,8 @@ interface VehicleData {
   vtCenter: string | null;
   insuranceStartDate: string | null;
   insuranceEndDate: string | null;
-  insuranceCompany: string;
+  insuranceCompany: string | null;
+  insurancePolicyNum: string | null;
   
   // Status
   status: string;
@@ -119,6 +121,7 @@ interface VehicleData {
 interface MaintenanceRecord {
   id: string;
   category: string;
+  categories?: string[]; // All selected categories
   subCategory: string | null;
   description: string;
   mileage: number;
@@ -126,11 +129,13 @@ interface MaintenanceRecord {
   status: string;
   ownerValidation: string;
   isLocked: boolean;
+  garageCertified?: boolean; // Whether the garage is certified
   garageName: string;
   garageLogo: string | null;
   mechanicName: string;
   invoicePhoto: string | null;
   workPhotos: string[];
+  totalCost?: number;
   createdAt: string;
 }
 
@@ -381,8 +386,10 @@ export default function QRWebApp() {
     );
   }
   
-  // Calculate confidence score
-  const validatedRecords = vehicle.maintenanceRecords.filter(r => r.ownerValidation === 'VALIDATED' && r.isLocked);
+  // Calculate confidence score - count validated records (from certified garages or owner-validated)
+  const validatedRecords = vehicle.maintenanceRecords.filter(r => 
+    r.ownerValidation === 'VALIDATED' && (r.isLocked || r.garageCertified)
+  );
   const confidenceScore = Math.min(100, validatedRecords.length * 15 + 25);
   
   // Get pending records count for owner
@@ -883,7 +890,7 @@ function HomeTab({
               </div>
               {vehicle.insuranceEndDate && (
                 <p className="text-xs text-slate-400">
-                  {vehicle.insuranceCompany} • Valide jusqu'au {formatDate(vehicle.insuranceEndDate)}
+                  {vehicle.insuranceCompany || 'Assurance'} {vehicle.insurancePolicyNum && `• N° ${vehicle.insurancePolicyNum}`} • Valide jusqu'au {formatDate(vehicle.insuranceEndDate)}
                 </p>
               )}
             </div>
@@ -1090,9 +1097,13 @@ function CarnetTab({
   
   const filteredRecords = selectedFilter === 'all' 
     ? displayRecords 
-    : displayRecords.filter(r => r.category === selectedFilter);
+    : displayRecords.filter(r => 
+        (r.categories || [r.category]).includes(selectedFilter)
+      );
   
-  const categories = [...new Set(displayRecords.map(r => r.category))];
+  // Get all unique categories from all records
+  const allCategories = displayRecords.flatMap(r => r.categories || [r.category]);
+  const categories = [...new Set(allCategories)];
   
   const getValidationBadge = (validation: string) => {
     switch (validation) {
@@ -1199,21 +1210,30 @@ function CarnetTab({
               >
                 <div className="p-4">
                   <div className="flex gap-3">
-                    {/* Icon */}
-                    <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0",
-                      CATEGORY_CONFIG[record.category]?.color || 'bg-slate-500'
-                    )}>
-                      {CATEGORY_CONFIG[record.category]?.icon || '📋'}
+                    {/* Icon - Show all categories */}
+                    <div className="flex gap-1">
+                      {(record.categories || [record.category]).map((cat, i) => (
+                        <div key={i} className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0",
+                          CATEGORY_CONFIG[cat]?.color || 'bg-slate-500'
+                        )}>
+                          {CATEGORY_CONFIG[cat]?.icon || '📋'}
+                        </div>
+                      ))}
                     </div>
                     
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-semibold text-slate-800 dark:text-white">
-                            {CATEGORY_CONFIG[record.category]?.label || record.category}
-                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {(record.categories || [record.category]).map((cat, i) => (
+                              <span key={i} className="font-semibold text-slate-800 dark:text-white text-sm">
+                                {CATEGORY_CONFIG[cat]?.label || cat}
+                                {i < (record.categories?.length || 1) - 1 && <span className="text-slate-400 mx-1">+</span>}
+                              </span>
+                            ))}
+                          </div>
                           <p className="text-xs text-slate-500 mt-0.5">
                             {formatDate(record.interventionDate)}
                           </p>
@@ -1477,7 +1497,7 @@ function AlertsTab({ vehicle }: { vehicle: VehicleData }) {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-slate-800 dark:text-white">{alert.title}</p>
-                {alert.daysLeft !== null && (
+                {alert.daysLeft !== null && alert.daysLeft !== undefined && (
                   <p className={cn(
                     "text-sm",
                     alert.urgent ? "text-red-600" : "text-slate-500"
@@ -1485,7 +1505,7 @@ function AlertsTab({ vehicle }: { vehicle: VehicleData }) {
                     {alert.daysLeft <= 0 ? 'Expiré!' : `${alert.daysLeft} jours restants`}
                   </p>
                 )}
-                {alert.kmLeft !== null && (
+                {alert.kmLeft !== null && alert.kmLeft !== undefined && (
                   <p className={cn(
                     "text-sm",
                     alert.urgent ? "text-red-600" : "text-slate-500"
@@ -1639,7 +1659,7 @@ function ValidationTab({
                 </div>
               )}
               
-              {record.totalCost > 0 && (
+              {record.totalCost && record.totalCost > 0 && (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
                   <span>Coût total: {record.totalCost.toLocaleString()} XOF</span>
                 </div>

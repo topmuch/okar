@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateCuid } from '@/lib/qr';
 import { triggerScoreCalculation } from '@/lib/score';
+import { getSession } from '@/lib/session';
 
 // POST - Validate or reject a maintenance record (owner only)
 export async function POST(
@@ -14,13 +15,12 @@ export async function POST(
     const { approve, rejectionReason } = body;
 
     // Get current user from session
-    const sessionRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/me`, {
-      headers: { cookie: request.headers.get('cookie') || '' }
-    });
-    let currentUser = null;
-    if (sessionRes.ok) {
-      const sessionData = await sessionRes.json();
-      currentUser = sessionData.user;
+    const currentUser = await getSession();
+
+    if (!currentUser) {
+      return NextResponse.json({ 
+        error: 'Session non valide. Veuillez vous reconnecter.' 
+      }, { status: 401 });
     }
 
     // Get the record

@@ -61,7 +61,7 @@ export default function NouvelleInterventionContent() {
   const [vehicleSearch, setVehicleSearch] = useState('');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   
-  const [category, setCategory] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [mileage, setMileage] = useState('');
   const [parts, setParts] = useState<Part[]>([]);
@@ -78,9 +78,24 @@ export default function NouvelleInterventionContent() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitMode, setSubmitMode] = useState<'draft' | 'submit'>('submit');
+  const [garageId, setGarageId] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  // Garage ID (would come from auth)
-  const garageId = 'demo-garage-id';
+  // Get garage ID from session
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        if (data.garageId) {
+          setGarageId(data.garageId);
+        }
+      } catch (err) {
+        console.error('Error fetching session:', err);
+      }
+    };
+    fetchSession();
+  }, []);
 
   // Load vehicle if ID provided
   useEffect(() => {
@@ -111,9 +126,10 @@ export default function NouvelleInterventionContent() {
   };
 
   const searchVehicles = async () => {
+    if (!garageId) return;
     setSearchLoading(true);
     try {
-      const response = await fetch(`/api/vehicles?garageId=${garageId}&search=${vehicleSearch}`);
+      const response = await fetch(`/api/garage/vehicles?search=${vehicleSearch}`);
       const data = await response.json();
       setVehicles(data.vehicles || []);
     } catch (err) {
@@ -260,10 +276,19 @@ export default function NouvelleInterventionContent() {
     setStep(5);
   };
 
+  // Toggle category selection
+  const toggleCategory = (catId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(catId) 
+        ? prev.filter(c => c !== catId)
+        : [...prev, catId]
+    );
+  };
+
   // Form validation
   const validateForm = () => {
     if (!vehicle) return false;
-    if (!category) return false;
+    if (selectedCategories.length === 0) return false;
     if (!description.trim()) return false;
     if (parts.length === 0 && !laborCost) return false;
     
@@ -277,6 +302,11 @@ export default function NouvelleInterventionContent() {
       return;
     }
 
+    if (!garageId) {
+      setError('Session non valide. Veuillez vous reconnecter.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSubmitMode(mode);
@@ -287,8 +317,8 @@ export default function NouvelleInterventionContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           vehicleId: vehicle.id,
-          garageId,
-          category,
+          category: selectedCategories[0], // Primary category
+          categories: selectedCategories, // All selected categories
           description,
           mileage: mileage ? parseInt(mileage) : null,
           partsList: JSON.stringify(parts.filter(p => p.name)),
@@ -311,8 +341,12 @@ export default function NouvelleInterventionContent() {
         return;
       }
 
-      // Success - redirect
-      router.push('/garage/interventions');
+      // Success - redirect with success message
+      setSuccess(true);
+      // Small delay to show success state
+      setTimeout(() => {
+        router.push('/garage/interventions?success=1');
+      }, 1000);
 
     } catch (err) {
       setError('Erreur lors de l\'enregistrement de l\'intervention');
@@ -467,31 +501,58 @@ export default function NouvelleInterventionContent() {
             </div>
           </div>
 
-          {/* Category Selection */}
+          {/* Category Selection - Multiple */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
-              Type d'intervention
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
+              Types d'intervention
             </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Sélectionnez une ou plusieurs rubriques (ex: Vidange + Freins)
+            </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.id)}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    category === cat.id
-                      ? 'border-orange-500 bg-orange-50 dark:bg-orange-500/10'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-orange-300'
-                  }`}
-                >
-                  <span className="text-2xl mb-2 block">{cat.icon}</span>
-                  <span className={`text-sm font-medium ${
-                    category === cat.id ? 'text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'
-                  }`}>
-                    {cat.label}
-                  </span>
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const isSelected = selectedCategories.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => toggleCategory(cat.id)}
+                    className={`p-4 rounded-xl border-2 transition-all relative ${
+                      isSelected
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-500/10'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-orange-300'
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <span className="text-2xl mb-2 block">{cat.icon}</span>
+                    <span className={`text-sm font-medium ${
+                      isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'
+                    }`}>
+                      {cat.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+            {selectedCategories.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="text-sm text-slate-500">Sélectionné:</span>
+                {selectedCategories.map(catId => {
+                  const cat = categories.find(c => c.id === catId);
+                  return cat ? (
+                    <span key={catId} className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-full text-sm font-medium">
+                      {cat.icon} {cat.label}
+                      <button onClick={() => toggleCategory(catId)} className="ml-1 hover:text-orange-800">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
           </div>
 
           {/* Description & Mileage */}
@@ -533,7 +594,7 @@ export default function NouvelleInterventionContent() {
             </button>
             <button
               onClick={() => setStep(3)}
-              disabled={!category || !description.trim()}
+              disabled={selectedCategories.length === 0 || !description.trim()}
               className="flex-1 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continuer
@@ -770,7 +831,7 @@ export default function NouvelleInterventionContent() {
       )}
 
       {/* Step 5: Confirmation */}
-      {step === 5 && (
+      {step === 5 && !success && (
         <div className="space-y-6">
           {/* Summary */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
@@ -791,14 +852,21 @@ export default function NouvelleInterventionContent() {
                 </div>
               </div>
 
-              {/* Category */}
-              <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                <Wrench className="w-5 h-5 text-orange-500" />
+              {/* Categories */}
+              <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <Wrench className="w-5 h-5 text-orange-500 mt-0.5" />
                 <div>
-                  <p className="text-sm text-slate-500">Type d'intervention</p>
-                  <p className="font-medium text-slate-800 dark:text-white">
-                    {categories.find(c => c.id === category)?.label}
-                  </p>
+                  <p className="text-sm text-slate-500">Types d'intervention</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedCategories.map(catId => {
+                      const cat = categories.find(c => c.id === catId);
+                      return cat ? (
+                        <span key={catId} className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-full text-sm font-medium">
+                          {cat.icon} {cat.label}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -860,8 +928,27 @@ export default function NouvelleInterventionContent() {
           </div>
 
           <p className="text-center text-sm text-slate-500">
-            En envoyant, le propriétaire recevra une notification pour valider l'intervention.
+            En envoyant, le rapport sera automatiquement validé car votre garage est certifié OKAR.
           </p>
+        </div>
+      )}
+
+      {/* Success State */}
+      {success && (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
+            <CheckCircle className="w-12 h-12 text-emerald-500 animate-bounce" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+            Intervention enregistrée ! 🎉
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 text-center mb-6 max-w-md">
+            L'intervention a été validée automatiquement et ajoutée au passeport OKAR du véhicule.
+          </p>
+          <div className="flex items-center gap-2 text-emerald-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Redirection vers vos interventions...</span>
+          </div>
         </div>
       )}
     </div>

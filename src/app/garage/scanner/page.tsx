@@ -14,7 +14,6 @@ import {
   Loader2,
   ChevronRight,
   ArrowLeft,
-  Keyboard,
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -50,7 +49,6 @@ export default function OKARScannerPage() {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [manualCode, setManualCode] = useState('');
-  const [showManual, setShowManual] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentScans, setRecentScans] = useState<{ reference: string; status: string; timestamp: number }[]>([]);
@@ -86,22 +84,36 @@ export default function OKARScannerPage() {
 
   // Process scanned code - extract shortCode from URL or use direct code
   const extractCode = (scannedText: string): string | null => {
-    // If it's a URL like https://okar.sn/v/ABC123 or /v/ABC123
-    const urlMatch = scannedText.match(/\/v\/([A-Z0-9]{8})/i);
+    const text = scannedText.trim().toUpperCase();
+    
+    // If it's a URL like https://okar.sn/v/OKAR001 or /v/OKAR001
+    const urlMatch = text.match(/\/v\/([A-Z0-9]+)/i);
     if (urlMatch) {
       return urlMatch[1].toUpperCase();
     }
     
-    // If it's a direct short code (8 chars alphanumeric)
-    const shortCodeMatch = scannedText.match(/^[A-Z0-9]{8}$/i);
-    if (shortCodeMatch) {
-      return scannedText.toUpperCase();
+    // If it's a code with OKAR prefix like OKAR001, OKAR002, etc.
+    const okarMatch = text.match(/^(OKAR\d{3})$/);
+    if (okarMatch) {
+      return okarMatch[1];
     }
     
-    // If it contains OKAR- reference
-    const refMatch = scannedText.match(/OKAR-([A-Z0-9]+)/i);
+    // If it's a full codeUnique format like OKAR001-A06JKV
+    const uniqueMatch = text.match(/^(OKAR\d{3}-[A-Z0-9]+)$/);
+    if (uniqueMatch) {
+      return uniqueMatch[1];
+    }
+    
+    // If it contains OKAR reference anywhere
+    const refMatch = text.match(/OKAR(\d{3})/);
     if (refMatch) {
-      return 'OKAR-' + refMatch[1].toUpperCase();
+      return 'OKAR' + refMatch[1];
+    }
+    
+    // If it's a direct short code (6-10 chars alphanumeric)
+    const shortCodeMatch = text.match(/^[A-Z0-9]{6,10}$/);
+    if (shortCodeMatch) {
+      return text;
     }
     
     return null;
@@ -122,18 +134,22 @@ export default function OKARScannerPage() {
       const response = await fetch('/api/scan/' + code);
       const data = await response.json();
       
-      if (data.success) {
+      // Handle both API response formats
+      const isSuccess = data.success === true || data.status === 'active' || data.status === 'inactive';
+      const qrStatus = data.qrStatus || (data.status === 'active' ? 'ACTIVE' : data.status === 'inactive' ? 'INACTIVE' : data.status?.toUpperCase());
+      
+      if (isSuccess && qrStatus) {
         setScanResult({
-          status: data.qrStatus,
+          status: qrStatus as 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'NOT_FOUND',
           vehicle: data.vehicle,
           message: data.message
         });
         if (data.vehicle?.reference) {
-          saveRecentScan(data.vehicle.reference, data.qrStatus);
+          saveRecentScan(data.vehicle.reference, qrStatus);
         }
         triggerHaptic(100);
       } else {
-        setError(data.error || 'Code invalide');
+        setError(data.message || data.error || 'Code non reconnu');
         triggerHaptic([100, 50, 100]);
         // Resume scanning after error
         if (scannerRef.current && scannerRef.current.isScanning) {
@@ -312,16 +328,9 @@ export default function OKARScannerPage() {
           </Link>
           <div className="text-center">
             <h1 className="text-xl font-black text-white">SCANNER OKAR</h1>
-            <p className="text-xs text-zinc-400">Scannez le QR Code du véhicule</p>
+            <p className="text-xs text-zinc-400">Scannez ou tapez le code</p>
           </div>
-          <button
-            onClick={() => setShowManual(!showManual)}
-            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-              showManual ? 'bg-[#FF6600]' : 'bg-zinc-800/80 backdrop-blur-sm'
-            }`}
-          >
-            <Keyboard className="w-6 h-6 text-white" />
-          </button>
+          <div className="w-12 h-12" /> {/* Spacer for centering */}
         </div>
       </div>
 
@@ -358,37 +367,35 @@ export default function OKARScannerPage() {
         />
       </div>
 
-      {/* Manual Entry */}
-      {showManual && (
-        <div className="absolute inset-x-0 bottom-40 z-20 px-4">
-          <form onSubmit={handleManualSubmit} className="max-w-lg mx-auto">
-            <div className="bg-zinc-900/95 backdrop-blur-sm rounded-2xl p-4 border border-zinc-700">
-              <label className="text-xs text-zinc-500 uppercase font-semibold mb-2 block">
-                Entrer le code manuellement
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                  placeholder="OKAR-XXXXXX ou code 8 caractères"
-                  className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white font-mono text-lg focus:border-[#FF6600] focus:ring-1 focus:ring-[#FF6600] outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={!manualCode.trim() || loading}
-                  className="px-6 py-3 bg-[#FF6600] rounded-xl text-white font-semibold disabled:opacity-50"
-                >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'OK'}
-                </button>
-              </div>
+      {/* Manual Entry - Always visible */}
+      <div className="absolute inset-x-0 bottom-28 z-20 px-4">
+        <form onSubmit={handleManualSubmit} className="max-w-lg mx-auto">
+          <div className="bg-zinc-900/95 backdrop-blur-sm rounded-2xl p-4 border border-zinc-700">
+            <label className="text-xs text-zinc-500 uppercase font-semibold mb-2 block">
+              Saisie manuelle du code
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                placeholder="OKAR001, OKAR002..."
+                className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white font-mono text-lg focus:border-[#FF6600] focus:ring-1 focus:ring-[#FF6600] outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!manualCode.trim() || loading}
+                className="px-6 py-3 bg-[#FF6600] rounded-xl text-white font-semibold disabled:opacity-50 disabled:bg-zinc-600"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'OK'}
+              </button>
             </div>
-          </form>
-        </div>
-      )}
+          </div>
+        </form>
+      </div>
 
       {/* Camera Controls */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black via-black/80 to-transparent p-6 pb-8">
+      <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black via-black/80 to-transparent p-4 pb-6">
         <div className="flex items-center justify-center gap-6 max-w-lg mx-auto">
           <button
             onClick={toggleTorch}
