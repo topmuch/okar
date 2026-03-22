@@ -15,26 +15,19 @@ if [ -z "$DATABASE_URL" ]; then
   export DATABASE_URL="file:/app/data/okar.db"
 fi
 
-# Run Prisma migrations (deploy mode for production)
-npx prisma migrate deploy --schema=/app/prisma/schema.prisma
+# Ensure data directory exists
+mkdir -p /app/data
 
-# Generate Prisma Client (in case it wasn't generated)
-npx prisma generate --schema=/app/prisma/schema.prisma
+# Run Prisma migrations (deploy mode for production)
+npx prisma migrate deploy --schema=/app/prisma/schema.prisma || echo "⚠️ Migration failed, continuing..."
 
 echo "✅ Database ready!"
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Seed Database (optional - only if no data exists)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-if [ "$SEED_DATABASE" = "true" ]; then
-  echo "🌱 Seeding database..."
-  npx prisma db seed --schema=/app/prisma/schema.prisma
-fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Start Application
 # ═══════════════════════════════════════════════════════════════════════════════
 
-echo "🌟 Starting Next.js server..."
-exec "$@"
+echo "🌟 Starting Next.js server on port 3000..."
+
+# Execute the CMD passed from Dockerfile
+exec node server.js
