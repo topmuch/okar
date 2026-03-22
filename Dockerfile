@@ -1,93 +1,40 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# OKAR - Dockerfile for Coolify Deployment
-# Next.js 15 + Prisma 6 + SQLite
+# OKAR - Dockerfile Simplifié pour Coolify
+# Next.js 15 + Prisma + SQLite
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Stage 1: Dependencies
-# ─────────────────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat openssl
+FROM node:20-alpine
 
-WORKDIR /app
-
-# Copy package files first
-COPY package.json package-lock.json* ./
-
-# Install ALL dependencies (including devDependencies for Prisma CLI)
-RUN npm install --legacy-peer-deps
-
-# Copy Prisma schema and generate client
-COPY prisma ./prisma/
-RUN npx prisma generate --schema=./prisma/schema.prisma
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Stage 2: Builder
-# ─────────────────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
-RUN apk add --no-cache libc6-compat openssl
-
-WORKDIR /app
-
-# Copy node_modules from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Set environment variables for build
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
-ENV SKIP_ENV_VALIDATION=1
-
-# Build the application
-RUN npm run build
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Stage 3: Runner (Production)
-# ─────────────────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runner
+# Install dependencies
 RUN apk add --no-cache libc6-compat openssl curl
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
+
+# Install dependencies and generate Prisma Client
+RUN npm install --legacy-peer-deps
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Copy source code
+COPY . .
+
+# Build the application
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+RUN npm run build
 
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create data directory
+RUN mkdir -p /app/data
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Copy built application and ALL dependencies
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# Copy standalone server (Next.js standalone output)
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
-# Copy static files
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copy public assets
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Copy Prisma files
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-
-# Copy ALL node_modules (needed for Prisma CLI and dependencies like 'effect')
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-# Create data directory for SQLite database
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
-
-# Set correct ownership
-RUN chown -R nextjs:nodejs /app
-
-USER nextjs
-
+# Expose port
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV NODE_ENV=production
 
-# Start server directly (no healthcheck to avoid killing the container)
-ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["mkdir -p /app/data && node server.js"]
+# Start command - run migrations then start server
+CMD sh -c "npx prisma migrate deploy --schema=./prisma/schema.prisma || true && node .next/standalone/server.js"
