@@ -1,25 +1,52 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎨 LEAFLET CSS - Import direct (pas d'import dynamique)
+// 🎨 LEAFLET CSS - Import direct
 // ═══════════════════════════════════════════════════════════════════════════════
 import 'leaflet/dist/leaflet.css';
 import './map-styles.css';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔧 FIX: Configuration des icônes par défaut Leaflet
-// Nécessaire car Webpack/Next.js ne résout pas les images par défaut
 // ═══════════════════════════════════════════════════════════════════════════════
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📍 TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+interface MapPoint {
+  id: string;
+  type: 'garage' | 'vehicle';
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  status?: string;
+  address?: string;
+  phone?: string;
+  isCertified?: boolean;
+  licensePlate?: string;
+  make?: string;
+  model?: string;
+  vehicleCount?: number;
+  city?: string;
+}
+
+interface MapContentProps {
+  points: MapPoint[];
+  center: [number, number];
+  zoom: number;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🎨 CREATE CUSTOM DIV ICON
@@ -52,43 +79,8 @@ const createIcon = (color: string, content: string, size: number = 32) => {
   });
 };
 
-// Icônes prédéfinies pour les différents types
-const ICONS = {
-  garageCertified: createIcon('#10b981', '★', 34),
-  garageStandard: createIcon('#3b82f6', 'G', 30),
-  garageSuspended: createIcon('#ef4444', '!', 30),
-  vehicle: createIcon('#8b5cf6', 'V', 28),
-  vehicleWarning: createIcon('#f59e0b', 'V', 28),
-};
-
 // ═══════════════════════════════════════════════════════════════════════════════
-// 📍 TYPES
-// ═══════════════════════════════════════════════════════════════════════════════
-interface MapPoint {
-  id: string;
-  type: 'garage' | 'vehicle';
-  name: string;
-  latitude: number | null;
-  longitude: number | null;
-  status?: string;
-  address?: string;
-  phone?: string;
-  isCertified?: boolean;
-  licensePlate?: string;
-  make?: string;
-  model?: string;
-  vehicleCount?: number;
-  city?: string;
-}
-
-interface MapContentProps {
-  points: MapPoint[];
-  center: [number, number];
-  zoom: number;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🗺️ FIT BOUNDS COMPONENT - Ajuste la vue pour montrer tous les points
+// 🗺️ FIT BOUNDS COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 function FitBounds({ points }: { points: MapPoint[] }) {
   const map = useMap();
@@ -108,7 +100,7 @@ function FitBounds({ points }: { points: MapPoint[] }) {
           duration: 0.5
         });
       } catch (error) {
-        console.warn('Could not fit bounds:', error);
+        console.warn('[MapContent] Could not fit bounds:', error);
       }
     }
   }, [points, map]);
@@ -121,8 +113,7 @@ function FitBounds({ points }: { points: MapPoint[] }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function PopupContent({ point }: { point: MapPoint }) {
   return (
-    <div className="min-w-[220px] font-sans">
-      {/* Header */}
+    <div className="min-w-[200px] font-sans p-1">
       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold ${
           point.type === 'garage' 
@@ -131,21 +122,20 @@ function PopupContent({ point }: { point: MapPoint }) {
         }`}>
           {point.type === 'garage' ? (point.isCertified ? '★' : 'G') : 'V'}
         </div>
-        <div>
-          <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 text-sm leading-tight truncate">
             {point.name}
           </h3>
           {point.city && (
-            <p className="text-xs text-gray-500">{point.city}</p>
+            <p className="text-xs text-gray-500 truncate">{point.city}</p>
           )}
         </div>
       </div>
       
-      {/* Details */}
-      <div className="space-y-1.5 text-sm">
+      <div className="space-y-1 text-sm">
         {point.address && (
           <p className="text-gray-600 flex items-start gap-1.5">
-            <span className="text-base">📍</span>
+            <span>📍</span>
             <span className="line-clamp-2">{point.address}</span>
           </p>
         )}
@@ -174,19 +164,10 @@ function PopupContent({ point }: { point: MapPoint }) {
         )}
       </div>
       
-      {/* Badge */}
       {point.type === 'garage' && point.isCertified && (
-        <div className="mt-3 pt-2 border-t border-gray-100">
+        <div className="mt-2 pt-2 border-t border-gray-100">
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
             ✓ Certifié OKAR
-          </span>
-        </div>
-      )}
-      
-      {point.status === 'SUSPENDED' && (
-        <div className="mt-3 pt-2 border-t border-gray-100">
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-            ⚠️ Suspendu
           </span>
         </div>
       )}
@@ -195,10 +176,23 @@ function PopupContent({ point }: { point: MapPoint }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🗺️ MAP CONTENT COMPONENT - Composant principal de la carte
+// 🗺️ MAP CONTENT COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function MapContent({ points, center, zoom }: MapContentProps) {
-  // Filtrer les points valides (avec coordonnées)
+  const [isReady, setIsReady] = useState(false);
+
+  // Icônes créées côté client seulement
+  const icons = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return {
+      garageCertified: createIcon('#10b981', '★', 34),
+      garageStandard: createIcon('#3b82f6', 'G', 30),
+      garageSuspended: createIcon('#ef4444', '!', 30),
+      vehicle: createIcon('#8b5cf6', 'V', 28),
+    };
+  }, []);
+
+  // Points valides
   const validPoints = useMemo(() => {
     return points.filter(p => 
       p.latitude !== null && 
@@ -208,14 +202,38 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
     );
   }, [points]);
 
-  // Obtenir l'icône appropriée pour chaque point
-  const getIcon = (point: MapPoint): L.DivIcon => {
-    if (point.type === 'garage') {
-      if (point.status === 'SUSPENDED') return ICONS.garageSuspended;
-      return point.isCertified ? ICONS.garageCertified : ICONS.garageStandard;
+  // Marquer prêt quand les icônes sont créées
+  useEffect(() => {
+    if (icons) {
+      setIsReady(true);
     }
-    return ICONS.vehicle;
+  }, [icons]);
+
+  // Obtenir l'icône pour un point
+  const getIcon = (point: MapPoint): L.DivIcon | null => {
+    if (!icons) return null;
+    
+    if (point.type === 'garage') {
+      if (point.status === 'SUSPENDED') return icons.garageSuspended;
+      return point.isCertified ? icons.garageCertified : icons.garageStandard;
+    }
+    return icons.vehicle;
   };
+
+  // Ne pas rendre tant que les icônes ne sont pas prêtes
+  if (!isReady || !icons) {
+    return (
+      <div 
+        className="w-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl"
+        style={{ height: '600px' }}
+      >
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 dark:text-slate-400">Préparation de la carte...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MapContainer
@@ -224,7 +242,6 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
       scrollWheelZoom={true}
       zoomControl={true}
       doubleClickZoom={true}
-      // ⚠️ CRITICAL: Hauteur EXPLICITE en pixels (pas 100%)
       style={{ 
         height: '600px', 
         width: '100%',
@@ -233,38 +250,30 @@ export default function MapContent({ points, center, zoom }: MapContentProps) {
       }}
       className="leaflet-map-container"
     >
-      {/* Fond de carte OpenStreetMap */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         maxZoom={19}
       />
       
-      {/* Ajuster la vue pour montrer tous les points */}
       <FitBounds points={validPoints} />
       
-      {/* Marqueurs */}
-      {validPoints.map((point) => (
-        <Marker
-          key={`${point.type}-${point.id}`}
-          position={[point.latitude!, point.longitude!]}
-          icon={getIcon(point)}
-          eventHandlers={{
-            mouseover: (e) => {
-              const marker = e.target;
-              marker.openPopup();
-            }
-          }}
-        >
-          <Popup 
-            maxWidth={300}
-            closeButton={true}
-            className="leaflet-popup-custom"
+      {validPoints.map((point) => {
+        const icon = getIcon(point);
+        if (!icon) return null;
+        
+        return (
+          <Marker
+            key={`${point.type}-${point.id}`}
+            position={[point.latitude!, point.longitude!]}
+            icon={icon}
           >
-            <PopupContent point={point} />
-          </Popup>
-        </Marker>
-      ))}
+            <Popup maxWidth={300} closeButton={true}>
+              <PopupContent point={point} />
+            </Popup>
+          </Marker>
+        );
+      })}
     </MapContainer>
   );
 }
