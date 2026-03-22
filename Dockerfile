@@ -60,18 +60,22 @@ RUN adduser --system --uid 1001 nextjs
 # Copy built application and dependencies
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Copy standalone server
-COPY --from=builder /app/.next/standalone ./
+# Copy standalone server (Next.js standalone output)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 # Copy static files
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy public assets
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy Prisma files (IMPORTANT: include node_modules for Prisma CLI)
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules ./node_modules
+# Copy Prisma files
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# Copy node_modules for Prisma CLI (only what's needed)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
@@ -90,8 +94,8 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+# Healthcheck - start period increased to 30s
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

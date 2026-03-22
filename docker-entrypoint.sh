@@ -21,13 +21,19 @@ echo "📦 Database URL: $DATABASE_URL"
 mkdir -p /app/data
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Database migrations (with local Prisma 6.x)
+# Database Setup
 # ═══════════════════════════════════════════════════════════════════════════════
 
-if [ -f "/app/node_modules/.bin/prisma" ]; then
+# Run Prisma migrations if Prisma CLI exists
+if [ -f "/app/node_modules/prisma/build/index.js" ]; then
   echo "🔄 Running Prisma migrations..."
-  /app/node_modules/.bin/prisma migrate deploy --schema=/app/prisma/schema.prisma 2>/dev/null || {
-    echo "⚠️ Migration skipped or failed, continuing..."
+  node /app/node_modules/prisma/build/index.js migrate deploy --schema=/app/prisma/schema.prisma 2>&1 || {
+    echo "⚠️ Migration skipped, continuing..."
+  }
+elif [ -f "/app/node_modules/.bin/prisma" ]; then
+  echo "🔄 Running Prisma migrations..."
+  /app/node_modules/.bin/prisma migrate deploy --schema=/app/prisma/schema.prisma 2>&1 || {
+    echo "⚠️ Migration skipped, continuing..."
   }
 else
   echo "⚠️ Prisma CLI not found, skipping migrations"
@@ -37,10 +43,12 @@ echo "✅ Database ready!"
 echo "========================================"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Start Application (execute CMD from Dockerfile)
+# Start Application
 # ═══════════════════════════════════════════════════════════════════════════════
 
-echo "🌟 Starting Next.js server on port 3000..."
+echo "🌟 Starting Next.js server..."
+echo "   PORT: $PORT"
+echo "   HOSTNAME: $HOSTNAME"
 
 # Execute the CMD passed from Dockerfile
 exec "$@"
