@@ -7,33 +7,231 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const showAll = searchParams.get('all') === 'true';
 
-    // Utiliser une requête raw pour faire la jointure correctement
-    // Afficher les véhicules qui ont un QR code ACTIF dans QRCodeStock
-    // OU qui ont un qrStatus = 'ACTIVE' dans Vehicle (pour compatibilité)
-    const vehicles = await db.$queryRaw<any[]>`
-      SELECT 
-        v.id, v.reference, v.make, v.model, v.year, v.color, v.licensePlate, v.vin,
-        v.currentMileage, v.vtEndDate, v.insuranceEndDate, v.qrStatus, v.status,
-        v.okarScore, v.okarBadge, v.createdAt, v.lastScanDate,
-        v.ownerId, v.proprietorId, v.garageId,
-        qs.id as qrCodeId, qs.codeUnique, qs.shortCode, qs.status as qrStockStatus,
-        o.id as ownerId, o.name as ownerName, o.phone as ownerPhone, o.email as ownerEmail,
-        p.id as proprietorId, p.name as proprietorName, p.phone as proprietorPhone,
-        g.id as garageId, g.name as garageName, g.slug as garageSlug,
-        (SELECT COUNT(*) FROM MaintenanceRecord WHERE vehicleId = v.id) as maintenanceCount
-      FROM Vehicle v
-      LEFT JOIN QRCodeStock qs ON qs.linkedVehicleId = v.id
-      LEFT JOIN User o ON v.ownerId = o.id
-      LEFT JOIN User p ON v.proprietorId = p.id
-      LEFT JOIN Garage g ON v.garageId = g.id
-      WHERE ${
-        showAll 
-          ? '1=1' 
-          : "(qs.status = 'ACTIVE' OR (qs.status IS NULL AND v.qrStatus = 'ACTIVE'))"
+    // ═══════════════════════════════════════════════════════════════════
+    // APPROACHE 1: Utiliser Prisma avec des requêtes séparées
+    // ═══════════════════════════════════════════════════════════════════
+    
+    let vehicles = [];
+
+    if (showAll) {
+      // Afficher tous les véhicules
+      vehicles = await db.vehicle.findMany({
+        select: {
+          id: true,
+          reference: true,
+          make: true,
+          model: true,
+          year: true,
+          color: true,
+          licensePlate: true,
+          vin: true,
+          currentMileage: true,
+          vtEndDate: true,
+          insuranceEndDate: true,
+          qrStatus: true,
+          status: true,
+          okarScore: true,
+          okarBadge: true,
+          createdAt: true,
+          lastScanDate: true,
+          ownerId: true,
+          proprietorId: true,
+          garageId: true,
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true
+            }
+          },
+          proprietor: {
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          },
+          garage: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          },
+          QRCodeStock: {
+            select: {
+              id: true,
+              codeUnique: true,
+              shortCode: true,
+              status: true
+            }
+          },
+          _count: {
+            select: {
+              MaintenanceRecord: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500
+      });
+    } else {
+      // ═══════════════════════════════════════════════════════════════════
+      // APPROACHE 2: Récupérer les véhicules avec QR actif
+      // Utiliser 2 requêtes et combiner les résultats
+      // ═══════════════════════════════════════════════════════════════════
+
+      // 2.1. Véhicules avec QRCodeStock ACTIVE
+      const vehiclesWithActiveQRStock = await db.vehicle.findMany({
+        where: {
+          QRCodeStock: {
+            status: 'ACTIVE'
+          }
+        },
+        select: {
+          id: true,
+          reference: true,
+          make: true,
+          model: true,
+          year: true,
+          color: true,
+          licensePlate: true,
+          vin: true,
+          currentMileage: true,
+          vtEndDate: true,
+          insuranceEndDate: true,
+          qrStatus: true,
+          status: true,
+          okarScore: true,
+          okarBadge: true,
+          createdAt: true,
+          lastScanDate: true,
+          ownerId: true,
+          proprietorId: true,
+          garageId: true,
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true
+            }
+          },
+          proprietor: {
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          },
+          garage: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          },
+          QRCodeStock: {
+            select: {
+              id: true,
+              codeUnique: true,
+              shortCode: true,
+              status: true
+            }
+          },
+          _count: {
+            select: {
+              MaintenanceRecord: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500
+      });
+
+      // 2.2. Véhicules SANS QRCodeStock mais AVEC qrStatus = 'ACTIVE'
+      const vehiclesWithActiveQrStatus = await db.vehicle.findMany({
+        where: {
+          QRCodeStock: null,
+          qrStatus: 'ACTIVE'
+        },
+        select: {
+          id: true,
+          reference: true,
+          make: true,
+          model: true,
+          year: true,
+          color: true,
+          licensePlate: true,
+          vin: true,
+          currentMileage: true,
+          vtEndDate: true,
+          insuranceEndDate: true,
+          qrStatus: true,
+          status: true,
+          okarScore: true,
+          okarBadge: true,
+          createdAt: true,
+          lastScanDate: true,
+          ownerId: true,
+          proprietorId: true,
+          garageId: true,
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true
+            }
+          },
+          proprietor: {
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          },
+          garage: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          },
+          QRCodeStock: {
+            select: {
+              id: true,
+              codeUnique: true,
+              shortCode: true,
+              status: true
+            }
+          },
+          _count: {
+            select: {
+              MaintenanceRecord: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500
+      });
+
+      // Combiner les deux listes en évitant les doublons
+      const seenIds = new Set<string>();
+      for (const v of vehiclesWithActiveQRStock) {
+        if (!seenIds.has(v.id)) {
+          seenIds.add(v.id);
+          vehicles.push(v);
+        }
       }
-      ORDER BY v.createdAt DESC
-      LIMIT 500
-    `;
+      for (const v of vehiclesWithActiveQrStatus) {
+        if (!seenIds.has(v.id)) {
+          seenIds.add(v.id);
+          vehicles.push(v);
+        }
+      }
+    }
 
     // Reformater les résultats pour correspondre au format attendu
     const formattedVehicles = vehicles.map(v => ({
@@ -54,33 +252,22 @@ export async function GET(request: NextRequest) {
       okarBadge: v.okarBadge,
       createdAt: v.createdAt,
       lastScanDate: v.lastScanDate,
-      owner: v.ownerId ? {
-        id: v.ownerId,
-        name: v.ownerName,
-        phone: v.ownerPhone,
-        email: v.ownerEmail
-      } : null,
-      proprietor: v.proprietorId ? {
-        id: v.proprietorId,
-        name: v.proprietorName,
-        phone: v.proprietorPhone
-      } : null,
-      garage: v.garageId ? {
-        id: v.garageId,
-        name: v.garageName,
-        slug: v.garageSlug
-      } : null,
-      qrCode: v.qrCodeId ? {
-        id: v.qrCodeId,
-        codeUnique: v.codeUnique,
-        shortCode: v.shortCode,
-        status: v.qrStockStatus
+      owner: v.owner,
+      proprietor: v.proprietor,
+      garage: v.garage,
+      qrCode: v.QRCodeStock ? {
+        id: v.QRCodeStock.id,
+        codeUnique: v.QRCodeStock.codeUnique,
+        shortCode: v.QRCodeStock.shortCode,
+        status: v.QRCodeStock.status
       } : null,
       _count: {
-        maintenanceRecords: v.maintenanceCount || 0
+        maintenanceRecords: v._count?.MaintenanceRecord || 0
       },
       maintenanceRecords: []
     }));
+
+    console.log('[VEHICLES API] Found', formattedVehicles.length, 'vehicles (showAll:', showAll, ')');
 
     return NextResponse.json({ vehicles: formattedVehicles });
   } catch (error) {
