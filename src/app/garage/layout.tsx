@@ -108,11 +108,16 @@ export default function GarageLayout({
     }
 
     if (user.role !== 'garage') {
-      // User is authenticated but not a garage - redirect to their area
+      // User is authenticated but not a garage - redirect to their correct area
       if (['superadmin', 'admin', 'agent'].includes(user.role)) {
         router.replace('/admin/tableau-de-bord');
-      } else {
+      } else if (user.role === 'agency') {
         router.replace('/agence/tableau-de-bord');
+      } else if (user.role === 'driver') {
+        router.replace('/driver/tableau-de-bord');
+      } else {
+        // Unknown role - redirect to home
+        router.replace('/');
       }
     }
   }, [user, loading, router, pathname]);

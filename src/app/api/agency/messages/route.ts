@@ -1,54 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSession } from '@/lib/session';
 
-// GET - Fetch messages for agency
+// GET - Fetch messages for agency/garage
 export async function GET(request: NextRequest) {
   try {
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const agencyId = searchParams.get('agencyId');
     const type = searchParams.get('type');
     const unreadOnly = searchParams.get('unread') === 'true';
 
-    if (!agencyId) {
-      return NextResponse.json(
-        { error: 'Agency ID is required' },
-        { status: 400 }
-      );
+    const where: Record<string, unknown> = {
+      receiverId: user.id
+    };
+
+    if (type) {
+      where.type = type;
+    }
+
+    if (unreadOnly) {
+      where.isRead = false;
     }
 
     // If just requesting unread count
     if (searchParams.get('count') === 'true') {
       const unreadCount = await db.message.count({
-        where: {
-          OR: [
-            { type: 'reponse_assistance', recipientAgencyId: agencyId, status: 'non_lu' },
-            { type: 'message_superadmin', recipientAgencyId: agencyId, status: 'non_lu' },
-          ],
-        },
+        where: { receiverId: user.id, isRead: false }
       });
       return NextResponse.json({ unreadCount });
-    }
-
-    const where: Record<string, unknown> = {};
-
-    // Filter by type
-    if (type === 'assistance_agence') {
-      // Messages sent by this agency to superadmin
-      where.type = 'assistance_agence';
-      where.agencyId = agencyId;
-    } else if (type === 'reponse_assistance') {
-      // Responses from superadmin to this agency
-      where.type = 'reponse_assistance';
-      where.recipientAgencyId = agencyId;
-    } else if (type === 'message_superadmin') {
-      // Messages from superadmin specifically for this agency
-      where.type = 'message_superadmin';
-      where.recipientAgencyId = agencyId;
-    }
-
-    // Filter unread only
-    if (unreadOnly) {
-      where.status = 'non_lu';
     }
 
     const messages = await db.message.findMany({
@@ -57,20 +40,14 @@ export async function GET(request: NextRequest) {
       take: 100,
     });
 
-    // Get unread count for incoming messages
     const unreadCount = await db.message.count({
-      where: {
-        OR: [
-          { type: 'reponse_assistance', recipientAgencyId: agencyId, status: 'non_lu' },
-          { type: 'message_superadmin', recipientAgencyId: agencyId, status: 'non_lu' },
-        ],
-      },
+      where: { receiverId: user.id, isRead: false }
     });
 
     return NextResponse.json({ messages, unreadCount });
 
   } catch (error) {
-    console.error('Error fetching agency messages:', error);
+    console.error('Error fetching messages:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la récupération des messages' },
       { status: 500 }
@@ -78,34 +55,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a new message from agency
+// POST - Create a new message
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { type, agencyId, senderName, subject, content } = body;
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
 
-    if (!type || !agencyId || !content) {
+    const body = await request.json();
+    const { type, subject, content, receiverId } = body;
+
+    if (!content) {
       return NextResponse.json(
-        { error: 'Type, agency ID et contenu requis' },
+        { error: 'Contenu requis' },
         { status: 400 }
       );
     }
 
     const message = await db.message.create({
       data: {
-        type,
-        agencyId,
-        senderName: senderName || null,
+        type: type || 'general',
+        senderId: user.id,
+        receiverId: receiverId || null,
         subject: subject || null,
         content: typeof content === 'string' ? content : JSON.stringify(content),
-        status: 'non_lu',
+        isRead: false,
       },
     });
 
     return NextResponse.json({ success: true, message });
 
   } catch (error) {
-    console.error('Error creating agency message:', error);
+    console.error('Error creating message:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la création du message' },
       { status: 500 }
@@ -116,19 +98,24 @@ export async function POST(request: NextRequest) {
 // PUT - Update message status (mark as read)
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { id, status } = body;
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
 
-    if (!id || !status) {
+    const body = await request.json();
+    const { id, isRead } = body;
+
+    if (!id) {
       return NextResponse.json(
-        { error: 'ID et statut requis' },
+        { error: 'ID requis' },
         { status: 400 }
       );
     }
 
     const message = await db.message.update({
       where: { id },
-      data: { status },
+      data: { isRead: isRead ?? true, readAt: new Date() },
     });
 
     return NextResponse.json({ success: true, message });

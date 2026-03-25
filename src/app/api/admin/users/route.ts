@@ -9,10 +9,10 @@ const userSchema = z.object({
   email: z.string().email(),
   name: z.string().optional(),
   password: z.string().min(6),
-  role: z.enum(['superadmin', 'admin', 'agent', 'agency']),
-  agencyId: z.string().optional(),
+  role: z.enum(['superadmin', 'admin', 'agent', 'garage', 'driver']),
+  garageId: z.string().optional(),
   sendWelcomeEmail: z.boolean().optional(), // Optional: send welcome email
-  agencyName: z.string().optional(), // For welcome email
+  garageName: z.string().optional(), // For welcome email
 });
 
 // Password hashing with bcrypt (compatible with login API)
@@ -24,7 +24,7 @@ async function hashPassword(password: string): Promise<string> {
 export async function GET() {
   try {
     const users = await db.user.findMany({
-      include: { agency: true },
+      include: { garage: true },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -67,34 +67,33 @@ export async function POST(request: NextRequest) {
         name: validatedData.name || null,
         password: hashedPassword,
         role: validatedData.role,
-        agencyId: validatedData.agencyId || null,
+        garageId: validatedData.garageId || null,
       }
     });
 
-    // Send welcome email for agency users
-    if (validatedData.role === 'agency' && validatedData.sendWelcomeEmail !== false) {
+    // Send welcome email for garage users
+    if (validatedData.role === 'garage' && validatedData.sendWelcomeEmail !== false) {
       try {
         const emailSettings = await getEmailSettings();
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
         const loginUrl = `${baseUrl}/garage/connexion`;
-        
+
         const template = getWelcomeAgencyEmailTemplate(
-          validatedData.agencyName || validatedData.name || 'Agence',
+          validatedData.garageName || validatedData.name || 'Garage',
           validatedData.email,
           validatedData.password,
           loginUrl
         );
-        
+
         await sendEmail({
           to: validatedData.email,
-          subject: '🎉 Bienvenue sur OKAR - Votre espace agence',
+          subject: '🎉 Bienvenue sur OKAR - Votre espace garage',
           html: template.html,
           text: template.text,
           type: 'welcome',
           userId: user.id,
-          agencyId: validatedData.agencyId
         });
-        
+
         console.log('✅ Welcome email sent to:', validatedData.email);
       } catch (emailError) {
         console.error('❌ Failed to send welcome email:', emailError);

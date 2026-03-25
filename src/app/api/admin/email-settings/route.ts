@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getEmailSettings, saveEmailSettings } from '@/lib/email';
+import { getEmailSettings, saveEmailSettings, EmailProvider } from '@/lib/email';
 
 // GET - Retrieve email settings
 export async function GET() {
   try {
     const settings = await getEmailSettings();
-    
+
     // Mask sensitive data
     const safeSettings = settings ? {
       ...settings,
@@ -26,10 +26,10 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate provider
-    const validProviders = ['console', 'smtp'];
-    if (body.provider && !validProviders.includes(body.provider)) {
+    const validProviders: EmailProvider[] = ['console', 'smtp'];
+    if (body.provider && !validProviders.includes(body.provider as EmailProvider)) {
       return NextResponse.json(
         { error: 'Provider invalide' },
         { status: 400 }
@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest) {
 
     // Prepare settings data
     const settingsData: {
-      provider?: string;
+      provider?: EmailProvider;
       fromEmail?: string;
       fromName?: string;
       smtpHost?: string | null;
@@ -48,10 +48,10 @@ export async function PUT(request: NextRequest) {
       smtpEncryption?: string;
     } = {};
 
-    if (body.provider) settingsData.provider = body.provider;
+    if (body.provider) settingsData.provider = body.provider as EmailProvider;
     if (body.fromEmail) settingsData.fromEmail = body.fromEmail;
     if (body.fromName) settingsData.fromName = body.fromName;
-    
+
     // SMTP settings
     if (body.smtpHost !== undefined) settingsData.smtpHost = body.smtpHost || null;
     if (body.smtpPort !== undefined) settingsData.smtpPort = body.smtpPort ? parseInt(body.smtpPort) : null;

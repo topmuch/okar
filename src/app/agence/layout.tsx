@@ -380,8 +380,17 @@ export default function AgencyRootLayout({
     }
     
     if (!isAgency) {
-      // User is authenticated but not agency - redirect to admin area
-      router.replace('/admin/tableau-de-bord');
+      // User is authenticated but not agency - redirect to their correct area
+      if (['superadmin', 'admin', 'agent'].includes(user.role)) {
+        router.replace('/admin/tableau-de-bord');
+      } else if (user.role === 'garage') {
+        router.replace('/garage/tableau-de-bord');
+      } else if (user.role === 'driver') {
+        router.replace('/driver/tableau-de-bord');
+      } else {
+        // Unknown role - redirect to home
+        router.replace('/');
+      }
     }
   }, [user, loading, isAgency, router, pathname]);
 

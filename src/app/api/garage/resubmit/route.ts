@@ -1,126 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSession } from '@/lib/session';
 
 /**
- * POST /api/garage/resubmit
- * Resoumet une demande de garage après correction
+ * POST - Resubmit garage application after rejection
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      garageId,
-      agreementDocumentUrl,
-      shopPhoto,
-      idDocumentUrl,
-      additionalNotes,
-      updatedInfo,
-    } = body;
-
-    if (!garageId) {
-      return NextResponse.json(
-        { error: 'ID garage requis' },
-        { status: 400 }
-      );
+    const session = await getSession();
+    if (!session || session.role !== 'garage' || !session.garageId) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    // Vérifier que le garage existe et est rejeté
+    const garageId = session.garageId; // Now we know it's not null
+    const body = await request.json();
+    const { name, address, city, phone, email, description } = body;
+
+    // Get garage
     const garage = await db.garage.findUnique({
-      where: { id: garageId },
+      where: { id: garageId }
     });
 
     if (!garage) {
-      return NextResponse.json(
-        { error: 'Garage non trouvé' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Garage non trouvé' }, { status: 404 });
     }
 
-    if (garage.validationStatus !== 'REJECTED') {
-      return NextResponse.json(
-        { error: 'Seuls les garages rejetés peuvent resoumettre leur demande' },
-        { status: 400 }
-      );
-    }
-
-    // Préparer les données de mise à jour
-    const updateData: any = {
-      validationStatus: 'PENDING', // Remettre en attente
-      rejectionReason: null, // Effacer l'ancien motif de rejet
-      updatedAt: new Date(),
-    };
-
-    // Mettre à jour les documents si fournis
-    if (agreementDocumentUrl) {
-      updateData.agreementDocumentUrl = agreementDocumentUrl;
-    }
-    if (shopPhoto) {
-      updateData.shopPhoto = shopPhoto;
-    }
-    if (idDocumentUrl) {
-      updateData.idDocumentUrl = idDocumentUrl;
-    }
-
-    // Mettre à jour les informations si fournies
-    if (updatedInfo) {
-      if (updatedInfo.name) updateData.name = updatedInfo.name;
-      if (updatedInfo.email !== undefined) updateData.email = updatedInfo.email;
-      if (updatedInfo.phone) updateData.phone = updatedInfo.phone;
-      if (updatedInfo.whatsappNumber) updateData.whatsappNumber = updatedInfo.whatsappNumber;
-      if (updatedInfo.address) updateData.address = updatedInfo.address;
-      if (updatedInfo.managerName) updateData.managerName = updatedInfo.managerName;
-      if (updatedInfo.managerPhone) updateData.managerPhone = updatedInfo.managerPhone;
-      if (updatedInfo.businessRegistryNumber) updateData.businessRegistryNumber = updatedInfo.businessRegistryNumber;
-    }
-
-    // Mettre à jour le garage
+    // Update garage with new data
     const updatedGarage = await db.garage.update({
       where: { id: garageId },
-      data: updateData,
-    });
-
-    // Créer un log d'audit
-    await db.auditLog.create({
       data: {
-        action: 'GARAGE_RESUBMITTED',
-        entityType: 'GARAGE',
-        entityId: garageId,
-        details: JSON.stringify({
-          garageName: garage.name,
-          previousRejectionReason: garage.rejectionReason,
-          additionalNotes: additionalNotes || null,
-          updatedDocuments: {
-            agreementDocument: !!agreementDocumentUrl,
-            shopPhoto: !!shopPhoto,
-            idDocument: !!idDocumentUrl,
-          },
-          timestamp: new Date().toISOString(),
-        }),
-      },
-    });
-
-    // Créer une notification pour les admins
-    await db.notification.create({
-      data: {
-        type: 'GARAGE_RESUBMITTED',
-        message: `Le garage "${garage.name}" a corrigé et resoumis sa demande.`,
-      },
+        name: name || garage.name,
+        address: address || garage.address,
+        city: city || garage.city,
+        phone: phone || garage.phone,
+        email: email || garage.email,
+        description: description || garage.description,
+        isVerified: false,
+      }
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Votre demande a été mise à jour et sera réexaminée par notre équipe.',
-      garage: {
-        id: updatedGarage.id,
-        name: updatedGarage.name,
-        validationStatus: updatedGarage.validationStatus,
-      },
+      message: 'Demande renvoyée avec succès',
+      garage: updatedGarage
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error resubmitting garage application:', error);
     return NextResponse.json(
-      { error: error.message || 'Erreur lors de la resoumission' },
+      { error: 'Erreur lors du renvoi de la demande' },
       { status: 500 }
     );
   }

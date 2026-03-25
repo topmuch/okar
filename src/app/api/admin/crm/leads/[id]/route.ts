@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db } from '@/lib/db';
 
 // GET - Get lead details with observations
 export async function GET(
@@ -10,8 +8,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    
-    const lead = await prisma.lead.findUnique({
+
+    const lead = await db.lead.findUnique({
       where: { id },
       include: {
         assignedTo: {
@@ -62,7 +60,7 @@ export async function PUT(
     if (email !== undefined) updateData.email = email;
     if (name !== undefined) updateData.name = name;
 
-    const lead = await prisma.lead.update({
+    const lead = await db.lead.update({
       where: { id },
       data: updateData,
       include: {

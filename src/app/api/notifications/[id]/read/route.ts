@@ -11,7 +11,7 @@ export async function POST(
 
     const notification = await db.notification.update({
       where: { id },
-      data: { read: true },
+      data: { isRead: true, readAt: new Date() },
     });
 
     return NextResponse.json({ success: true, notification });

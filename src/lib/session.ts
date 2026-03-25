@@ -150,16 +150,15 @@ export async function getSession(): Promise<SessionUser | null> {
       include: {
         User: {
           include: {
-            Garage: {
+            garage: {
               select: {
                 id: true,
                 name: true,
-                slug: true,
                 email: true,
                 phone: true,
                 address: true,
                 logo: true,
-                isCertified: true,
+                isVerified: true,
               },
             },
           },
@@ -206,7 +205,7 @@ export async function getSession(): Promise<SessionUser | null> {
       name: session.User.name,
       role: session.User.role,
       garageId: session.User.garageId,
-      garage: session.User.Garage,
+      garage: session.User.garage,
     };
   } catch (error) {
     console.error('Error getting session:', error);

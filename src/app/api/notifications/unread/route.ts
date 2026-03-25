@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     // Get all unread notifications (broadcast to superadmins)
     const notifications = await db.notification.findMany({
       where: {
-        read: false,
+        isRead: false,
       },
       orderBy: {
         createdAt: 'desc',

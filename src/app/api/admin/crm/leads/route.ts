@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
+import { getSession } from '@/lib/session';
 import { z } from 'zod';
-
-// Initialize Prisma Client directly in this file
-const prisma = new PrismaClient();
 
 // Extended status type
 type LeadStatus = 'new' | 'contacted' | 'in_discussion' | 'qualified' | 'converted' | 'lost';
@@ -24,7 +22,7 @@ const leadSchema = z.object({
 // GET - List all leads
 export async function GET() {
   try {
-    const leads = await prisma.lead.findMany({
+    const leads = await db.lead.findMany({
       include: {
         assignedTo: {
           select: { id: true, name: true }
@@ -50,13 +48,19 @@ export async function GET() {
 // POST - Create new lead
 export async function POST(request: NextRequest) {
   try {
+    // Get current user
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     console.log('Received lead data:', body);
-    
+
     const validatedData = leadSchema.parse(body);
     console.log('Validated data:', validatedData);
 
-    const lead = await prisma.lead.create({
+    const lead = await db.lead.create({
       data: {
         name: validatedData.name,
         email: validatedData.email,
@@ -65,6 +69,8 @@ export async function POST(request: NextRequest) {
         status: validatedData.status || 'new',
         source: validatedData.source || '',
         notes: validatedData.notes || '',
+        createdById: user.id,
+        assignedToId: validatedData.assignedToId || null,
       }
     });
 
@@ -101,7 +107,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const lead = await prisma.lead.update({
+    const lead = await db.lead.update({
       where: { id },
       data
     });
@@ -130,7 +136,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await prisma.lead.delete({
+    await db.lead.delete({
       where: { id }
     });
 

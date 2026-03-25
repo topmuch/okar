@@ -19,13 +19,13 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
-        slug: true,
         email: true,
         phone: true,
         address: true,
+        city: true,
         logo: true,
-        isCertified: true,
-        active: true,
+        isVerified: true,
+        isActive: true,
         createdAt: true,
       },
     });

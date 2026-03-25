@@ -71,21 +71,25 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, phone, address, logo, passwordChange } = body;
+    const { name, email, phone, address, city, description, logo, passwordChange } = body;
 
     // Update garage info
     const updateData: {
       name?: string;
       email?: string | null;
-      phone?: string | null;
-      address?: string | null;
+      phone?: string;
+      address?: string;
+      city?: string;
+      description?: string | null;
       logo?: string | null;
     } = {};
 
     if (name) updateData.name = name;
     if (email !== undefined) updateData.email = email || null;
-    if (phone !== undefined) updateData.phone = phone || null;
-    if (address !== undefined) updateData.address = address || null;
+    if (phone !== undefined) updateData.phone = phone || '';
+    if (address !== undefined) updateData.address = address || '';
+    if (city !== undefined) updateData.city = city || '';
+    if (description !== undefined) updateData.description = description || null;
     if (logo !== undefined) updateData.logo = logo || null;
 
     // Update garage

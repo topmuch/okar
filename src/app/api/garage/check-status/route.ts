@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 /**
  * GET /api/garage/check-status?phone=XXX
  * Vérifie le statut d'un garage par son numéro de téléphone
- * Utilisé pour le flux de correction après rejet
  */
 export async function GET(request: NextRequest) {
   try {
@@ -21,31 +20,20 @@ export async function GET(request: NextRequest) {
     // Normaliser le numéro de téléphone
     const normalizedPhone = phone.replace(/[\s\-\(\)]/g, '');
 
-    // Rechercher le garage par téléphone ou WhatsApp
+    // Rechercher le garage par téléphone
     const garage = await db.garage.findFirst({
       where: {
-        OR: [
-          { phone: { contains: normalizedPhone.slice(-9) } },
-          { whatsappNumber: { contains: normalizedPhone.slice(-9) } },
-          { managerPhone: { contains: normalizedPhone.slice(-9) } },
-        ],
+        phone: { contains: normalizedPhone.slice(-9) }
       },
       select: {
         id: true,
         name: true,
         email: true,
         phone: true,
-        whatsappNumber: true,
         address: true,
-        managerName: true,
-        managerPhone: true,
-        businessRegistryNumber: true,
-        agreementDocumentUrl: true,
-        shopPhoto: true,
-        idDocumentUrl: true,
-        rejectionReason: true,
-        validationStatus: true,
-        accountStatus: true,
+        city: true,
+        isVerified: true,
+        isActive: true,
         createdAt: true,
       },
     });
@@ -57,32 +45,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Vérifier si le garage peut corriger sa demande
-    if (garage.validationStatus === 'APPROVED') {
+    // Vérifier le statut
+    if (garage.isVerified && garage.isActive) {
       return NextResponse.json(
-        { 
+        {
           error: 'Votre garage est déjà validé. Vous pouvez vous connecter à votre espace.',
-          garage: garage 
+          garage: garage
         },
         { status: 400 }
       );
     }
 
-    if (garage.validationStatus === 'PENDING') {
+    if (!garage.isVerified) {
       return NextResponse.json(
-        { 
-          error: 'Votre demande est en cours d\'examen. Vous serez notifié par SMS/WhatsApp une fois traitée.',
-          garage: garage 
+        {
+          error: 'Votre demande est en cours d\'examen.',
+          garage: garage
         },
         { status: 400 }
       );
     }
 
-    // Le garage est rejeté, il peut corriger
     return NextResponse.json({
       success: true,
       garage: garage,
-      canResubmit: garage.validationStatus === 'REJECTED',
+      canResubmit: !garage.isActive,
     });
 
   } catch (error: any) {

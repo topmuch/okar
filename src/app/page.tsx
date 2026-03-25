@@ -56,14 +56,14 @@ export default function HomePage() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/inscrire">
+              <Link href="/login">
                 <button className="px-5 py-2.5 text-sm font-semibold text-[#111111] hover:text-[#FF6B00] transition-colors">
                   Se connecter
                 </button>
               </Link>
-              <Link href="/inscrire">
+              <Link href="/devenir-partenaire">
                 <button className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#FF6B00] to-[#FF0080] rounded-full hover:shadow-lg hover:shadow-[#FF6B00]/25 transition-all duration-200">
-                  Créer un compte
+                  Devenir partenaire
                 </button>
               </Link>
             </div>
@@ -87,14 +87,14 @@ export default function HomePage() {
               <a href="#temoignages" className="text-sm font-medium text-[#111111] py-2">Témoignages</a>
               <a href="#contact" className="text-sm font-medium text-[#111111] py-2">Contact</a>
               <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
-                <Link href="/inscrire">
+                <Link href="/login">
                   <button className="w-full py-3 text-sm font-semibold text-[#111111] border border-gray-200 rounded-full">
                     Se connecter
                   </button>
                 </Link>
-                <Link href="/inscrire">
+                <Link href="/devenir-partenaire">
                   <button className="w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#FF6B00] to-[#FF0080] rounded-full">
-                    Créer un compte
+                    Devenir partenaire
                   </button>
                 </Link>
               </div>
@@ -202,12 +202,12 @@ export default function HomePage() {
                     Valorisez votre auto avec un passeport numérique infalsifiable. Suivez tous vos entretiens en un clic.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Link href="/inscrire">
+                    <Link href="/login">
                       <button className="px-8 py-4 text-lg font-semibold text-[#FF6B00] border-2 border-[#FF6B00] rounded-full hover:bg-[#FF6B00] hover:text-white transition-all duration-200">
                         Se connecter
                       </button>
                     </Link>
-                    <Link href="/inscrire">
+                    <Link href="/devenir-partenaire">
                       <button className="px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-[#FF6B00] to-[#FF8c00] rounded-full hover:shadow-lg hover:shadow-[#FF6B00]/30 transition-all duration-200">
                         Créer mon passeport
                       </button>
@@ -481,9 +481,9 @@ export default function HomePage() {
             Rejoignez des milliers de conducteurs et garages qui font confiance à OKAR.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/inscrire">
+            <Link href="/login">
               <button className="w-full sm:w-auto px-10 py-5 text-lg font-semibold text-white bg-gradient-to-r from-[#FF6B00] to-[#FF0080] rounded-full hover:shadow-lg hover:shadow-[#FF6B00]/30 transition-all duration-200 flex items-center justify-center gap-2">
-                Rechercher un véhicule
+                Se connecter
                 <ArrowRight className="w-5 h-5" />
               </button>
             </Link>

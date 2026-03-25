@@ -1,59 +1,77 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
 // Initialize demo users for login
 export async function GET() {
   try {
     // Check if superadmin exists
-    const existingAdmin = await prisma.user.findUnique({
-      where: { email: 'admin@autopass.sn' }
+    const existingAdmin = await db.user.findUnique({
+      where: { email: 'admin@okar.sn' }
     });
 
     if (!existingAdmin) {
       // Hash passwords
-      const adminPassword = await bcrypt.hash('admin123', 10);
-      const garagePassword = await bcrypt.hash('garage123', 10);
+      const adminPassword = await bcrypt.hash('Admin123!', 10);
+      const garagePassword = await bcrypt.hash('Garage123!', 10);
 
-      // Create superadmin user
-      await prisma.user.create({
+      // Create superadmin user first
+      const superAdmin = await db.user.create({
         data: {
-          email: 'admin@autopass.sn',
-          name: 'Super Admin',
+          email: 'admin@okar.sn',
+          name: 'Super Admin OKAR',
+          phone: '+221 77 000 00 00',
           password: adminPassword,
           role: 'superadmin',
+          emailVerified: new Date(),
         }
       });
 
-      // Create demo garage first
-      const demoGarage = await prisma.garage.create({
+      // Create demo garage user first
+      const garageUser = await db.user.create({
         data: {
-          name: 'GARAGE AUTO PLUS',
-          slug: 'garage-auto-plus',
-          email: 'contact@garage-auto-plus.sn',
-          phone: '+221 77 123 45 67',
-          address: 'Dakar, Sénégal',
-          active: true,
-        }
-      });
-
-      // Create demo garage user
-      await prisma.user.create({
-        data: {
-          email: 'garage@autopass.sn',
-          name: 'GARAGE AUTO PLUS',
+          email: 'garage@okar.sn',
+          name: 'Garage Central Dakar',
+          phone: '+221 33 800 00 00',
           password: garagePassword,
           role: 'garage',
-          garageId: demoGarage.id,
+          emailVerified: new Date(),
         }
       });
+
+      // Create demo garage linked to user
+      await db.garage.create({
+        data: {
+          name: 'Garage Central Dakar',
+          email: 'garage@okar.sn',
+          phone: '+221 33 800 00 00',
+          address: 'Route de Rufisque, Dakar',
+          city: 'Dakar',
+          description: 'Garage certifié OKAR',
+          isActive: true,
+          isVerified: true,
+          userId: garageUser.id,
+        }
+      });
+
+      // Update garage user with garageId
+      const garage = await db.garage.findFirst({
+        where: { userId: garageUser.id }
+      });
+
+      if (garage) {
+        await db.user.update({
+          where: { id: garageUser.id },
+          data: { garageId: garage.id }
+        });
+      }
 
       return NextResponse.json({
         success: true,
         message: 'Demo users created successfully',
         users: [
-          { email: 'admin@autopass.sn', password: 'admin123', role: 'superadmin' },
-          { email: 'garage@autopass.sn', password: 'garage123', role: 'garage' }
+          { email: 'admin@okar.sn', password: 'Admin123!', role: 'superadmin' },
+          { email: 'garage@okar.sn', password: 'Garage123!', role: 'garage' }
         ]
       });
     }
@@ -62,8 +80,8 @@ export async function GET() {
       success: true,
       message: 'Demo users already exist',
       users: [
-        { email: 'admin@autopass.sn', password: 'admin123', role: 'superadmin' },
-        { email: 'garage@autopass.sn', password: 'garage123', role: 'garage' }
+        { email: 'admin@okar.sn', password: 'Admin123!', role: 'superadmin' },
+        { email: 'garage@okar.sn', password: 'Garage123!', role: 'garage' }
       ]
     });
   } catch (error) {

@@ -90,6 +90,7 @@ export async function middleware(req: NextRequest) {
   const isApiRoute = API_ROUTES.some(route => pathname.startsWith(route));
   const isAdminRoute = pathname.startsWith('/admin');
   const isGarageRoute = pathname.startsWith('/garage') && !pathname.startsWith('/garage/connexion') && !pathname.startsWith('/garage/correction');
+  const isAgenceRoute = pathname.startsWith('/agence') && !pathname.startsWith('/agence/login');
 
   // 6. If no session cookie, deny access
   if (!sessionCookie) {
@@ -110,6 +111,11 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
     
+    if (isAgenceRoute) {
+      const loginUrl = new URL('/garage/connexion', req.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    
     return NextResponse.next();
   }
 
@@ -123,9 +129,12 @@ export const config = {
     '/admin/:path*',
     // Garage routes
     '/garage/:path*',
+    // Agence routes
+    '/agence/:path*',
     // API routes
     '/api/admin/:path*',
     '/api/garage/:path*',
     '/api/driver/:path*',
+    '/api/agence/:path*',
   ],
 };

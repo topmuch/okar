@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/session';
 import bcrypt from 'bcryptjs';
-import { 
-  sendGarageApprovalNotification, 
-  sendGarageRejectionNotification 
-} from '@/lib/notification-service';
 
 // Fonction pour générer un mot de passe temporaire
 function generateTemporaryPassword(): string {
@@ -31,9 +26,9 @@ function generateGarageEmail(name: string): string {
 // POST - Valider ou rejeter une demande d'adhésion
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session || !['superadmin', 'admin'].includes(session.role)) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
@@ -56,15 +51,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Garage non trouvé' }, { status: 404 });
     }
 
-    if (garage.validationStatus !== 'PENDING' && action !== 'update') {
+    // Check if already verified (using isVerified instead of validationStatus)
+    if (garage.isVerified && action !== 'update') {
       return NextResponse.json(
-        { error: 'Cette demande a déjà été traitée' },
+        { error: 'Ce garage est déjà validé' },
         { status: 400 }
       );
     }
 
-    const adminId = session.user.id;
-    const adminEmail = session.user.email;
+    const adminId = session.id;
 
     if (action === 'approve') {
       // Générer les identifiants
@@ -81,23 +76,22 @@ export async function POST(request: NextRequest) {
         user = await db.user.create({
           data: {
             email: garageEmail,
-            name: garage.managerName || garage.name,
-            phone: garage.whatsappNumber || garage.phone,
+            name: garage.name,
+            phone: garage.phone,
             password: hashedPassword,
             role: 'garage',
             garageId: garage.id,
-            emailVerified: true,
+            emailVerified: new Date(),
           },
         });
       } else {
-        // Mettre à jour l'utilisateur existant
         await db.user.update({
           where: { id: user.id },
           data: {
             password: hashedPassword,
             role: 'garage',
             garageId: garage.id,
-            emailVerified: true,
+            emailVerified: new Date(),
           },
         });
       }
@@ -106,45 +100,9 @@ export async function POST(request: NextRequest) {
       const updatedGarage = await db.garage.update({
         where: { id: garageId },
         data: {
-          validationStatus: 'APPROVED',
-          isCertified: true,
-          active: true,
-          validatedAt: new Date(),
-          validatedBy: adminId,
-          email: garageEmail,
-          temporaryPassword: hashedPassword,
+          isVerified: true,
+          isActive: true,
         },
-      });
-
-      // Créer un log d'audit
-      await db.auditLog.create({
-        data: {
-          action: 'APPROVE_GARAGE',
-          entityType: 'GARAGE',
-          entityId: garageId,
-          userId: adminId,
-          userEmail: adminEmail,
-          garageId: garageId,
-          details: JSON.stringify({
-            garageName: garage.name,
-            garageEmail: garageEmail,
-            managerPhone: garage.whatsappNumber || garage.phone,
-          }),
-        },
-      });
-
-      // Envoyer les identifiants par notification multi-canal
-      await sendGarageApprovalNotification({
-        garageId: garage.id,
-        garageName: garage.name,
-        phone: garage.phone || '',
-        whatsappNumber: garage.whatsappNumber,
-        email: garageEmail,
-        managerName: garage.managerName,
-        managerPhone: garage.managerPhone,
-        loginEmail: garageEmail,
-        temporaryPassword: temporaryPassword,
-        loginUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://okar.sn'}/garage/connexion`,
       });
 
       return NextResponse.json({
@@ -165,44 +123,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Rejeter le garage
+      // Désactiver le garage
       const updatedGarage = await db.garage.update({
         where: { id: garageId },
         data: {
-          validationStatus: 'REJECTED',
-          rejectionReason: rejectionReason,
-          validatedAt: new Date(),
-          validatedBy: adminId,
+          isActive: false,
         },
-      });
-
-      // Créer un log d'audit
-      await db.auditLog.create({
-        data: {
-          action: 'REJECT_GARAGE',
-          entityType: 'GARAGE',
-          entityId: garageId,
-          userId: adminId,
-          userEmail: adminEmail,
-          garageId: garageId,
-          details: JSON.stringify({
-            garageName: garage.name,
-            rejectionReason: rejectionReason,
-          }),
-        },
-      });
-
-      // Notifier le demandeur via multi-canal
-      await sendGarageRejectionNotification({
-        garageId: garage.id,
-        garageName: garage.name,
-        phone: garage.phone || '',
-        whatsappNumber: garage.whatsappNumber,
-        email: garage.email,
-        managerName: garage.managerName,
-        managerPhone: garage.managerPhone,
-        rejectionReason: rejectionReason,
-        correctionUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://okar.sn'}/garage/correction?phone=${encodeURIComponent(garage.phone || '')}`,
       });
 
       return NextResponse.json({
@@ -226,5 +152,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// Les fonctions de notification ont été déplacées vers /lib/notification-service.ts

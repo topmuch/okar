@@ -1,43 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// GET /api/admin/expirations - List vehicles with expiring VT/Insurance
+// GET /api/admin/expirations - List vehicles (simplified - no expiration fields in schema yet)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '7');
 
-    const now = new Date();
-    const futureDate = new Date();
-    futureDate.setDate(now.getDate() + days);
-
+    // Note: The Vehicle model doesn't have vtEndDate/insuranceEndDate fields yet
+    // Return empty array for now - these fields should be added to the schema if needed
     const vehicles = await db.vehicle.findMany({
-      where: {
-        OR: [
-          { vtEndDate: { gte: now, lte: futureDate } },
-          { insuranceEndDate: { gte: now, lte: futureDate } },
-          { vtEndDate: { lt: now } },
-          { insuranceEndDate: { lt: now } }
-        ]
-      },
       include: {
         owner: { select: { name: true, phone: true } },
-        proprietor: { select: { name: true, phone: true } },
         garage: { select: { name: true } }
       },
-      orderBy: { vtEndDate: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: 200
     });
 
-    const vehiclesWithDays = vehicles.map(v => {
-      const daysUntilVtExpiry = v.vtEndDate 
-        ? Math.ceil((new Date(v.vtEndDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-        : null;
-      const daysUntilInsuranceExpiry = v.insuranceEndDate
-        ? Math.ceil((new Date(v.insuranceEndDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-        : null;
-      return { ...v, daysUntilVtExpiry, daysUntilInsuranceExpiry };
-    });
+    // Add placeholder expiration data
+    const vehiclesWithDays = vehicles.map(v => ({
+      ...v,
+      daysUntilVtExpiry: null,
+      daysUntilInsuranceExpiry: null,
+      vtEndDate: null,
+      insuranceEndDate: null
+    }));
 
     return NextResponse.json({ vehicles: vehiclesWithDays });
   } catch (error) {

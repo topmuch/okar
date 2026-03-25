@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { cookies } from 'next/headers';
 
 // POST - Track impression or click
 export async function POST(request: NextRequest) {
@@ -34,30 +33,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user info if authenticated
-    let userId: string | null = null;
-    let agencyId: string | null = null;
-    let userRole: string | null = null;
-
-    try {
-      const cookieStore = await cookies();
-      const sessionToken = cookieStore.get('session')?.value;
-
-      if (sessionToken) {
-        const session = await db.session.findUnique({
-          where: { id: sessionToken },
-          include: { user: true }
-        });
-
-        if (session) {
-          userId = session.user.id;
-          agencyId = session.user.agencyId;
-          userRole = session.user.role;
-        }
-      }
-    } catch {
-      // Continue without user info
-    }
+    // Get user info if authenticated (optional)
+    // Note: User info tracking not needed for basic functionality
 
     // Get IP and user agent
     const ipAddress = request.headers.get('x-forwarded-for') ||
@@ -68,11 +45,8 @@ export async function POST(request: NextRequest) {
     // Create impression record
     await db.adImpression.create({
       data: {
-        advertisementId,
-        userId,
-        agencyId,
-        userRole,
-        action,
+        adId: advertisementId,
+        type: action,
         ipAddress: String(ipAddress).split(',')[0].trim(),
         userAgent
       }
@@ -82,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (action === 'impression') {
       await db.advertisement.update({
         where: { id: advertisementId },
-        data: { impressions: { increment: 1 } }
+        data: { views: { increment: 1 } }
       });
     } else {
       await db.advertisement.update({

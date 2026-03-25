@@ -22,7 +22,7 @@ const adminFeatures = [
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { user, login, loading: authLoading, isSuperAdmin } = useAuth();
+  const { user, login, loading: authLoading } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,12 +34,17 @@ export default function AdminLoginPage() {
   const buttonColor = '#000000'; // Black for buttons
   const buttonHover = '#1a1a1a';
 
-  // Redirect if already logged in as superadmin
+  // Redirect if already logged in
   useEffect(() => {
-    if (!authLoading && user && isSuperAdmin) {
-      router.replace('/admin/tableau-de-bord');
+    if (!authLoading && user) {
+      // Redirect based on role
+      if (['superadmin', 'admin', 'agent'].includes(user.role)) {
+        router.replace('/admin/tableau-de-bord');
+      } else if (user.role === 'garage') {
+        router.replace('/garage/tableau-de-bord');
+      }
     }
-  }, [user, authLoading, isSuperAdmin, router]);
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

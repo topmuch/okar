@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 
 // Feature definitions inline
 const FEATURE_DEFINITIONS = [
@@ -67,11 +66,10 @@ const FEATURE_DEFINITIONS = [
     icon: 'Webhook',
     enabled: false,
   },
-  // 🤖 AI Features
   {
     key: 'ai_fraud_detection',
     label: 'Détection de fraude IA',
-    description: '🤖 Détecte les scans suspects (multiples IPs, pays différents) et affiche des alertes. Fallback: règles métier classiques.',
+    description: '🤖 Détecte les scans suspects (multiples IPs, pays différents) et affiche des alertes.',
     category: 'ai',
     icon: 'Shield',
     enabled: false,
@@ -79,120 +77,39 @@ const FEATURE_DEFINITIONS = [
   {
     key: 'ai_translation',
     label: 'Traduction automatique IA',
-    description: '🤖 Traduit automatiquement les messages WhatsApp dans la langue du propriétaire. Gratuit ≤500 req/jour.',
+    description: '🤖 Traduit automatiquement les messages WhatsApp dans la langue du propriétaire.',
     category: 'ai',
     icon: 'Languages',
     enabled: false,
   },
-  {
-    key: 'ai_message_summary',
-    label: 'Résumé IA des messages',
-    description: '🤖 Génère un résumé en 1 ligne des longs messages partenaires via Hugging Face API.',
-    category: 'ai',
-    icon: 'Sparkles',
-    enabled: false,
-  },
-  {
-    key: 'ai_qr_suggestions',
-    label: 'Suggestions QR intelligentes',
-    description: '🤖 Recommande un volume de QR codes aux agences basé sur l\'historique. Régression linéaire simple.',
-    category: 'ai',
-    icon: 'Brain',
-    enabled: false,
-  },
 ];
+
+// In-memory feature flags (simple solution without database)
+let featureFlags = [...FEATURE_DEFINITIONS];
 
 // GET - Fetch all feature flags
 export async function GET() {
-  try {
-    type FeatureFlagType = {
-      id: string;
-      key: string;
-      label: string;
-      description: string;
-      category: string;
-      icon: string | null;
-      enabled: boolean;
-      createdAt: Date;
-      updatedAt: Date;
-    };
-    
-    let existingFlags: FeatureFlagType[] = [];
-
-    try {
-      existingFlags = await db.featureFlag.findMany();
-    } catch (dbError) {
-      console.error('Database query error:', dbError);
-      // Continue with empty array
+  const categories: Record<string, typeof featureFlags> = {};
+  featureFlags.forEach((flag) => {
+    if (!categories[flag.category]) {
+      categories[flag.category] = [];
     }
+    categories[flag.category].push(flag);
+  });
 
-    const existingKeys = new Set(existingFlags.map((f) => f.key));
-
-    // Create missing flags from definitions
-    const missingFlags = FEATURE_DEFINITIONS.filter(
-      def => !existingKeys.has(def.key)
-    );
-
-    if (missingFlags.length > 0) {
-      try {
-        for (const def of missingFlags) {
-          await db.featureFlag.create({
-            data: {
-              key: def.key,
-              label: def.label,
-              description: def.description,
-              category: def.category,
-              icon: def.icon,
-              enabled: def.enabled,
-            }
-          });
-        }
-        // Refetch after creating
-        existingFlags = await db.featureFlag.findMany();
-      } catch (createError) {
-        console.error('Error creating feature flags:', createError);
-      }
+  return NextResponse.json({
+    flags: featureFlags,
+    categories,
+    categoryLabels: {
+      general: 'Général',
+      communication: 'Communication',
+      geolocation: 'Géolocalisation',
+      export: 'Export & Documents',
+      notifications: 'Notifications',
+      integration: 'Intégrations',
+      ai: '🤖 Intelligence Artificielle',
     }
-
-    // Return all flags grouped by category
-    const categories: Record<string, FeatureFlagType[]> = {};
-    existingFlags.forEach((flag) => {
-      if (!categories[flag.category]) {
-        categories[flag.category] = [];
-      }
-      categories[flag.category].push(flag);
-    });
-
-    return NextResponse.json({
-      flags: existingFlags,
-      categories,
-      categoryLabels: {
-        general: 'Général',
-        communication: 'Communication',
-        geolocation: 'Géolocalisation',
-        export: 'Export & Documents',
-        notifications: 'Notifications',
-        integration: 'Intégrations',
-        ai: '🤖 Intelligence Artificielle',
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching feature flags:', error);
-    // Return empty data instead of error
-    return NextResponse.json({
-      flags: [],
-      categories: {},
-      categoryLabels: {
-        general: 'Général',
-        communication: 'Communication',
-        geolocation: 'Géolocalisation',
-        export: 'Export & Documents',
-        notifications: 'Notifications',
-        integration: 'Intégrations',
-        ai: '🤖 Intelligence Artificielle',
-      }
-    });
-  }
+  });
 }
 
 // PUT - Toggle a feature flag
@@ -208,38 +125,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const existingFlag = await db.featureFlag.findUnique({
-      where: { key }
-    });
-
-    if (existingFlag) {
-      const updated = await db.featureFlag.update({
-        where: { key },
-        data: { enabled }
-      });
-      return NextResponse.json({ success: true, flag: updated });
-    } else {
-      // Create from definition if exists
-      const definition = FEATURE_DEFINITIONS.find(f => f.key === key);
-      if (definition) {
-        const created = await db.featureFlag.create({
-          data: {
-            key,
-            label: definition.label,
-            description: definition.description,
-            category: definition.category,
-            icon: definition.icon,
-            enabled
-          }
-        });
-        return NextResponse.json({ success: true, flag: created });
-      } else {
-        return NextResponse.json(
-          { error: 'Fonctionnalité inconnue' },
-          { status: 404 }
-        );
-      }
+    const flagIndex = featureFlags.findIndex(f => f.key === key);
+    if (flagIndex >= 0) {
+      featureFlags[flagIndex] = { ...featureFlags[flagIndex], enabled };
+      return NextResponse.json({ success: true, flag: featureFlags[flagIndex] });
     }
+
+    return NextResponse.json(
+      { error: 'Fonctionnalité inconnue' },
+      { status: 404 }
+    );
   } catch (error) {
     console.error('Error toggling feature flag:', error);
     return NextResponse.json(

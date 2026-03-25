@@ -22,10 +22,15 @@ export default function GarageLoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in as garage
+  // Redirect if already logged in
   useEffect(() => {
-    if (!authLoading && user && user.role === 'garage') {
-      router.replace('/garage/tableau-de-bord');
+    if (!authLoading && user) {
+      // Redirect based on role
+      if (['superadmin', 'admin', 'agent'].includes(user.role)) {
+        router.replace('/admin/tableau-de-bord');
+      } else if (user.role === 'garage') {
+        router.replace('/garage/tableau-de-bord');
+      }
     }
   }, [user, authLoading, router]);
 

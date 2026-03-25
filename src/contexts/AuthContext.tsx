@@ -190,8 +190,10 @@ export function useRequireAuth(allowedRoles?: Role[]) {
         // Redirect to correct area based on role
         if (['superadmin', 'admin', 'agent'].includes(user.role)) {
           router.replace('/admin/tableau-de-bord');
+        } else if (user.role === 'garage') {
+          router.replace('/garage/tableau-de-bord');
         } else {
-          router.replace('/agence/tableau-de-bord');
+          router.replace('/');
         }
       }
     }
@@ -222,8 +224,10 @@ export function useRequirePermission(permission: Permission | Permission[]) {
       // Redirect to dashboard if no permission
       if (['superadmin', 'admin', 'agent'].includes(user.role)) {
         router.replace('/admin/tableau-de-bord');
+      } else if (user.role === 'garage') {
+        router.replace('/garage/tableau-de-bord');
       } else {
-        router.replace('/agence/tableau-de-bord');
+        router.replace('/');
       }
     }
   }, [user, loading, permission, canAny, router, pathname]);

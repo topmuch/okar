@@ -1,48 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 
-// Default settings
-const defaultSettings = {
+// Default settings (in-memory)
+let appSettings: Record<string, string> = {
   // Company Info
   company_name: 'OKAR',
-  company_address: 'Poissy, France',
-  company_phone: '+33 7 45 34 93 39',
-  company_email: 'contact@okar.com',
+  company_address: 'Dakar, Sénégal',
+  company_phone: '+221 77 000 00 00',
+  company_email: 'contact@okar.sn',
   company_logo: '',
   // SEO
-  seo_title: 'OKAR - Protection intelligente des bagages',
-  seo_description: 'Protégez vos bagages avec un autocollant QR intelligent. Sans application, sans batterie, sans GPS.',
-  seo_keywords: 'QR, bagage, voyage, hajj, protection, sticker',
+  seo_title: 'OKAR - Protection intelligente des véhicules',
+  seo_description: 'Gérez vos véhicules avec un système QR intelligent.',
+  seo_keywords: 'QR, véhicule, garage, maintenance, sénégal',
   seo_image: '',
   // Localization
-  languages: 'fr,en,ar',
+  languages: 'fr,en',
   default_language: 'fr',
-  currency: 'EUR',
+  currency: 'XOF',
 };
 
 // GET - Get all settings
 export async function GET() {
-  try {
-    const settings = await db.setting.findMany();
-    
-    // Convert to object
-    const settingsMap: Record<string, string> = {};
-    for (const setting of settings) {
-      settingsMap[setting.key] = setting.value;
-    }
-
-    // Merge with defaults
-    const result = { ...defaultSettings, ...settingsMap };
-
-    return NextResponse.json({ settings: result });
-
-  } catch (error) {
-    console.error('Get settings error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ settings: appSettings });
 }
 
 // PUT - Update settings
@@ -51,16 +30,12 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { settings } = body;
 
-    // Update each setting
+    // Update settings in memory
     for (const [key, value] of Object.entries(settings)) {
-      await db.setting.upsert({
-        where: { key },
-        create: { key, value: String(value) },
-        update: { value: String(value) }
-      });
+      appSettings[key] = String(value);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, settings: appSettings });
 
   } catch (error) {
     console.error('Update settings error:', error);

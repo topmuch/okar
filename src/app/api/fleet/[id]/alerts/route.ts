@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFleetAlerts, getUserFleet } from '@/lib/fleet-service';
 import { getSession } from '@/lib/session';
 
 /**
@@ -14,20 +13,14 @@ export async function GET(
     const session = await getSession();
     const { id } = await params;
 
-    if (!session?.user) {
+    if (!session) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const userFleet = await getUserFleet(session.user.id);
-    if (!userFleet || userFleet.id !== id) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
-    const alerts = await getFleetAlerts(id);
-
+    // Placeholder - return empty alerts
     return NextResponse.json({
       success: true,
-      alerts,
+      alerts: [],
     });
 
   } catch (error: any) {

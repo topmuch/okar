@@ -358,8 +358,17 @@ export default function AdminRootLayout({
     }
 
     if (!hasAdminAccess) {
-      // User is authenticated but not admin role - redirect to agency area
-      router.replace('/agence/tableau-de-bord');
+      // User is authenticated but not admin role - redirect to their correct area
+      if (user.role === 'garage') {
+        router.replace('/garage/tableau-de-bord');
+      } else if (user.role === 'agency') {
+        router.replace('/agence/tableau-de-bord');
+      } else if (user.role === 'driver') {
+        router.replace('/driver/tableau-de-bord');
+      } else {
+        // Unknown role - redirect to home
+        router.replace('/');
+      }
     }
   }, [user, loading, hasAdminAccess, router, pathname]);
 

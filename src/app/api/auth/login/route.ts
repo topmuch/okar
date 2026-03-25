@@ -28,16 +28,15 @@ export async function POST(request: NextRequest) {
     const user = await db.user.findUnique({
       where: { email: email.toLowerCase() },
       include: {
-        Garage: {
+        garage: {
           select: {
             id: true,
             name: true,
-            slug: true,
             email: true,
             phone: true,
             address: true,
             logo: true,
-            isCertified: true,
+            isVerified: true,
           }
         }
       }
@@ -91,7 +90,7 @@ export async function POST(request: NextRequest) {
     const userData = {
       ...userWithoutPassword,
       garageId: user.garageId,
-      garage: user.Garage,
+      garage: user.garage,
     }
 
     return NextResponse.json({

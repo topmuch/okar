@@ -4,29 +4,14 @@ import { getSession } from '@/lib/session';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 
-// Generate a unique slug from name
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 50) + '-' + Math.random().toString(36).substring(2, 8);
-}
-
 // Validation schema
 const garageSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  slug: z.string().min(1, 'Slug is required').optional(),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
-  businessLicense: z.string().optional(),
-  subscriptionPlan: z.enum(['basic', 'premium', 'enterprise']).optional(),
-  managerName: z.string().optional(),
-  managerPhone: z.string().optional(),
-  whatsappNumber: z.string().optional(),
-  validationStatus: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
-  isCertified: z.boolean().optional(),
+  city: z.string().optional(),
+  description: z.string().optional(),
   // Login credentials
   loginEmail: z.string().email().optional().or(z.literal('')),
   loginPassword: z.string().optional(),
@@ -37,22 +22,21 @@ const garageSchema = z.object({
  */
 async function verifyAdminAuth() {
   const session = await getSession();
-  
+
   if (!session) {
     return { authorized: false, error: 'Non authentifié', status: 401 };
   }
-  
+
   if (!['superadmin', 'admin', 'agent'].includes(session.role)) {
     return { authorized: false, error: 'Accès non autorisé. Droits admin requis.', status: 403 };
   }
-  
+
   return { authorized: true, user: session };
 }
 
 // GET - List all garages
 export async function GET() {
   try {
-    // Verify authentication
     const auth = await verifyAdminAuth();
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -61,23 +45,13 @@ export async function GET() {
     const garages = await db.garage.findMany({
       include: {
         _count: {
-          select: { Vehicle: true, User: true }
+          select: { vehicles: true }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    // Transformer les données pour inclure les champs de suspension
-    const garagesWithStatus = garages.map(garage => ({
-      ...garage,
-      accountStatus: garage.accountStatus || 'ACTIVE',
-      suspendedAt: garage.suspendedAt,
-      suspendedBy: garage.suspendedBy,
-      suspensionReason: garage.suspensionReason,
-      contractEndDate: garage.contractEndDate,
-    }));
-
-    return NextResponse.json({ garages: garagesWithStatus });
+    return NextResponse.json({ garages });
 
   } catch (error) {
     console.error('Get garages error:', error);
@@ -91,7 +65,6 @@ export async function GET() {
 // POST - Create new garage
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
     const auth = await verifyAdminAuth();
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -126,88 +99,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate slug if not provided
-    const slug = validatedData.slug || generateSlug(validatedData.name);
-
-    // Check if slug already exists
-    const existingGarage = await db.garage.findUnique({
-      where: { slug }
-    });
-
-    if (existingGarage) {
-      return NextResponse.json(
-        { error: 'Un garage avec ce slug existe déjà' },
-        { status: 400 }
-      );
-    }
-
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.loginPassword, 10);
 
     // Create garage and user in a transaction
-    const now = new Date();
-    const result = await db.$transaction(async (tx) => {
-      // Create garage
-      const garage = await tx.garage.create({
-        data: {
-          id: `garage-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          name: validatedData.name,
-          slug,
-          email: validatedData.email || validatedData.loginEmail || null,
-          phone: validatedData.phone || null,
-          address: validatedData.address || null,
-          businessLicense: validatedData.businessLicense || null,
-          subscriptionPlan: validatedData.subscriptionPlan || 'basic',
-          managerName: validatedData.managerName || null,
-          managerPhone: validatedData.managerPhone || null,
-          whatsappNumber: validatedData.whatsappNumber || null,
-          validationStatus: validatedData.validationStatus || 'APPROVED',
-          isCertified: validatedData.isCertified ?? true,
-          active: true,
-          updatedAt: now,
-        }
-      });
+    const loginEmail = validatedData.loginEmail!.toLowerCase();
 
-      // Create user account for garage
+    const result = await db.$transaction(async (tx) => {
+      // Create user account for garage first
       const user = await tx.user.create({
         data: {
-          id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          email: validatedData.loginEmail.toLowerCase(),
-          name: validatedData.managerName || validatedData.name,
+          email: loginEmail,
+          name: validatedData.name,
           phone: validatedData.phone || null,
           password: hashedPassword,
           role: 'garage',
-          garageId: garage.id,
-          emailVerified: true,
-          updatedAt: now,
+          emailVerified: new Date(),
         }
       });
 
-      return { garage, user };
-    });
+      // Create garage with userId
+      const garage = await tx.garage.create({
+        data: {
+          name: validatedData.name,
+          email: validatedData.email || loginEmail || null,
+          phone: validatedData.phone || '',
+          address: validatedData.address || '',
+          city: validatedData.city || '',
+          description: validatedData.description || null,
+          isVerified: true,
+          isActive: true,
+          userId: user.id,
+        }
+      });
 
-    // Log creation
-    await db.auditLog.create({
-      data: {
-        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-        action: 'GARAGE_CREATED',
-        entityType: 'GARAGE',
-        entityId: result.garage.id,
-        userId: auth.user!.id,
-        userEmail: auth.user!.email,
-        details: JSON.stringify({
-          garageName: result.garage.name,
-          slug: result.garage.slug,
-          loginEmail: validatedData.loginEmail,
-        }),
-      },
+      // Update user with garageId
+      await tx.user.update({
+        where: { id: user.id },
+        data: { garageId: garage.id }
+      });
+
+      return { garage, user };
     });
 
     return NextResponse.json({ garage: result.garage });
 
   } catch (error) {
     console.error('Create garage error:', error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Erreur de validation', details: error.errors },
@@ -225,42 +164,17 @@ export async function POST(request: NextRequest) {
 // PUT - Update garage
 export async function PUT(request: NextRequest) {
   try {
-    // Verify authentication
     const auth = await verifyAdminAuth();
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const body = await request.json();
-    const { id, isCertified, ...data } = body;
-    const validatedData = garageSchema.partial().parse(data);
-
-    const updateData: Record<string, unknown> = { ...validatedData };
-    
-    // Handle certification separately (superadmin only)
-    if (isCertified !== undefined && auth.user!.role === 'superadmin') {
-      updateData.isCertified = isCertified;
-    }
+    const { id, ...data } = body;
 
     const garage = await db.garage.update({
       where: { id },
-      data: updateData
-    });
-
-    // Log update
-    await db.auditLog.create({
-      data: {
-        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-        action: 'GARAGE_UPDATED',
-        entityType: 'GARAGE',
-        entityId: garage.id,
-        userId: auth.user!.id,
-        userEmail: auth.user!.email,
-        details: JSON.stringify({
-          garageName: garage.name,
-          updatedFields: Object.keys(updateData),
-        }),
-      },
+      data
     });
 
     return NextResponse.json({ garage });
@@ -277,12 +191,11 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete garage
 export async function DELETE(request: NextRequest) {
   try {
-    // Verify authentication - only superadmin can delete
     const auth = await verifyAdminAuth();
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-    
+
     if (auth.user!.role !== 'superadmin') {
       return NextResponse.json(
         { error: 'Seul le superadmin peut supprimer un garage' },
@@ -300,37 +213,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get garage info before deletion
-    const garage = await db.garage.findUnique({
-      where: { id },
-      select: { id: true, name: true, slug: true },
-    });
-
-    if (!garage) {
-      return NextResponse.json(
-        { error: 'Garage non trouvé' },
-        { status: 404 }
-      );
-    }
-
     await db.garage.delete({
       where: { id }
-    });
-
-    // Log deletion
-    await db.auditLog.create({
-      data: {
-        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-        action: 'GARAGE_DELETED',
-        entityType: 'GARAGE',
-        entityId: id,
-        userId: auth.user!.id,
-        userEmail: auth.user!.email,
-        details: JSON.stringify({
-          garageName: garage.name,
-          slug: garage.slug,
-        }),
-      },
     });
 
     return NextResponse.json({ success: true });

@@ -8,24 +8,27 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  password      String
-  name          String?
-  phone         String?
-  role          String         @default("DRIVER")
-  isActive      Boolean        @default(true)
-  emailVerified DateTime?
-  image         String?
-  garageId      String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  documents     Document[]
-  garage        Garage?
-  notifications Notification[]
-  vehicles      Vehicle[]
-  sessions      Session[]
-  loginLogs     LoginLog[]
+  id               String            @id @default(cuid())
+  email            String            @unique
+  password         String
+  name             String?
+  phone            String?
+  role             String            @default("DRIVER")
+  isActive         Boolean           @default(true)
+  emailVerified    DateTime?
+  image            String?
+  garageId         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  documents        Document[]
+  garage           Garage?
+  leadsAssigned    Lead[]            @relation("AssignedLeads")
+  leadsCreated     Lead[]            @relation("CreatedLeads")
+  leadObservations LeadObservation[]
+  loginLogs        LoginLog[]
+  notifications    Notification[]
+  sessions         Session[]
+  vehicles         Vehicle[]
 
   @@map("users")
 }
@@ -49,6 +52,7 @@ model Garage {
   applications     GarageApplication[]
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   vehicles         Vehicle[]
+  maintenanceRecords MaintenanceRecord[]
 
   @@map("garages")
 }
@@ -94,8 +98,8 @@ model Vehicle {
   garageId           String?
   documents          Document[]
   maintenanceRecords MaintenanceRecord[]
-  garage             Garage?             @relation(fields: [garageId], references: [id])
   owner              User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  garage             Garage?             @relation(fields: [garageId], references: [id])
 
   @@map("vehicles")
 }
@@ -113,22 +117,24 @@ model Document {
   verifiedBy String?
   vehicleId  String?
   userId     String?
-  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   vehicle    Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("documents")
 }
 
 model MaintenanceRecord {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   type        String
   description String
   cost        Float?
   mileage     Int?
-  performedAt DateTime @default(now())
-  garageId    String?
+  performedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
   vehicleId   String
-  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  garageId    String?
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  garage      Garage?   @relation(fields: [garageId], references: [id])
 
   @@map("maintenance_records")
 }
@@ -139,9 +145,9 @@ model Notification {
   message   String
   type      String    @default("INFO")
   isRead    Boolean   @default(false)
+  readAt    DateTime?
   actionUrl String?
   createdAt DateTime  @default(now())
-  readAt    DateTime?
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -161,7 +167,7 @@ model Session {
 }
 
 model LoginLog {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   userId        String?
   email         String
   success       Boolean
@@ -170,42 +176,43 @@ model LoginLog {
   userAgent     String?
   country       String?
   city          String?
-  createdAt     DateTime  @default(now())
-  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
 
   @@map("login_logs")
 }
 
 model Advertisement {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   description String?
   imageUrl    String?
   linkUrl     String?
-  position    String   @default("sidebar")
-  priority    Int      @default(0)
-  status      String   @default("active")
+  position    String    @default("sidebar")
+  priority    Int       @default(0)
+  status      String    @default("active")
   startDate   DateTime?
   endDate     DateTime?
-  views       Int      @default(0)
-  clicks      Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  views       Int       @default(0)
+  clicks      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("advertisements")
 }
 
 model BlogPost {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  content     String
-  excerpt     String?
-  coverImage  String?
-  author      String?
-  status      String   @default("draft")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  title      String
+  slug       String   @unique
+  content    String
+  excerpt    String?
+  coverImage String?
+  author     String?
+  status     String   @default("draft")
+  views      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@map("blog_posts")
 }
@@ -247,4 +254,217 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model Lead {
+  id           String           @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  company      String?
+  status       String           @default("NEW")
+  source       String?
+  notes        String?
+  assignedToId String?
+  createdById  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  assignedTo   User?            @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  createdBy    User             @relation("CreatedLeads", fields: [createdById], references: [id])
+  observations LeadObservation[]
+
+  @@map("leads")
+}
+
+model LeadObservation {
+  id        String   @id @default(cuid())
+  content   String
+  date      DateTime @default(now())
+  leadId    String
+  userId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("lead_observations")
+}
+
+// QR Code Stock for managing QR codes
+model QRCodeStock {
+  id           String    @id @default(cuid())
+  code         String    @unique
+  status       String    @default("available") // available, assigned, activated
+  assignedTo   String?   // User ID or Garage ID
+  assignedAt   DateTime?
+  activatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@map("qr_code_stock")
+}
+
+// Messages for communication
+model Message {
+  id          String    @id @default(cuid())
+  senderId    String?
+  receiverId  String?
+  type        String    @default("general")
+  subject     String?
+  content     String
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("messages")
+}
+
+// Message templates for quick responses
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  type        String   @default("SMS") // SMS, EMAIL, WHATSAPP
+  category    String   @default("general")
+  subject     String?
+  content     String
+  variables   String?  // JSON string of variables
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("message_templates")
+}
+
+// Application settings
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// Garage profile for additional info
+model GarageProfile {
+  id               String   @id @default(cuid())
+  garageId         String   @unique
+  subscriptionTier String   @default("FREE")
+  rating           Float    @default(0)
+  reviewCount      Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("garage_profiles")
+}
+
+// Garage ratings
+model GarageRating {
+  id        String   @id @default(cuid())
+  garageId  String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@map("garage_ratings")
+}
+
+// Ad impressions for tracking
+model AdImpression {
+  id           String   @id @default(cuid())
+  adId         String
+  type         String   // view, click
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@map("ad_impressions")
+}
+
+// Email settings
+model EmailSettings {
+  id              String    @id @default(cuid())
+  provider        String    @default("console")
+  fromEmail       String
+  fromName        String
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUser        String?
+  smtpPassword    String?
+  smtpEncryption  String    @default("tls")
+  lastTestAt      DateTime?
+  lastTestStatus  String?
+  lastTestError   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("email_settings")
+}
+
+// Email logs
+model EmailLog {
+  id        String    @id @default(cuid())
+  to        String
+  subject   String
+  type      String
+  status    String
+  error     String?
+  userId    String?
+  agencyId  String?
+  data      String?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("email_logs")
+}
+
+// Email tokens for verification
+model EmailToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  code      String
+  type      String   // email_verification, password_reset
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("email_tokens")
+}
+
+// Reports for issues/feedback
+model Report {
+  id           String    @id @default(cuid())
+  type         String
+  subject      String
+  description  String
+  status       String    @default("pending")
+  priority     Int       @default(0)
+  reporterId   String?
+  reporterEmail String?
+  adminNotes   String?
+  resolution   String?
+  resolvedAt   DateTime?
+  resolvedBy   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("reports")
+}
+
+// Audit logs for tracking actions
+model AuditLog {
+  id         String    @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  userId     String?
+  userEmail  String?
+  details    String?
+  ipAddress  String?
+  garageId   String?
+  createdAt  DateTime  @default(now())
+
+  @@map("audit_logs")
 }

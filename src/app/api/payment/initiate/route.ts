@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       amount: parseFloat(amount),
       phone: normalizedPhone,
       provider,
-      userId: session?.user?.id || null,
-      garageId: garageId || session?.user?.garageId || null,
+      userId: session?.id || undefined,
+      garageId: garageId || session?.garageId || undefined,
       metadata,
       promoCode,
     });
