@@ -1,0 +1,58 @@
+{
+  "common": {
+    "loading": "Verifying QR code...",
+    "welcome": "Welcome! 👋",
+    "activate_in": "Activate this vehicle in 30 seconds",
+    "vehicle_type": "Vehicle type",
+    "auto_redirect": "Automatic redirect in",
+    "start_activation": "Start activation",
+    "back_home": "Back to home",
+    "powered_by": "OKAR © 2026 by MMASOLUTION"
+  },
+  "errors": {
+    "qr_not_valid": "Invalid QR code",
+    "qr_not_valid_desc": "This QR code does not exist in our system.",
+    "vehicle_blocked": "Vehicle blocked",
+    "vehicle_blocked_desc": "This vehicle has been blocked for security reasons.",
+    "protection_expired": "Protection expired",
+    "protection_expired_desc": "The passport for this vehicle has expired.",
+    "server_error": "Server error",
+    "geolocation_not_supported": "Geolocation is not supported by your browser. Please enter a location manually.",
+    "location_failed": "Unable to retrieve your location. Please enter a location manually below.",
+    "location_permission_denied": "Location permission denied. Please allow location access in your browser settings, or enter the location manually below.",
+    "location_unavailable": "Location unavailable. Please enter the location manually.",
+    "location_timeout": "Location timeout. Please enter the location manually or try again.",
+    "error_occurred": "An error occurred. Please try again."
+  },
+  "vehicle": {
+    "vehicle_found": "Vehicle information",
+    "owner": "Owner",
+    "make": "Make",
+    "model": "Model",
+    "year": "Year",
+    "color": "Color",
+    "license_plate": "License plate",
+    "vin": "VIN",
+    "mileage": "Mileage",
+    "engine_type": "Engine type",
+    "history": "Maintenance history",
+    "no_history": "No maintenance records yet",
+    "garage": "Certified garage"
+  },
+  "maintenance": {
+    "categories": {
+      "vidange": "Oil change",
+      "freins": "Brakes",
+      "pneus": "Tires",
+      "moteur": "Engine",
+      "electricite": "Electrical",
+      "carrosserie": "Bodywork",
+      "autre": "Other"
+    },
+    "date": "Date",
+    "mileage": "Mileage",
+    "description": "Description",
+    "cost": "Cost",
+    "validated": "Validated by owner"
+  }
+}

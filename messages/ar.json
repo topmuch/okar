@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "OKAR",
+    "tagline": "الجواز الرقمي لمركبتك"
+  },
+  "landing": {
+    "hero": {
+      "title": "الجواز الرقمي لمركبتك",
+      "subtitle": "سجل صيانة لا يمكن تزويره، متاح في كل مكان عبر رمز QR. تكامل مع أورنج موني ويف للمدفوعات.",
+      "ctaGarage": "أنا كراج",
+      "ctaDriver": "أنا سائق"
+    },
+    "howItWorks": {
+      "title": "كيف يعمل؟",
+      "garage": {
+        "title": "للكراجات",
+        "step1": "تفعيل رمز QR لمركبة عميلك",
+        "step2": "تسجيل كل تدخل (فاتورة، توقيع)",
+        "step3": "المالك يصدق على التقرير عبر التطبيق"
+      },
+      "driver": {
+        "title": "للسائقين",
+        "step1": "استلم رمز QR من كراج شريك",
+        "step2": "استشر السجل الكامل لمركبتك",
+        "step3": "صدق على تقارير الصيانة بنقرة واحدة"
+      }
+    },
+    "pricing": {
+      "title": "أسعار الكراجات",
+      "basic": {
+        "title": "أساسي",
+        "price": "25,000 فرنك",
+        "duration": "/شهر",
+        "features": ["50 رمز QR/شهر", "تقارير الصيانة", "دعم عبر البريد"]
+      },
+      "premium": {
+        "title": "مميز",
+        "price": "75,000 فرنك",
+        "duration": "/شهر",
+        "features": ["200 رمز QR/شهر", "توقيع رقمي", "دعم أولوي", "إحصائيات متقدمة"]
+      },
+      "enterprise": {
+        "title": "المؤسسات",
+        "price": "حسب الطلب",
+        "duration": "",
+        "features": ["رموز QR غير محدودة", "واجهة برمجة مخصصة", "مدير حساب", "تدريب في الموقع"]
+      }
+    },
+    "contact": {
+      "title": "اتصل بنا",
+      "address": "داكار، السنغال",
+      "phone": "+221 78 123 45 67",
+      "email": "contact@okar.sn"
+    }
+  },
+  "scan": {
+    "title": "مركبة {name}",
+    "notFound": "رمز QR غير صالح",
+    "notActivated": "لم يتم تفعيل رمز QR بعد",
+    "expired": "انتهت صلاحية هذا الجواز",
+    "blocked": "تم حظر هذا الجواز",
+    "vehicleInfo": "معلومات المركبة",
+    "history": "سجل الصيانة",
+    "noHistory": "لا توجد تدخلات مسجلة"
+  },
+  "activate": {
+    "garage": {
+      "title": "تفعيل رمز QR للمركبة",
+      "subtitle": "تفعيل الجواز الرقمي للمركبة",
+      "vehicleInfo": "معلومات المركبة",
+      "driverInfo": "معلومات السائق",
+      "submit": "تفعيل رمز QR",
+      "success": "تم تفعيل جواز المركبة بنجاح!"
+    }
+  },
+  "dashboard": {
+    "garage": {
+      "title": "لوحة تحكم الكراج",
+      "total": "إجمالي المركبات",
+      "active": "QR نشط",
+      "pending": "في الانتظار",
+      "reports": "التقارير",
+      "searchPlaceholder": "البحث عن مركبة...",
+      "activateQR": "تفعيل QR",
+      "newIntervention": "تدخل جديد",
+      "registerDriver": "تسجيل سائق"
+    },
+    "admin": {
+      "title": "الإدارة العليا",
+      "garages": "الكراجات",
+      "generateQR": "إنشاء مجموعات QR",
+      "users": "المستخدمون",
+      "certifications": "الشهادات",
+      "settings": "الإعدادات"
+    },
+    "driver": {
+      "title": "مركبتي",
+      "myVehicle": "مركبتي",
+      "history": "السجل",
+      "validations": "التحقيقات المعلقة",
+      "qrCode": "رمز QR الخاص بي"
+    }
+  },
+  "status": {
+    "INACTIVE": "غير نشط",
+    "ACTIVE": "نشط",
+    "BLOCKED": "محظور",
+    "PENDING": "في الانتظار",
+    "VALIDATED": "معتمد",
+    "REJECTED": "مرفوض"
+  },
+  "maintenance": {
+    "categories": {
+      "vidange": "تغيير الزيت",
+      "freins": "الفرامل",
+      "pneus": "الإطارات",
+      "moteur": "المحرك",
+      "electricite": "الكهرباء",
+      "carrosserie": "الهيكل",
+      "autre": "أخرى"
+    }
+  },
+  "payment": {
+    "orangeMoney": "أورنج موني",
+    "wave": "يف",
+    "bankTransfer": "تحويل بنكي",
+    "cash": "نقداً"
+  }
+}

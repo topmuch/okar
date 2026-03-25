@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== FONTS ===== */
+:root {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ===== BASE ===== */
+@layer base {
+  * {
+    border-color: #e5e7eb;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+  }
+
+  /* Serif headings class */
+  .font-serif {
+    font-family: var(--font-serif) !important;
+  }
+
+  /* Monospace for data */
+  .font-mono {
+    font-family: var(--font-mono) !important;
+  }
+
+  /* Selection color */
+  ::selection {
+    background: #FF6B00;
+    color: white;
+  }
+}
+
+/* ===== UTILITIES ===== */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Border width 3px */
+  .border-3 {
+    border-width: 3px;
+  }
+  
+  .border-4 {
+    border-width: 4px;
+  }
+
+  /* Gradient text */
+  .gradient-text-orange-pink {
+    background: linear-gradient(90deg, #FF6B00, #FF0080);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-rainbow {
+    background: linear-gradient(90deg, #FF6B00, #FF0080, #FFD700, #00E5FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Hard shadow variants */
+  .shadow-hard-orange {
+    box-shadow: 4px 4px 0 0 #FF6B00;
+  }
+
+  .shadow-hard-pink {
+    box-shadow: 4px 4px 0 0 #FF0080;
+  }
+
+  .shadow-hard-cyan {
+    box-shadow: 4px 4px 0 0 #00E5FF;
+  }
+
+  .shadow-hard-yellow {
+    box-shadow: 4px 4px 0 0 #FFD700;
+  }
+
+  /* Colored shadows on hover */
+  .hover\:shadow-glow-orange:hover {
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+  }
+
+  .hover\:shadow-glow-pink:hover {
+    box-shadow: 0 0 20px rgba(255, 0, 128, 0.3);
+  }
+
+  .hover\:shadow-glow-cyan:hover {
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+  }
+}
+
+/* ===== ANIMATIONS (minimal & performant) ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s ease-out;
+}
