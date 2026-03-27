@@ -1,18 +1,10 @@
 'use client';
 
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Eye, EyeOff, Car } from 'lucide-react';
-
-// ============================================
-// Debug logging
-// ============================================
-const DEBUG = process.env.NODE_ENV === 'development';
-function debugLog(...args: unknown[]) {
-  if (DEBUG) console.log('[LOGIN]', ...args);
-}
 
 // ============================================
 // Login Content Component
@@ -20,38 +12,30 @@ function debugLog(...args: unknown[]) {
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading, initialized, login } = useAuth();
+  const { user, loading, login } = useAuth();
   const role = searchParams.get('role') || 'garage';
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  // Track if we've already attempted redirect
-  const redirectAttempted = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // ============================================
-  // Redirect authenticated users to their dashboard
+  // REDIRECTION - PATIENTE
   // ============================================
   useEffect(() => {
-    // Wait for auth to be initialized
-    if (!initialized || authLoading) {
-      debugLog('Waiting for auth initialization...');
+    console.log('[LOGIN] Effect:', { loading, hasUser: !!user, userRole: user?.role });
+
+    // 1. SI ÇA CHARGE ENCORE : On ne fait RIEN
+    if (loading) {
+      console.log('[LOGIN] ⏳ En attente du chargement...');
       return;
     }
 
-    // Don't redirect if already attempted
-    if (redirectAttempted.current) {
-      debugLog('Redirect already attempted, skipping');
-      return;
-    }
-
-    // If user is logged in, redirect to their dashboard
-    if (user) {
-      debugLog('User already logged in:', user.email, user.role);
-      redirectAttempted.current = true;
+    // 2. SI USER EXISTE APRÈS CHARGEMENT = REDIRECTION
+    if (!loading && user) {
+      console.log('[LOGIN] ✅ Utilisateur déjà connecté:', user.email, user.role);
       
       let dashboardPath = '/';
       if (['superadmin', 'admin', 'agent'].includes(user.role)) {
@@ -64,14 +48,10 @@ function LoginContent() {
         dashboardPath = '/driver/tableau-de-bord';
       }
       
-      debugLog('Redirecting to:', dashboardPath);
-      
-      // Use setTimeout to avoid React state issues
-      setTimeout(() => {
-        router.replace(dashboardPath);
-      }, 100);
+      console.log('[LOGIN] 🔀 Redirection vers:', dashboardPath);
+      router.replace(dashboardPath);
     }
-  }, [user, authLoading, initialized, router]);
+  }, [user, loading, router]);
 
   // ============================================
   // Handle login form submission
@@ -79,25 +59,25 @@ function LoginContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-    debugLog('Submitting login form for:', email);
+    setSubmitting(true);
+    console.log('[LOGIN] 📝 Soumission du formulaire pour:', email);
 
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Important: include cookies
+        credentials: 'include', // CRUCIAL pour recevoir le cookie
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
-      debugLog('Login response:', { success: data.success, role: data.user?.role });
+      console.log('[LOGIN] 📨 Réponse:', { success: data.success, role: data.user?.role });
 
       if (response.ok && data.success) {
-        // Update auth context
+        // Mettre à jour le contexte
         login(data.user);
         
-        // Determine redirect path
+        // Déterminer la destination
         let dashboardPath = '/';
         if (['superadmin', 'admin', 'agent'].includes(data.user.role)) {
           dashboardPath = '/admin/tableau-de-bord';
@@ -109,53 +89,49 @@ function LoginContent() {
           dashboardPath = '/driver/tableau-de-bord';
         }
         
-        debugLog('Login successful, redirecting to:', dashboardPath);
-        
-        // Small delay to ensure cookie is set
-        setTimeout(() => {
-          router.push(dashboardPath);
-        }, 100);
+        console.log('[LOGIN] 🔀 Redirection après login vers:', dashboardPath);
+        router.push(dashboardPath);
       } else {
         setError(data.error || 'Identifiants incorrects');
       }
     } catch (err) {
-      debugLog('Login error:', err);
+      console.error('[LOGIN] ❌ Erreur:', err);
       setError('Erreur de connexion. Veuillez réessayer.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   // ============================================
-  // Render loading state while checking auth
+  // AFFICHAGE PENDANT LE CHARGEMENT
   // ============================================
-  if (authLoading || !initialized) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-          <span className="text-slate-500">Vérification de la session...</span>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto" />
+          <p className="mt-4 text-slate-600 font-medium">Vérification de votre session...</p>
         </div>
       </div>
     );
   }
 
   // ============================================
-  // Render redirect message if user is authenticated
+  // SI USER EXISTE = REDIRECTION EN COURS
   // ============================================
   if (user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-          <span className="text-slate-500">Redirection vers votre espace...</span>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto" />
+          <p className="mt-4 text-slate-600 font-medium">Redirection vers votre espace...</p>
         </div>
       </div>
     );
   }
 
   // ============================================
-  // Render login form
+  // FORMULAIRE DE LOGIN
   // ============================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
@@ -218,6 +194,7 @@ function LoginContent() {
                 placeholder="votre@email.com"
                 required
                 autoComplete="email"
+                disabled={submitting}
               />
             </div>
 
@@ -234,6 +211,7 @@ function LoginContent() {
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
+                  disabled={submitting}
                 />
                 <button
                   type="button"
@@ -247,10 +225,10 @@ function LoginContent() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="w-full bg-gradient-to-r from-[#FF6B00] to-[#FF0080] text-white py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Connexion...
@@ -296,9 +274,9 @@ function LoginContent() {
 function LoadingFallback() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-      <div className="flex items-center gap-3">
-        <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-        <span className="text-slate-500">Chargement...</span>
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto" />
+        <p className="mt-4 text-slate-600 font-medium">Chargement...</p>
       </div>
     </div>
   );

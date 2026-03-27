@@ -1,19 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Role, hasPermission, hasAnyPermission, Permission, PERMISSIONS } from '@/lib/permissions';
-
-// ============================================
-// 🐛 DEBUG FLAGS - Set to true in production for debugging
-// ============================================
-const DEBUG_AUTH = process.env.NODE_ENV === 'development';
-
-function debugLog(...args: unknown[]) {
-  if (DEBUG_AUTH) {
-    console.log('[AUTH]', new Date().toISOString().split('T')[1], ...args);
-  }
-}
 
 // ============================================
 // User type
@@ -51,7 +40,6 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  initialized: boolean;  // NEW: Track if initial fetch is complete
   login: (userData: User) => void;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -64,11 +52,10 @@ interface AuthContextType {
   refreshSession: () => Promise<void>;
 }
 
-// Create context with safe defaults
+// Create context
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: true,
-  initialized: false,
+  loading: true,  // TRUE par défaut - on ne sait pas encore
   login: () => {},
   logout: async () => {},
   isAuthenticated: false,
@@ -82,126 +69,84 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 // ============================================
-// Login pages that should NOT redirect
-// ============================================
-const LOGIN_PAGES = new Set([
-  '/login',
-  '/admin/connexion',
-  '/admin/login',
-  '/garage/connexion',
-  '/garage/inscrire',
-  '/garage/activate',
-  '/agence/login',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
-]);
-
-function isLoginPage(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return LOGIN_PAGES.has(pathname) || pathname.startsWith('/activate/');
-}
-
-// ============================================
 // Provider component
 // ============================================
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
+  const [loading, setLoading] = useState(true); // TRUE au départ - CRUCIAL
   const router = useRouter();
   const pathname = usePathname();
-  
-  // Track if we've already fetched session to prevent duplicate calls
-  const hasFetchedRef = useRef(false);
-  const isFetchingRef = useRef(false);
 
   // ============================================
-  // Fetch session from server (cookie-based)
-  // ============================================
-  const fetchSession = useCallback(async (isInitialFetch = false) => {
-    // Prevent duplicate fetches
-    if (isFetchingRef.current) {
-      debugLog('Fetch already in progress, skipping');
-      return;
-    }
-    
-    isFetchingRef.current = true;
-    
-    try {
-      debugLog('Fetching session from /api/auth/session');
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-      
-      const response = await fetch('/api/auth/session', {
-        signal: controller.signal,
-        credentials: 'include', // Important: include cookies
-      });
-      
-      clearTimeout(timeoutId);
-      
-      const data = await response.json();
-      debugLog('Session response:', { authenticated: data.authenticated, userId: data.user?.id });
-
-      if (data.authenticated && data.user) {
-        setUser(data.user as User);
-        debugLog('User set:', data.user.email, data.user.role);
-      } else {
-        setUser(null);
-        debugLog('No user in session');
-      }
-    } catch (error) {
-      const err = error as Error;
-      if (err.name === 'AbortError') {
-        debugLog('Session fetch timed out');
-      } else {
-        debugLog('Error fetching session:', err.message);
-      }
-      setUser(null);
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-      
-      if (isInitialFetch) {
-        setInitialized(true);
-        debugLog('Auth initialized');
-      }
-    }
-  }, []);
-
-  // ============================================
-  // Initialize auth state - RUN ONCE
+  // INITIALISATION - Une seule fois au montage
   // ============================================
   useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
-    
-    debugLog('Initializing auth, pathname:', pathname);
-    fetchSession(true);
-  }, []); // Empty deps - only run once
+    const initAuth = async () => {
+      // 1. On commence par dire qu'on charge
+      setLoading(true);
+      
+      try {
+        console.log('[AUTH] 🔍 Début vérification session...');
+        
+        // 2. Appel API pour valider la session (avec timeout de sécurité)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          console.log('[AUTH] ⏱️ Timeout - abort');
+        }, 10000); // 10 secondes max
+        
+        const response = await fetch('/api/auth/session', {
+          credentials: 'include', // CRUCIAL pour envoyer le cookie
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        
+        // 3. Traitement de la réponse
+        if (data.authenticated && data.user) {
+          console.log('[AUTH] ✅ Utilisateur connecté:', data.user.email, data.user.role);
+          setUser(data.user as User);
+        } else {
+          console.log('[AUTH] ❌ Pas de session valide');
+          setUser(null);
+        }
+      } catch (error) {
+        // Gestion des erreurs (timeout, network, etc.)
+        console.error('[AUTH] ❌ Erreur lors de la vérification:', error);
+        setUser(null);
+      } finally {
+        // 4. CRUCIAL: On passe loading à false SEULEMENT quand tout est fini
+        console.log('[AUTH] ✅ Chargement terminé');
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []); // [] = une seule fois au montage
 
   // ============================================
-  // Login function - called after successful login API call
+  // Login function - appelée après login API réussi
   // ============================================
   const login = useCallback((userData: User) => {
-    debugLog('Login called for:', userData.email);
+    console.log('[AUTH] 🎉 Login:', userData.email);
     setUser(userData);
-    setInitialized(true);
+    setLoading(false);
   }, []);
 
   // ============================================
-  // Logout function - calls logout API and clears state
+  // Logout function
   // ============================================
   const logout = useCallback(async () => {
-    debugLog('Logout called');
+    console.log('[AUTH] 🚪 Logout');
     try {
       await fetch('/api/auth/logout', { 
         method: 'POST',
         credentials: 'include',
       });
     } catch (error) {
-      debugLog('Error during logout:', error);
+      console.error('[AUTH] Erreur logout:', error);
     } finally {
       setUser(null);
       setLoading(false);
@@ -209,12 +154,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ============================================
-  // Refresh session from server
+  // Refresh session
   // ============================================
   const refreshSession = useCallback(async () => {
-    debugLog('Refresh session called');
-    await fetchSession(false);
-  }, [fetchSession]);
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/session', {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      
+      if (data.authenticated && data.user) {
+        setUser(data.user as User);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('[AUTH] Erreur refresh:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // ============================================
   // Computed values
@@ -243,7 +204,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
-        initialized,
         login,
         logout,
         isAuthenticated,
@@ -273,140 +233,49 @@ export function useAuth() {
 }
 
 // ============================================
-// Hook for protected routes - WITH SAFE REDIRECTS
+// Hook for protected routes - LE JUGE PATIENT
 // ============================================
 export function useRequireAuth(allowedRoles?: Role[]) {
-  const { user, loading, initialized, logout, refreshSession, can, canAny } = useAuth();
+  const { user, loading, logout, refreshSession, can, canAny } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const redirectAttempted = useRef(false);
 
   useEffect(() => {
-    // Wait for initialization to complete
-    if (!initialized || loading) {
-      debugLog('useRequireAuth: waiting for initialization');
+    // 1. SI ÇA CHARGE ENCORE : On ne fait RIEN
+    // C'est cette ligne qui empêche la boucle !
+    if (loading) {
+      console.log('[useRequireAuth] ⏳ En attente du chargement...');
       return;
     }
 
-    // Don't redirect on login pages
-    if (isLoginPage(pathname)) {
-      debugLog('useRequireAuth: on login page, skipping redirect');
-      return;
-    }
-
-    // Prevent multiple redirect attempts
-    if (redirectAttempted.current) {
-      debugLog('useRequireAuth: redirect already attempted');
-      return;
-    }
-
-    // Not authenticated
-    if (!user) {
-      debugLog('useRequireAuth: no user, redirecting to login');
-      redirectAttempted.current = true;
-      
+    // 2. SI ÇA A FINI DE CHARGER ET QU'IL N'Y A PAS D'USER
+    if (!loading && !user) {
+      console.log('[useRequireAuth] ❌ Pas d\'utilisateur, redirection login');
       const isAdminArea = pathname?.startsWith('/admin');
-      const isGarageArea = pathname?.startsWith('/garage');
-      const isDriverArea = pathname?.startsWith('/driver');
-      
-      let loginPath = '/login';
-      if (isAdminArea) loginPath = '/admin/connexion';
-      else if (isGarageArea) loginPath = '/garage/connexion';
-      else if (isDriverArea) loginPath = '/login';
-      
-      // Use setTimeout to avoid React state update issues
-      setTimeout(() => {
-        router.replace(loginPath);
-      }, 0);
+      const loginPath = isAdminArea ? '/admin/connexion' : '/garage/connexion';
+      router.replace(loginPath);
       return;
     }
 
-    // Check role-based access
-    if (allowedRoles && allowedRoles.length > 0) {
+    // 3. Vérification des rôles
+    if (user && allowedRoles && allowedRoles.length > 0) {
       const hasRole = allowedRoles.includes(user.role);
       if (!hasRole) {
-        debugLog('useRequireAuth: wrong role, redirecting to correct area');
-        redirectAttempted.current = true;
-        
-        let redirectPath = '/';
+        console.log('[useRequireAuth] ⚠️ Mauvais rôle, redirection');
         if (['superadmin', 'admin', 'agent'].includes(user.role)) {
-          redirectPath = '/admin/tableau-de-bord';
+          router.replace('/admin/tableau-de-bord');
         } else if (user.role === 'garage') {
-          redirectPath = '/garage/tableau-de-bord';
-        } else if (user.role === 'agency') {
-          redirectPath = '/agence/tableau-de-bord';
+          router.replace('/garage/tableau-de-bord');
         } else if (user.role === 'driver') {
-          redirectPath = '/driver/tableau-de-bord';
+          router.replace('/driver/tableau-de-bord');
+        } else {
+          router.replace('/');
         }
-        
-        setTimeout(() => {
-          router.replace(redirectPath);
-        }, 0);
       }
     }
-  }, [user, loading, initialized, allowedRoles, router, pathname]);
+  }, [user, loading, allowedRoles, router, pathname]);
 
-  // Reset redirect flag when user changes
-  useEffect(() => {
-    redirectAttempted.current = false;
-  }, [user?.id]);
-
-  return { user, loading, initialized, logout, refreshSession, can, canAny };
-}
-
-// ============================================
-// Hook for permission-based access
-// ============================================
-export function useRequirePermission(permission: Permission | Permission[]) {
-  const { user, loading, initialized, can, canAny, logout, refreshSession } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-  const redirectAttempted = useRef(false);
-
-  useEffect(() => {
-    // Wait for initialization
-    if (!initialized || loading) return;
-
-    // Don't redirect on login pages
-    if (isLoginPage(pathname)) return;
-
-    // Prevent multiple redirects
-    if (redirectAttempted.current) return;
-
-    // Not authenticated
-    if (!user) {
-      redirectAttempted.current = true;
-      const isAdminArea = pathname?.startsWith('/admin');
-      router.replace(isAdminArea ? '/admin/connexion' : '/login');
-      return;
-    }
-
-    // Check permission
-    const permissions = Array.isArray(permission) ? permission : [permission];
-    if (!canAny(permissions)) {
-      redirectAttempted.current = true;
-      
-      let redirectPath = '/';
-      if (['superadmin', 'admin', 'agent'].includes(user.role)) {
-        redirectPath = '/admin/tableau-de-bord';
-      } else if (user.role === 'garage') {
-        redirectPath = '/garage/tableau-de-bord';
-      } else if (user.role === 'driver') {
-        redirectPath = '/driver/tableau-de-bord';
-      }
-      
-      setTimeout(() => {
-        router.replace(redirectPath);
-      }, 0);
-    }
-  }, [user, loading, initialized, permission, canAny, router, pathname]);
-
-  // Reset when user changes
-  useEffect(() => {
-    redirectAttempted.current = false;
-  }, [user?.id]);
-
-  return { user, loading, initialized, can, canAny, logout, refreshSession };
+  return { user, loading, logout, refreshSession, can, canAny };
 }
 
 export default AuthContext;

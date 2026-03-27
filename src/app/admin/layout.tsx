@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -37,13 +37,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import NotificationBell from '@/components/admin/NotificationBell';
 import { PERMISSIONS, ROLES, ROLE_COLORS, Permission } from '@/lib/permissions';
 
-// ============================================
 // Debug
-// ============================================
 const DEBUG = process.env.NODE_ENV === 'development';
-function debugLog(...args: unknown[]) {
-  if (DEBUG) console.log('[ADMIN_LAYOUT]', ...args);
-}
+function log(...args: unknown[]) { if (DEBUG) console.log('[ADMIN]', ...args); }
 
 // ============================================
 // Types
@@ -80,54 +76,39 @@ function Sidebar({
   const { can } = useAuth();
 
   const allMenuItems: MenuItem[] = useMemo(() => [
-    { label: "Tableau de bord", icon: <LayoutDashboard className="w-5 h-5" />, href: "/admin/tableau-de-bord", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    { label: "Tableau de bord", icon: <LayoutDashboard className="w-5 h-5" />, href: "/admin/tableau-de-bord", roles: ['superadmin', 'admin'] },
     { label: "VÉHICULES", icon: null, isCategory: true },
-    { label: "Tous les véhicules", icon: <Car className="w-5 h-5" />, href: "/admin/vehicles", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
-    { label: "Expirations", icon: <Calendar className="w-5 h-5" />, href: "/admin/expirations", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    { label: "Tous les véhicules", icon: <Car className="w-5 h-5" />, href: "/admin/vehicles", roles: ['superadmin', 'admin'] },
+    { label: "Expirations", icon: <Calendar className="w-5 h-5" />, href: "/admin/expirations", roles: ['superadmin', 'admin'] },
     { label: "GARAGES", icon: null, isCategory: true },
-    { label: "Garages partenaires", icon: <Building2 className="w-5 h-5" />, href: "/admin/garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
-    { label: "Demandes d'adhésion", icon: <ClipboardCheck className="w-5 h-5" />, href: "/admin/demandes-garages", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
-    { label: "Carte interactive", icon: <MapPin className="w-5 h-5" />, href: "/admin/map", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
+    { label: "Garages partenaires", icon: <Building2 className="w-5 h-5" />, href: "/admin/garages", roles: ['superadmin', 'admin'] },
+    { label: "Demandes d'adhésion", icon: <ClipboardCheck className="w-5 h-5" />, href: "/admin/demandes-garages", roles: ['superadmin', 'admin'] },
     { label: "QR CODES", icon: null, isCategory: true },
-    { label: "Générer QR", icon: <QrCode className="w-5 h-5" />, href: "/admin/generer", permission: PERMISSIONS.CREATE_QR_LOTS },
-    { label: "Stock QR", icon: <Package className="w-5 h-5" />, href: "/admin/qrcodes", permission: PERMISSIONS.VIEW_QR_LOTS },
+    { label: "Générer QR", icon: <QrCode className="w-5 h-5" />, href: "/admin/generer" },
+    { label: "Stock QR", icon: <Package className="w-5 h-5" />, href: "/admin/qrcodes" },
     { label: "SÉCURITÉ", icon: null, isCategory: true, roles: ['superadmin', 'admin'] },
-    { label: "Signalements", icon: <AlertTriangle className="w-5 h-5" />, href: "/admin/reports", permission: PERMISSIONS.VIEW_SETTINGS, roles: ['superadmin', 'admin'] },
-    { label: "Utilisateurs", icon: <Users className="w-5 h-5" />, href: "/admin/utilisateurs", permission: PERMISSIONS.VIEW_USERS, roles: ['superadmin', 'admin'] },
-    { label: "Audit & Logs", icon: <Shield className="w-5 h-5" />, href: "/admin/securite", permission: PERMISSIONS.VIEW_SETTINGS, roles: ['superadmin', 'admin'] },
-    { label: "COMMUNICATION", icon: null, isCategory: true },
-    { label: "Notifications globales", icon: <Megaphone className="w-5 h-5" />, href: "/admin/broadcast", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin', 'admin'] },
-    { label: "Templates SMS/WA", icon: <MessageSquare className="w-5 h-5" />, href: "/admin/templates", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin', 'admin'] },
-    { label: "Messages", icon: <MessageSquare className="w-5 h-5" />, href: "/admin/messages", badge: unreadMessages, permission: PERMISSIONS.VIEW_MESSAGES },
-    { label: "CONFIGURATION", icon: null, isCategory: true, permission: PERMISSIONS.VIEW_SETTINGS },
-    { label: "Catégories intervention", icon: <Wrench className="w-5 h-5" />, href: "/admin/categories", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin', 'admin'] },
-    { label: "Paramètres", icon: <Settings className="w-5 h-5" />, href: "/admin/parametres", permission: PERMISSIONS.VIEW_SETTINGS },
-    { label: "Fonctionnalités", icon: <Globe className="w-5 h-5" />, href: "/admin/parametres/fonctionnalites", permission: PERMISSIONS.MANAGE_FEATURES, roles: ['superadmin', 'admin'] },
-    { label: "Sauvegardes", icon: <Database className="w-5 h-5" />, href: "/admin/sauvegardes", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin'] },
+    { label: "Utilisateurs", icon: <Users className="w-5 h-5" />, href: "/admin/utilisateurs", roles: ['superadmin', 'admin'] },
+    { label: "CONFIGURATION", icon: null, isCategory: true },
+    { label: "Paramètres", icon: <Settings className="w-5 h-5" />, href: "/admin/parametres" },
     { label: "MARKETING", icon: null, isCategory: true, roles: ['superadmin'] },
-    { label: "CRM", icon: <UserPlus className="w-5 h-5" />, href: "/admin/crm", permission: PERMISSIONS.VIEW_CRM, roles: ['superadmin', 'admin', 'agent'] },
-    { label: "Rapports", icon: <BarChart3 className="w-5 h-5" />, href: "/admin/rapports", permission: PERMISSIONS.VIEW_REPORTS },
-    { label: "Publicités", icon: <Megaphone className="w-5 h-5" />, href: "/admin/publicites", permission: PERMISSIONS.MANAGE_SETTINGS, roles: ['superadmin'] },
-    { label: "Blog", icon: <Newspaper className="w-5 h-5" />, href: "/admin/blog", permission: PERMISSIONS.VIEW_MESSAGES, roles: ['superadmin', 'admin'] },
+    { label: "CRM", icon: <UserPlus className="w-5 h-5" />, href: "/admin/crm", roles: ['superadmin', 'admin', 'agent'] },
+    { label: "Rapports", icon: <BarChart3 className="w-5 h-5" />, href: "/admin/rapports" },
   ], [unreadMessages]);
 
   const menuItems = useMemo(() => {
     return allMenuItems.filter(item => {
       if (item.isCategory) return true;
-      if (item.permission && !can(item.permission)) return false;
       if (item.roles && item.roles.length > 0) return item.roles.includes(userRole);
       return true;
     });
-  }, [allMenuItems, can, userRole]);
+  }, [allMenuItems, userRole]);
 
   const roleLabel = ROLES[userRole as keyof typeof ROLES] || userRole;
   const roleColor = ROLE_COLORS[userRole as keyof typeof ROLE_COLORS] || 'bg-gray-500';
 
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setIsOpen(false)} />
-      )}
+      {isOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setIsOpen(false)} />}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[280px] bg-[#ff7f00] transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col shadow-2xl`}>
         <div className="p-6 border-b border-white/10">
           <Link href="/admin/tableau-de-bord" className="flex items-center gap-3">
@@ -148,11 +129,7 @@ function Sidebar({
           <ul className="space-y-1">
             {menuItems.map((item, index) => {
               if (item.isCategory) {
-                return (
-                  <li key={index} className="pt-4 first:pt-0">
-                    <span className="px-4 text-xs font-semibold text-white uppercase tracking-wider">{item.label}</span>
-                  </li>
-                );
+                return <li key={index} className="pt-4 first:pt-0"><span className="px-4 text-xs font-semibold text-white uppercase tracking-wider">{item.label}</span></li>;
               }
               const isActive = pathname === item.href;
               return (
@@ -160,7 +137,6 @@ function Sidebar({
                   <Link href={item.href!} className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${isActive ? 'bg-black text-white shadow-lg' : 'bg-black text-white hover:bg-black/80'}`} onClick={() => setIsOpen(false)}>
                     <span className="shrink-0 text-white">{item.icon}</span>
                     <span className="font-medium text-sm flex-1">{item.label}</span>
-                    {item.badge && item.badge > 0 && <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">{item.badge}</span>}
                   </Link>
                 </li>
               );
@@ -210,7 +186,7 @@ function Header({ onMenuClick, userName, userRole }: { onMenuClick: () => void; 
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={toggleTheme} className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}>
+          <button onClick={toggleTheme} className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
             {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-600" />}
           </button>
           <NotificationBell />
@@ -230,68 +206,56 @@ function Header({ onMenuClick, userName, userRole }: { onMenuClick: () => void; 
 }
 
 // ============================================
-// Main Layout Component
+// MAIN LAYOUT - LE JUGE PATIENT
 // ============================================
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const { user, loading, initialized, logout, isSuperAdmin, isAdmin, isAgent } = useAuth();
+  const { user, loading, logout, isSuperAdmin, isAdmin, isAgent } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const redirectAttempted = useRef(false);
 
   const hasAdminAccess = isSuperAdmin || isAdmin || isAgent;
 
   // ============================================
-  // Handle redirects - AFTER initialization
+  // LOGIQUE DE REDIRECTION - PATIENTE
   // ============================================
   useEffect(() => {
-    debugLog('Effect running:', { loading, initialized, hasUser: !!user, pathname });
+    log('Effect:', { loading, hasUser: !!user, hasAdminAccess, pathname });
 
-    // Wait for initialization
-    if (!initialized || loading) {
-      debugLog('Waiting for initialization...');
+    // 1. SI ÇA CHARGE ENCORE : On ne fait RIEN
+    // C'est cette ligne qui empêche la boucle !
+    if (loading) {
+      log('⏳ En attente du chargement...');
       return;
     }
 
-    // Skip for login pages
+    // Ne pas rediriger sur les pages de login
     if (pathname === '/admin/connexion' || pathname === '/admin/login') {
-      debugLog('On login page, skipping redirect');
+      log('📍 Page de login, pas de redirection');
       return;
     }
 
-    // Prevent duplicate redirects
-    if (redirectAttempted.current) {
-      debugLog('Redirect already attempted');
+    // 2. SI ÇA A FINI DE CHARGER ET QU'IL N'Y A PAS D'USER
+    if (!loading && !user) {
+      log('❌ Pas d\'utilisateur après chargement, redirection login');
+      router.replace('/admin/connexion');
       return;
     }
 
-    // No user - redirect to login
-    if (!user) {
-      debugLog('No user, redirecting to login');
-      redirectAttempted.current = true;
-      setTimeout(() => router.replace('/admin/connexion'), 0);
-      return;
+    // 3. SI USER MAIS PAS LES BONS DROITS
+    if (!loading && user && !hasAdminAccess) {
+      log('⚠️ Mauvais rôle, redirection vers la bonne zone');
+      if (user.role === 'garage') {
+        router.replace('/garage/tableau-de-bord');
+      } else if (user.role === 'agency') {
+        router.replace('/agence/tableau-de-bord');
+      } else if (user.role === 'driver') {
+        router.replace('/driver/tableau-de-bord');
+      } else {
+        router.replace('/');
+      }
     }
-
-    // User doesn't have admin access - redirect to their area
-    if (!hasAdminAccess) {
-      debugLog('User not admin, redirecting to correct area');
-      redirectAttempted.current = true;
-      
-      let redirectPath = '/';
-      if (user.role === 'garage') redirectPath = '/garage/tableau-de-bord';
-      else if (user.role === 'agency') redirectPath = '/agence/tableau-de-bord';
-      else if (user.role === 'driver') redirectPath = '/driver/tableau-de-bord';
-      
-      setTimeout(() => router.replace(redirectPath), 0);
-    }
-  }, [user, loading, initialized, hasAdminAccess, router, pathname]);
-
-  // Reset redirect flag when user changes
-  useEffect(() => {
-    redirectAttempted.current = false;
-  }, [user?.id]);
+  }, [user, loading, hasAdminAccess, router, pathname]);
 
   // ============================================
   // Handle logout
@@ -302,46 +266,47 @@ export default function AdminRootLayout({ children }: { children: React.ReactNod
   };
 
   // ============================================
-  // Don't wrap login page with sidebar
+  // Ne pas wrapper les pages de login
   // ============================================
   if (pathname === '/admin/connexion' || pathname === '/admin/login') {
     return <>{children}</>;
   }
 
   // ============================================
-  // Show loading state
+  // AFFICHAGE PENDANT LE CHARGEMENT
+  // C'est crucial d'afficher un spinner pendant que loading=true
   // ============================================
-  if (loading || !initialized) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-          <span className="text-slate-500">Vérification de l'authentification...</span>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto" />
+          <p className="mt-4 text-slate-600 font-medium">Chargement de votre espace OKAR...</p>
         </div>
       </div>
     );
   }
 
   // ============================================
-  // Don't render if not authenticated or no access
+  // SI PAS D'USER APRÈS CHARGEMENT = REDIRECTION
   // ============================================
   if (!user || !hasAdminAccess) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-          <span className="text-slate-500">Redirection...</span>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto" />
+          <p className="mt-4 text-slate-600 font-medium">Redirection...</p>
         </div>
       </div>
     );
   }
 
   // ============================================
-  // Render admin layout
+  // AFFICHAGE NORMAL SI CONNECTÉ
   // ============================================
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} unreadMessages={unreadMessages} onLogout={handleLogout} userName={user.name || 'Utilisateur'} userRole={user.role} />
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onLogout={handleLogout} userName={user.name || 'Utilisateur'} userRole={user.role} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} userName={user.name || 'Utilisateur'} userRole={user.role} />
         <main className="flex-1 p-6 lg:p-8">{children}</main>
