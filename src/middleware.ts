@@ -91,6 +91,7 @@ export async function middleware(req: NextRequest) {
   const isAdminRoute = pathname.startsWith('/admin');
   const isGarageRoute = pathname.startsWith('/garage') && !pathname.startsWith('/garage/connexion') && !pathname.startsWith('/garage/correction');
   const isAgenceRoute = pathname.startsWith('/agence') && !pathname.startsWith('/agence/login');
+  const isDriverRoute = pathname.startsWith('/driver');
 
   // 6. If no session cookie, deny access
   if (!sessionCookie) {
@@ -116,6 +117,11 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
     
+    if (isDriverRoute) {
+      const loginUrl = new URL('/login', req.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    
     return NextResponse.next();
   }
 
@@ -131,6 +137,8 @@ export const config = {
     '/garage/:path*',
     // Agence routes
     '/agence/:path*',
+    // Driver routes
+    '/driver/:path*',
     // API routes
     '/api/admin/:path*',
     '/api/garage/:path*',
