@@ -1,16 +1,26 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, QrCode, Eye, EyeOff, Car } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Car } from 'lucide-react';
 
-// Inner component that uses useSearchParams
+// ============================================
+// Debug logging
+// ============================================
+const DEBUG = process.env.NODE_ENV === 'development';
+function debugLog(...args: unknown[]) {
+  if (DEBUG) console.log('[LOGIN]', ...args);
+}
+
+// ============================================
+// Login Content Component
+// ============================================
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading, login } = useAuth();
+  const { user, loading: authLoading, initialized, login } = useAuth();
   const role = searchParams.get('role') || 'garage';
   
   const [email, setEmail] = useState('');
@@ -18,91 +28,135 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Track if we've already attempted redirect
+  const redirectAttempted = useRef(false);
 
+  // ============================================
+  // Redirect authenticated users to their dashboard
+  // ============================================
   useEffect(() => {
-    // Wait for auth to load
-    if (authLoading) return;
-
-    // If already logged in, redirect to appropriate dashboard
-    if (user) {
-      if (['superadmin', 'admin', 'agent'].includes(user.role)) {
-        router.replace('/admin/tableau-de-bord');
-      } else if (user.role === 'garage') {
-        router.replace('/garage/tableau-de-bord');
-      } else if (user.role === 'agency') {
-        router.replace('/agence/tableau-de-bord');
-      } else if (user.role === 'driver') {
-        router.replace('/driver/tableau-de-bord');
-      } else {
-        router.replace('/');
-      }
+    // Wait for auth to be initialized
+    if (!initialized || authLoading) {
+      debugLog('Waiting for auth initialization...');
+      return;
     }
-  }, [user, authLoading, router]);
 
+    // Don't redirect if already attempted
+    if (redirectAttempted.current) {
+      debugLog('Redirect already attempted, skipping');
+      return;
+    }
+
+    // If user is logged in, redirect to their dashboard
+    if (user) {
+      debugLog('User already logged in:', user.email, user.role);
+      redirectAttempted.current = true;
+      
+      let dashboardPath = '/';
+      if (['superadmin', 'admin', 'agent'].includes(user.role)) {
+        dashboardPath = '/admin/tableau-de-bord';
+      } else if (user.role === 'garage') {
+        dashboardPath = '/garage/tableau-de-bord';
+      } else if (user.role === 'agency') {
+        dashboardPath = '/agence/tableau-de-bord';
+      } else if (user.role === 'driver') {
+        dashboardPath = '/driver/tableau-de-bord';
+      }
+      
+      debugLog('Redirecting to:', dashboardPath);
+      
+      // Use setTimeout to avoid React state issues
+      setTimeout(() => {
+        router.replace(dashboardPath);
+      }, 100);
+    }
+  }, [user, authLoading, initialized, router]);
+
+  // ============================================
+  // Handle login form submission
+  // ============================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    debugLog('Submitting login form for:', email);
 
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Important: include cookies
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
+      debugLog('Login response:', { success: data.success, role: data.user?.role });
 
       if (response.ok && data.success) {
+        // Update auth context
         login(data.user);
         
-        // Redirect based on role
+        // Determine redirect path
+        let dashboardPath = '/';
         if (['superadmin', 'admin', 'agent'].includes(data.user.role)) {
-          router.push('/admin/tableau-de-bord');
+          dashboardPath = '/admin/tableau-de-bord';
         } else if (data.user.role === 'garage') {
-          router.push('/garage/tableau-de-bord');
+          dashboardPath = '/garage/tableau-de-bord';
         } else if (data.user.role === 'agency') {
-          router.push('/agence/tableau-de-bord');
+          dashboardPath = '/agence/tableau-de-bord';
         } else if (data.user.role === 'driver') {
-          router.push('/driver/tableau-de-bord');
-        } else {
-          router.push('/');
+          dashboardPath = '/driver/tableau-de-bord';
         }
+        
+        debugLog('Login successful, redirecting to:', dashboardPath);
+        
+        // Small delay to ensure cookie is set
+        setTimeout(() => {
+          router.push(dashboardPath);
+        }, 100);
       } else {
         setError(data.error || 'Identifiants incorrects');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      debugLog('Login error:', err);
       setError('Erreur de connexion. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Show loading while checking auth
-  if (authLoading) {
+  // ============================================
+  // Render loading state while checking auth
+  // ============================================
+  if (authLoading || !initialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="flex items-center gap-3">
           <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-          <span className="text-slate-500">Vérification...</span>
+          <span className="text-slate-500">Vérification de la session...</span>
         </div>
       </div>
     );
   }
 
-  // Don't show login form if already authenticated
+  // ============================================
+  // Render redirect message if user is authenticated
+  // ============================================
   if (user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="flex items-center gap-3">
           <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
-          <span className="text-slate-500">Redirection...</span>
+          <span className="text-slate-500">Redirection vers votre espace...</span>
         </div>
       </div>
     );
   }
 
+  // ============================================
+  // Render login form
+  // ============================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -163,6 +217,7 @@ function LoginContent() {
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
                 placeholder="votre@email.com"
                 required
+                autoComplete="email"
               />
             </div>
 
@@ -178,6 +233,7 @@ function LoginContent() {
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition pr-12"
                   placeholder="••••••••"
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -234,7 +290,9 @@ function LoginContent() {
   );
 }
 
-// Loading fallback
+// ============================================
+// Loading Fallback
+// ============================================
 function LoadingFallback() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
@@ -246,7 +304,9 @@ function LoadingFallback() {
   );
 }
 
-// Main page with Suspense wrapper
+// ============================================
+// Main Page Component
+// ============================================
 export default function LoginPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>

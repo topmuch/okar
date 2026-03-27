@@ -1,134 +1,144 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Session cookie name
+// ============================================
+// Session cookie name - MUST match lib/session.ts
+// ============================================
 const SESSION_COOKIE_NAME = 'okar_session';
 
-// Public routes that don't require authentication (exact matches or prefixes)
-const PUBLIC_ROUTES = [
+// ============================================
+// DEBUG MODE
+// ============================================
+const DEBUG = process.env.NODE_ENV === 'development';
+
+function debugLog(req: NextRequest, message: string, data?: Record<string, unknown>) {
+  if (DEBUG) {
+    console.log(`[MW] ${req.nextUrl.pathname} - ${message}`, data || '');
+  }
+}
+
+// ============================================
+// Routes that NEVER require authentication
+// ============================================
+const PUBLIC_ROUTES = new Set([
+  '/',
+  '/login',
+  '/register',
   '/admin/connexion',
   '/admin/login',
   '/garage/connexion',
+  '/garage/inscrire',
+  '/garage/activate',
   '/garage/correction',
   '/agence/login',
-  '/login',
-  '/register',
   '/devenir-partenaire',
   '/inscrire',
   '/forgot-password',
   '/reset-password',
-  '/v/',  // QR scan pages
-  '/scan/',
-  '/activate/',  // QR activation pages
-  '/api/auth',
+]);
+
+// Routes that start with these prefixes are public
+const PUBLIC_PREFIXES = [
+  '/v/',           // QR scan pages
+  '/scan/',        // QR scan pages
+  '/activate/',    // QR activation pages
+  '/api/auth',     // Auth API
   '/api/init-demo',
   '/api/upload',
   '/api/webhook',
   '/api/public',
   '/api/register',
-  '/api/setup',  // Setup/init API for first-time initialization (includes /api/setup/update-superadmin)
+  '/api/setup',
   '/api/garage/check-status',
   '/api/garage/resubmit',
   '/api/activate',
-  '/api/admin/garage-applications',  // Public POST for garage registration
-  '/api/reports/public',  // Public reports endpoint
+  '/api/admin/garage-applications',
+  '/api/reports/public',
 ];
 
-// Routes that should always pass through (no redirect loop possible)
-const ALLOWED_PATHS = new Set([
-  '/admin/connexion',
-  '/admin/login',
-]);
+// Login page for each area
+const LOGIN_PAGES: Record<string, string> = {
+  admin: '/admin/connexion',
+  garage: '/garage/connexion',
+  agence: '/agence/login',
+  driver: '/login',
+};
 
-// API routes that require special handling (return 401 instead of redirect)
-const API_ROUTES = [
-  '/api/admin',
-  '/api/garage',
-  '/api/driver',
-];
+// ============================================
+// Helper functions
+// ============================================
+function isPublicRoute(pathname: string): boolean {
+  // Exact match
+  if (PUBLIC_ROUTES.has(pathname)) return true;
+  
+  // Prefix match
+  for (const prefix of PUBLIC_PREFIXES) {
+    if (pathname.startsWith(prefix)) return true;
+  }
+  
+  return false;
+}
 
-/**
- * Middleware for route protection with server-side session verification
- */
+function getArea(pathname: string): string | null {
+  if (pathname.startsWith('/admin')) return 'admin';
+  if (pathname.startsWith('/garage')) return 'garage';
+  if (pathname.startsWith('/agence')) return 'agence';
+  if (pathname.startsWith('/driver')) return 'driver';
+  return null;
+}
+
+// ============================================
+// Middleware
+// ============================================
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   
-  // 1. Check if it's a static file or Next.js internals - always allow
+  // 1. Skip static files and Next.js internals
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname.startsWith('/uploads') ||
     pathname.startsWith('/icons') ||
     pathname.startsWith('/images') ||
-    pathname.includes('.') // Files with extensions
+    pathname.includes('.')
   ) {
     return NextResponse.next();
   }
 
-  // 2. Check if it's an allowed path (exact match) - always allow without session check
-  if (ALLOWED_PATHS.has(pathname)) {
+  // 2. Skip public routes
+  if (isPublicRoute(pathname)) {
+    debugLog(req, 'Public route, allowing');
     return NextResponse.next();
   }
 
-  // 3. Check if it's a public route - always allow
-  const isPublicRoute = PUBLIC_ROUTES.some(route => {
-    // Exact match for login pages
-    if (pathname === route) return true;
-    // Prefix match for API routes and scan pages
-    if (route.endsWith('/')) return pathname.startsWith(route);
-    return pathname.startsWith(route + '/') || pathname === route;
-  });
-  
-  if (isPublicRoute) {
+  // 3. Determine if this is a protected area
+  const area = getArea(pathname);
+  if (!area) {
+    // Not a protected area, allow
     return NextResponse.next();
   }
 
   // 4. Check for session cookie
   const sessionCookie = req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  // 5. Determine route type
-  const isApiRoute = API_ROUTES.some(route => pathname.startsWith(route));
-  const isAdminRoute = pathname.startsWith('/admin');
-  const isGarageRoute = pathname.startsWith('/garage') && !pathname.startsWith('/garage/connexion') && !pathname.startsWith('/garage/correction');
-  const isAgenceRoute = pathname.startsWith('/agence') && !pathname.startsWith('/agence/login');
-  const isDriverRoute = pathname.startsWith('/driver');
-
-  // 6. If no session cookie, deny access
   if (!sessionCookie) {
-    if (isApiRoute) {
-      return NextResponse.json(
-        { error: 'Non authentifié', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
-    
-    if (isAdminRoute) {
-      const loginUrl = new URL('/admin/connexion', req.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    
-    if (isGarageRoute) {
-      const loginUrl = new URL('/garage/connexion', req.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    
-    if (isAgenceRoute) {
-      const loginUrl = new URL('/garage/connexion', req.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    
-    if (isDriverRoute) {
-      const loginUrl = new URL('/login', req.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    
-    return NextResponse.next();
+    // No session cookie - redirect to login
+    debugLog(req, 'No session cookie, redirecting to login');
+    const loginPath = LOGIN_PAGES[area] || '/login';
+    const loginUrl = new URL(loginPath, req.url);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // 7. Session cookie exists - allow request
+  // 5. Session cookie exists - allow request
+  // Note: We don't validate the session here for performance
+  // The AuthContext will validate it client-side
+  debugLog(req, 'Session cookie found, allowing');
   return NextResponse.next();
 }
 
+// ============================================
+// Config - Which routes to match
+// ============================================
 export const config = {
   matcher: [
     // Admin routes
@@ -139,10 +149,5 @@ export const config = {
     '/agence/:path*',
     // Driver routes
     '/driver/:path*',
-    // API routes
-    '/api/admin/:path*',
-    '/api/garage/:path*',
-    '/api/driver/:path*',
-    '/api/agence/:path*',
   ],
 };

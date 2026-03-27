@@ -1,10 +1,23 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Role, hasPermission, hasAnyPermission, Permission, PERMISSIONS } from '@/lib/permissions';
 
+// ============================================
+// 🐛 DEBUG FLAGS - Set to true in production for debugging
+// ============================================
+const DEBUG_AUTH = process.env.NODE_ENV === 'development';
+
+function debugLog(...args: unknown[]) {
+  if (DEBUG_AUTH) {
+    console.log('[AUTH]', new Date().toISOString().split('T')[1], ...args);
+  }
+}
+
+// ============================================
 // User type
+// ============================================
 export interface User {
   id: string;
   email: string;
@@ -32,10 +45,13 @@ export interface User {
   } | null;
 }
 
+// ============================================
 // Auth context type
+// ============================================
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  initialized: boolean;  // NEW: Track if initial fetch is complete
   login: (userData: User) => void;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -48,10 +64,11 @@ interface AuthContextType {
   refreshSession: () => Promise<void>;
 }
 
-// Create context
+// Create context with safe defaults
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  initialized: false,
   login: () => {},
   logout: async () => {},
   isAuthenticated: false,
@@ -64,66 +81,153 @@ const AuthContext = createContext<AuthContextType>({
   refreshSession: async () => {},
 });
 
+// ============================================
+// Login pages that should NOT redirect
+// ============================================
+const LOGIN_PAGES = new Set([
+  '/login',
+  '/admin/connexion',
+  '/admin/login',
+  '/garage/connexion',
+  '/garage/inscrire',
+  '/garage/activate',
+  '/agence/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+]);
+
+function isLoginPage(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return LOGIN_PAGES.has(pathname) || pathname.startsWith('/activate/');
+}
+
+// ============================================
 // Provider component
+// ============================================
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Track if we've already fetched session to prevent duplicate calls
+  const hasFetchedRef = useRef(false);
+  const isFetchingRef = useRef(false);
 
+  // ============================================
   // Fetch session from server (cookie-based)
-  const fetchSession = useCallback(async () => {
+  // ============================================
+  const fetchSession = useCallback(async (isInitialFetch = false) => {
+    // Prevent duplicate fetches
+    if (isFetchingRef.current) {
+      debugLog('Fetch already in progress, skipping');
+      return;
+    }
+    
+    isFetchingRef.current = true;
+    
     try {
-      const response = await fetch('/api/auth/session');
+      debugLog('Fetching session from /api/auth/session');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+      
+      const response = await fetch('/api/auth/session', {
+        signal: controller.signal,
+        credentials: 'include', // Important: include cookies
+      });
+      
+      clearTimeout(timeoutId);
+      
       const data = await response.json();
+      debugLog('Session response:', { authenticated: data.authenticated, userId: data.user?.id });
 
       if (data.authenticated && data.user) {
         setUser(data.user as User);
+        debugLog('User set:', data.user.email, data.user.role);
       } else {
         setUser(null);
+        debugLog('No user in session');
       }
     } catch (error) {
-      console.error('Error fetching session:', error);
+      const err = error as Error;
+      if (err.name === 'AbortError') {
+        debugLog('Session fetch timed out');
+      } else {
+        debugLog('Error fetching session:', err.message);
+      }
       setUser(null);
     } finally {
+      setLoading(false);
+      isFetchingRef.current = false;
+      
+      if (isInitialFetch) {
+        setInitialized(true);
+        debugLog('Auth initialized');
+      }
+    }
+  }, []);
+
+  // ============================================
+  // Initialize auth state - RUN ONCE
+  // ============================================
+  useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    
+    debugLog('Initializing auth, pathname:', pathname);
+    fetchSession(true);
+  }, []); // Empty deps - only run once
+
+  // ============================================
+  // Login function - called after successful login API call
+  // ============================================
+  const login = useCallback((userData: User) => {
+    debugLog('Login called for:', userData.email);
+    setUser(userData);
+    setInitialized(true);
+  }, []);
+
+  // ============================================
+  // Logout function - calls logout API and clears state
+  // ============================================
+  const logout = useCallback(async () => {
+    debugLog('Logout called');
+    try {
+      await fetch('/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      debugLog('Error during logout:', error);
+    } finally {
+      setUser(null);
       setLoading(false);
     }
   }, []);
 
-  // Initialize auth state from server session
-  useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
-
-  // Login function - called after successful login API call
-  const login = useCallback((userData: User) => {
-    setUser(userData);
-  }, []);
-
-  // Logout function - calls logout API and clears state
-  const logout = useCallback(async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Error during logout:', error);
-    } finally {
-      setUser(null);
-    }
-  }, []);
-
+  // ============================================
   // Refresh session from server
+  // ============================================
   const refreshSession = useCallback(async () => {
-    await fetchSession();
+    debugLog('Refresh session called');
+    await fetchSession(false);
   }, [fetchSession]);
 
+  // ============================================
   // Computed values
+  // ============================================
   const isAuthenticated = !!user;
   const isSuperAdmin = user?.role === 'superadmin';
   const isAdmin = user?.role === 'admin';
   const isAgent = user?.role === 'agent';
   const isAgency = user?.role === 'agency';
 
+  // ============================================
   // Permission helpers
+  // ============================================
   const can = useCallback((permission: Permission): boolean => {
     if (!user) return false;
     return hasPermission(user.role, permission);
@@ -139,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
+        initialized,
         login,
         logout,
         isAuthenticated,
@@ -156,7 +261,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// ============================================
 // Hook to use auth
+// ============================================
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -165,21 +272,52 @@ export function useAuth() {
   return context;
 }
 
-// Hook for protected routes
+// ============================================
+// Hook for protected routes - WITH SAFE REDIRECTS
+// ============================================
 export function useRequireAuth(allowedRoles?: Role[]) {
-  const { user, loading, logout, refreshSession, can, canAny } = useAuth();
+  const { user, loading, initialized, logout, refreshSession, can, canAny } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const redirectAttempted = useRef(false);
 
   useEffect(() => {
-    if (loading) return;
+    // Wait for initialization to complete
+    if (!initialized || loading) {
+      debugLog('useRequireAuth: waiting for initialization');
+      return;
+    }
+
+    // Don't redirect on login pages
+    if (isLoginPage(pathname)) {
+      debugLog('useRequireAuth: on login page, skipping redirect');
+      return;
+    }
+
+    // Prevent multiple redirect attempts
+    if (redirectAttempted.current) {
+      debugLog('useRequireAuth: redirect already attempted');
+      return;
+    }
 
     // Not authenticated
     if (!user) {
-      // Check if this is admin area or agency area
+      debugLog('useRequireAuth: no user, redirecting to login');
+      redirectAttempted.current = true;
+      
       const isAdminArea = pathname?.startsWith('/admin');
-      const loginPath = isAdminArea ? '/admin/connexion' : '/garage/connexion';
-      router.replace(loginPath);
+      const isGarageArea = pathname?.startsWith('/garage');
+      const isDriverArea = pathname?.startsWith('/driver');
+      
+      let loginPath = '/login';
+      if (isAdminArea) loginPath = '/admin/connexion';
+      else if (isGarageArea) loginPath = '/garage/connexion';
+      else if (isDriverArea) loginPath = '/login';
+      
+      // Use setTimeout to avoid React state update issues
+      setTimeout(() => {
+        router.replace(loginPath);
+      }, 0);
       return;
     }
 
@@ -187,52 +325,88 @@ export function useRequireAuth(allowedRoles?: Role[]) {
     if (allowedRoles && allowedRoles.length > 0) {
       const hasRole = allowedRoles.includes(user.role);
       if (!hasRole) {
-        // Redirect to correct area based on role
+        debugLog('useRequireAuth: wrong role, redirecting to correct area');
+        redirectAttempted.current = true;
+        
+        let redirectPath = '/';
         if (['superadmin', 'admin', 'agent'].includes(user.role)) {
-          router.replace('/admin/tableau-de-bord');
+          redirectPath = '/admin/tableau-de-bord';
         } else if (user.role === 'garage') {
-          router.replace('/garage/tableau-de-bord');
-        } else {
-          router.replace('/');
+          redirectPath = '/garage/tableau-de-bord';
+        } else if (user.role === 'agency') {
+          redirectPath = '/agence/tableau-de-bord';
+        } else if (user.role === 'driver') {
+          redirectPath = '/driver/tableau-de-bord';
         }
+        
+        setTimeout(() => {
+          router.replace(redirectPath);
+        }, 0);
       }
     }
-  }, [user, loading, allowedRoles, router, pathname]);
+  }, [user, loading, initialized, allowedRoles, router, pathname]);
 
-  return { user, loading, logout, refreshSession, can, canAny };
+  // Reset redirect flag when user changes
+  useEffect(() => {
+    redirectAttempted.current = false;
+  }, [user?.id]);
+
+  return { user, loading, initialized, logout, refreshSession, can, canAny };
 }
 
+// ============================================
 // Hook for permission-based access
+// ============================================
 export function useRequirePermission(permission: Permission | Permission[]) {
-  const { user, loading, can, canAny, logout, refreshSession } = useAuth();
+  const { user, loading, initialized, can, canAny, logout, refreshSession } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const redirectAttempted = useRef(false);
 
   useEffect(() => {
-    if (loading) return;
+    // Wait for initialization
+    if (!initialized || loading) return;
+
+    // Don't redirect on login pages
+    if (isLoginPage(pathname)) return;
+
+    // Prevent multiple redirects
+    if (redirectAttempted.current) return;
 
     // Not authenticated
     if (!user) {
+      redirectAttempted.current = true;
       const isAdminArea = pathname?.startsWith('/admin');
-      router.replace(isAdminArea ? '/admin/connexion' : '/garage/connexion');
+      router.replace(isAdminArea ? '/admin/connexion' : '/login');
       return;
     }
 
     // Check permission
     const permissions = Array.isArray(permission) ? permission : [permission];
     if (!canAny(permissions)) {
-      // Redirect to dashboard if no permission
+      redirectAttempted.current = true;
+      
+      let redirectPath = '/';
       if (['superadmin', 'admin', 'agent'].includes(user.role)) {
-        router.replace('/admin/tableau-de-bord');
+        redirectPath = '/admin/tableau-de-bord';
       } else if (user.role === 'garage') {
-        router.replace('/garage/tableau-de-bord');
-      } else {
-        router.replace('/');
+        redirectPath = '/garage/tableau-de-bord';
+      } else if (user.role === 'driver') {
+        redirectPath = '/driver/tableau-de-bord';
       }
+      
+      setTimeout(() => {
+        router.replace(redirectPath);
+      }, 0);
     }
-  }, [user, loading, permission, canAny, router, pathname]);
+  }, [user, loading, initialized, permission, canAny, router, pathname]);
 
-  return { user, loading, can, canAny, logout, refreshSession };
+  // Reset when user changes
+  useEffect(() => {
+    redirectAttempted.current = false;
+  }, [user?.id]);
+
+  return { user, loading, initialized, can, canAny, logout, refreshSession };
 }
 
 export default AuthContext;
